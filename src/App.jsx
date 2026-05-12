@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { supabase } from './supabase'
+
 
 const feelingData = {
   1: { emoji: '😔', word: 'Really tough', response: "Glennis, some days are just hard — and that is the truth of healing. Checking in on a day like this takes real courage. Your body is not failing you. It is working hard, quietly, even when you cannot feel it." },
@@ -66,12 +68,23 @@ export default function App() {
     )
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
-      setScreen('response')
-    }, 2200)
+    
+    const response = selectedFeeling ? feelingData[selectedFeeling].response : "You showed up today — and that's everything."
+    
+    const { error } = await supabase.from('checkins').insert({
+      feeling: selectedFeeling,
+      feeling_word: selectedFeeling ? feelingData[selectedFeeling].word : '',
+      movements: movements,
+      note: note,
+      ai_response: response,
+    })
+    
+    if (error) console.log('Save error:', error)
+    
+    setLoading(false)
+    setScreen('response')
   }
 
   const openJournal = (day) => {
