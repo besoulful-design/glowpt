@@ -51,7 +51,7 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [journalDay, setJournalDay] = useState(null)
   const [greeting, setGreeting] = useState('Good evening')
-
+const [aiResponse, setAiResponse] = useState('')
   useEffect(() => {
     const hour = new Date().getHours()
     if (hour < 12) setGreeting('Good morning')
@@ -71,7 +71,44 @@ export default function App() {
   const handleSubmit = async () => {
     setLoading(true)
     
-    const response = selectedFeeling ? feelingData[selectedFeeling].response : "You showed up today — and that's everything."
+    let response = "You showed up today — and that's everything."
+    
+    try {
+      const movementText = movements.length > 0 ? movements.join(', ') : 'nothing logged'
+      const noteText = note.trim() ? note.trim() : 'no note added'
+      const feelingWord = selectedFeeling ? feelingData[selectedFeeling].word : 'not rated'
+      
+      const prompt = `You are GlowPT, a warm and encouraging wellness companion for physical therapy patients. Write a short, personal response (3-4 sentences max) for Glennis based on her daily check-in. Be warm, specific, and uplifting — never clinical. Use her name once.
+
+Her check-in today:
+- Feeling score: ${selectedFeeling || 'not rated'} out of 5 (${feelingWord})
+- Movement: ${movementText}
+- Her note: "${noteText}"
+
+Respond directly to Glennis in second person. Reference what she actually shared. End with one gentle encouragement.`
+
+      const result = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-client-side-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 200,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      })
+      
+      const data = await result.json()
+      if (data.content && data.content[0]) {
+        response = data.content[0].text
+      }
+    } catch (err) {
+      console.log('AI error:', err)
+    }
     
     const { error } = await supabase.from('checkins').insert({
       feeling: selectedFeeling,
@@ -82,6 +119,7 @@ export default function App() {
     })
     
     if (error) console.log('Save error:', error)
+      setAiResponse(response)
     
     setLoading(false)
     setScreen('response')
@@ -358,8 +396,7 @@ export default function App() {
 
               <div style={styles.responseEyebrow}>Today's reflection</div>
               <div style={styles.responseMessage}>
-                {selectedFeeling ? feelingData[selectedFeeling].response : "Glennis, you showed up today — and that's everything. Your body is doing the quiet work of getting stronger, one good day at a time."}
-              </div>
+                {aiResponse}</div>
 
               <div style={styles.statsRow}>
                 <div style={styles.statCard}>
