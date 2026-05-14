@@ -87,25 +87,16 @@ Her check-in today:
 
 Respond directly to Glennis in second person. Reference what she actually shared. End with one gentle encouragement.`
 
-      const result = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': import.meta.env.VITE_ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-client-side-access': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 200,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      })
-      
-      const data = await result.json()
-      if (data.content && data.content[0]) {
-        response = data.content[0].text
-      }
+      const result = await fetch('/.netlify/functions/ai-response', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ prompt })
+})
+
+const data = await result.json()
+if (data.response) {
+  response = data.response
+}
     } catch (err) {
       console.log('AI error:', err)
     }
