@@ -3,19 +3,19 @@ import { supabase } from './supabase'
 
 
 const feelingData = {
-  1: { emoji: '😔', word: 'Really tough', response: "Glennis, some days are just hard — and that is the truth of healing. Checking in on a day like this takes real courage. Your body is not failing you. It is working hard, quietly, even when you cannot feel it." },
-  2: { emoji: '😕', word: 'Hard day', response: "A hard day, Glennis — but you still showed up. Rest today. Let your body do its quiet work. The fact that you checked in means you are still in this, still caring for yourself. That matters." },
-  3: { emoji: '🙂', word: 'Getting there', response: "Glennis, you showed up today — and that takes real courage. Getting there is still moving forward. One honest day at a time is exactly how this works." },
-  4: { emoji: '😊', word: 'Good day', response: "A good day, Glennis. Feel that. Something is building — your body is responding, loosening, strengthening. Today is proof." },
-  5: { emoji: '😄', word: 'Feeling great', response: "Glennis, a 5 — remember this morning. This is what healing feels like at its best. Your body worked hard to get here and it deserves to be celebrated. Savor it." }
+  1: { emoji: '😔', word: 'Really tough', response: "Chris, some days are just hard — and that is the truth of healing. Checking in on a day like this takes real courage. Your body is not failing you. It is working hard, quietly, even when you cannot feel it." },
+  2: { emoji: '😕', word: 'Hard day', response: "A hard day, Chris — but you still showed up. Rest today. Let your body do its quiet work. The fact that you checked in means you are still in this, still caring for yourself. That matters." },
+  3: { emoji: '🙂', word: 'Getting there', response: "Chris, you showed up today — and that takes real courage. Getting there is still moving forward. One honest day at a time is exactly how this works." },
+  4: { emoji: '😊', word: 'Good day', response: "A good day, Chris. Feel that. Something is building — your body is responding, loosening, strengthening. Today is proof." },
+  5: { emoji: '😄', word: 'Feeling great', response: "Chris, a 5 — remember this morning. This is what healing feels like at its best. Your body worked hard to get here and it deserves to be celebrated. Savor it." }
 }
 
 const pastDays = [
-  { id: 1, day: 'M', date: 'May 5', feeling: 4, emoji: '😊', word: 'Good day', movements: ['PT exercises', 'Walk'], note: 'Felt pretty good after my walk — less stiffness than last week.', response: 'Something is shifting, Glennis. Less stiffness, more ease — your body is responding. Today is proof that the quiet work is paying off.', done: true },
-  { id: 2, day: 'T', date: 'May 6', feeling: 3, emoji: '🙂', word: 'Getting there', movements: ['Stretching'], note: 'Did my stretches but skipped the walk. Felt okay.', response: "Glennis, showing up even when it's just the minimum — that's still showing up. Stretching counts. You're doing the quiet work.", done: true },
+  { id: 1, day: 'M', date: 'May 5', feeling: 4, emoji: '😊', word: 'Good day', movements: ['PT exercises', 'Walk'], note: 'Felt pretty good after my walk — less stiffness than last week.', response: 'Something is shifting, Chris. Less stiffness, more ease — your body is responding. Today is proof that the quiet work is paying off.', done: true },
+  { id: 2, day: 'T', date: 'May 6', feeling: 3, emoji: '🙂', word: 'Getting there', movements: ['Stretching'], note: 'Did my stretches but skipped the walk. Felt okay.', response: "Chris, showing up even when it's just the minimum — that's still showing up. Stretching counts. You're doing the quiet work.", done: true },
   { id: 3, day: 'W', date: 'May 7', feeling: null, emoji: '', word: '', movements: [], note: '', response: '', done: false },
-  { id: 4, day: 'T', date: 'May 8', feeling: 4, emoji: '😊', word: 'Good day', movements: ['PT exercises'], note: 'Exercises done. Knee felt a little tight but I pushed through.', response: "Pushing through when it's not easy — that's where strength comes from, Glennis. A good day with a tight knee is worth celebrating.", done: true },
-  { id: 5, day: 'F', date: 'May 9', feeling: 3, emoji: '🙂', word: 'Getting there', movements: ['PT exercises'], note: 'Felt stiff getting up. Did my exercises anyway.', response: "Glennis, you showed up on a hard morning — and that takes real courage. The number doesn't tell the whole story. Doing your exercises when you didn't feel like it? That's the story.", done: true, today: true },
+  { id: 4, day: 'T', date: 'May 8', feeling: 4, emoji: '😊', word: 'Good day', movements: ['PT exercises'], note: 'Exercises done. Knee felt a little tight but I pushed through.', response: "Pushing through when it's not easy — that's where strength comes from, Chris. A good day with a tight knee is worth celebrating.", done: true },
+  { id: 5, day: 'F', date: 'May 9', feeling: 3, emoji: '🙂', word: 'Getting there', movements: ['PT exercises'], note: 'Felt stiff getting up. Did my exercises anyway.', response: "Chris, you showed up on a hard morning — and that takes real courage. The number doesn't tell the whole story. Doing your exercises when you didn't feel like it? That's the story.", done: true, today: true },
   { id: 6, day: 'S', date: 'May 10', feeling: null, emoji: '', word: '', movements: [], note: '', response: '', done: false },
   { id: 7, day: 'S', date: 'May 11', feeling: null, emoji: '', word: '', movements: [], note: '', response: '', done: false },
 ]
@@ -78,14 +78,14 @@ const [aiResponse, setAiResponse] = useState('')
       const noteText = note.trim() ? note.trim() : 'no note added'
       const feelingWord = selectedFeeling ? feelingData[selectedFeeling].word : 'not rated'
       
-      const prompt = `You are GlowPT, a warm and encouraging wellness companion for physical therapy patients. Write a short, personal response (3-4 sentences max) for Glennis based on her daily check-in. Be warm, specific, and uplifting — never clinical. Use her name once.
+      const prompt = `You are GlowPT, a warm and encouraging wellness companion for physical therapy patients. Write a short, personal response (3-4 sentences max) for Chris based on her daily check-in. Be warm, specific, and uplifting — never clinical. Use her name once.
 
 Her check-in today:
 - Feeling score: ${selectedFeeling || 'not rated'} out of 5 (${feelingWord})
 - Movement: ${movementText}
 - Her note: "${noteText}"
 
-Respond directly to Glennis in second person. Reference what she actually shared. End with one gentle encouragement.`
+Respond directly to Chris in second person. Reference what she actually shared. End with one gentle encouragement.`
 
       const result = await fetch('/.netlify/functions/ai-response', {
   method: 'POST',
@@ -294,7 +294,7 @@ if (data.response) {
             <div style={styles.welcomeMiddle}>
               <div style={styles.greeting}>
                 {greeting},<br />
-                <span style={styles.greetingEm}>Glennis.</span>
+                <span style={styles.greetingEm}>Chris.</span>
               </div>
               <div style={styles.welcomeSub}>Your daily check-in is waiting. It only takes a moment.</div>
             </div>
