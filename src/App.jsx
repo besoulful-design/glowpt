@@ -51,12 +51,70 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [journalDay, setJournalDay] = useState(null)
   const [greeting, setGreeting] = useState('Good evening')
-const [aiResponse, setAiResponse] = useState('')
+  const [aiResponse, setAiResponse] = useState('')
+
   useEffect(() => {
     const hour = new Date().getHours()
     if (hour < 12) setGreeting('Good morning')
     else if (hour < 17) setGreeting('Good afternoon')
     else setGreeting('Good evening')
+  }, [])
+
+  useEffect(() => {
+    // Apple Touch Icon — inline SVG as data URI so no extra file needed
+    const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+      <rect width="180" height="180" rx="36" fill="#0d1825"/>
+      <defs>
+        <radialGradient id="ati-haze" cx="50%" cy="90%" r="60%">
+          <stop offset="0%" stop-color="#e0a035" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#e0a035" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="ati-arc" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#c8861d" stop-opacity="0.15"/>
+          <stop offset="50%" stop-color="#e0a035"/>
+          <stop offset="100%" stop-color="#c8861d" stop-opacity="0.15"/>
+        </linearGradient>
+      </defs>
+      <ellipse cx="90" cy="122" rx="72" ry="26" fill="url(#ati-haze)"/>
+      <path d="M 28 122 A 62 62 0 0 1 152 122" fill="none" stroke="#c8861d" stroke-width="2" stroke-opacity="0.2" stroke-linecap="round"/>
+      <path d="M 42 122 A 48 48 0 0 1 138 122" fill="none" stroke="#c8861d" stroke-width="3" stroke-opacity="0.5" stroke-linecap="round"/>
+      <path d="M 58 122 A 32 32 0 0 1 122 122" fill="none" stroke="url(#ati-arc)" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="90" cy="122" r="20" fill="#e0a035" opacity="0.08"/>
+      <circle cx="90" cy="122" r="12" fill="#e0a035" opacity="0.18"/>
+      <circle cx="90" cy="122" r="7" fill="#e0a035"/>
+      <text x="52" y="74" font-family="Georgia, serif" font-style="italic" font-weight="400" font-size="34" fill="#f5efe4" letter-spacing="-1">Glow</text>
+      <text x="120" y="74" font-family="Arial, sans-serif" font-weight="700" font-size="34" fill="#c8861d" letter-spacing="-0.5">PT</text>
+    </svg>`
+
+    const encoded = `data:image/svg+xml,${encodeURIComponent(svgIcon)}`
+
+    const appleLink = document.createElement('link')
+    appleLink.rel = 'apple-touch-icon'
+    appleLink.sizes = '180x180'
+    appleLink.href = encoded
+    document.head.appendChild(appleLink)
+
+    const appTitle = document.createElement('meta')
+    appTitle.name = 'apple-mobile-web-app-title'
+    appTitle.content = 'GlowPT'
+    document.head.appendChild(appTitle)
+
+    const appCapable = document.createElement('meta')
+    appCapable.name = 'apple-mobile-web-app-capable'
+    appCapable.content = 'yes'
+    document.head.appendChild(appCapable)
+
+    const statusBar = document.createElement('meta')
+    statusBar.name = 'apple-mobile-web-app-status-bar-style'
+    statusBar.content = 'black-translucent'
+    document.head.appendChild(statusBar)
+
+    return () => {
+      document.head.removeChild(appleLink)
+      document.head.removeChild(appTitle)
+      document.head.removeChild(appCapable)
+      document.head.removeChild(statusBar)
+    }
   }, [])
 
   const today = new Date()
