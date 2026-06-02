@@ -47,6 +47,7 @@ export default function App() {
   const [screen, setScreen] = useState('welcome')
   const [selectedFeeling, setSelectedFeeling] = useState(null)
   const [movements, setMovements] = useState([])
+  const [otherMovement, setOtherMovement] = useState('')
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
   const [journalDay, setJournalDay] = useState(null)
@@ -75,15 +76,17 @@ export default function App() {
     let response = "You showed up today — and that's everything."
     
     try {
-      const movementText = movements.length > 0 ? movements.join(', ') : 'nothing logged'
+      const allMovements = [...movements, ...(otherMovement.trim() ? [otherMovement.trim()] : [])]
+      const movementText = allMovements.length > 0 ? allMovements.join(', ') : 'nothing logged'
       const noteText = note.trim() ? note.trim() : 'no note added'
       const feelingWord = selectedFeeling ? feelingData[selectedFeeling].word : 'not rated'
       
+      const isPlanningTo = movements.includes('Planning to do my exercises')
       const prompt = `You are GlowPT, a warm and encouraging wellness companion for physical therapy patients. Write a short, personal response (3-4 sentences max) for Chris based on her daily check-in. Be warm, specific, and uplifting — never clinical. Use her name once.
 
 Her check-in today:
 - Feeling score: ${selectedFeeling || 'not rated'} out of 5 (${feelingWord})
-- Movement: ${movementText}
+- Movement: ${movementText}${isPlanningTo ? ' (note: she is planning to do her exercises later today, not done yet)' : ''}
 - Her note: "${noteText}"
 
 Respond directly to Chris in second person. Reference what she actually shared. End with one gentle encouragement.`
@@ -106,6 +109,7 @@ if (data.response) {
       feeling: selectedFeeling,
       feeling_word: selectedFeeling ? feelingData[selectedFeeling].word : '',
       movements: movements,
+      other_movement: otherMovement.trim() || null,
       note: note,
       ai_response: response,
     })
@@ -185,6 +189,7 @@ if (data.response) {
       flexShrink: 0, background: checked ? '#c8861d' : 'transparent', transition: 'all 0.2s'
     }),
     movementLabel: (checked) => ({ fontSize: '15px', color: checked ? '#f5efe4' : 'rgba(245,239,228,0.7)', fontWeight: checked ? 500 : 400 }),
+    otherInput: { flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", fontSize: '15px', fontWeight: 500, placeholder: 'rgba(245,239,228,0.35)' },
 
     // Note
     noteField: { width: '100%', background: '#1a2840', border: '1px solid rgba(245,239,228,0.08)', borderRadius: '4px', padding: '16px', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", fontSize: '15px', lineHeight: 1.6, resize: 'none', outline: 'none', minHeight: '90px' },
@@ -275,7 +280,9 @@ if (data.response) {
         * { box-sizing: border-box; }
         body { margin: 0; background: #0d1825; }
         textarea::placeholder { color: rgba(245,239,228,0.35); font-style: italic; font-family: 'Fraunces', serif; }
+        input::placeholder { color: rgba(245,239,228,0.35); font-style: italic; font-family: 'DM Sans', sans-serif; }
         textarea:focus { border-color: rgba(200,134,29,0.4) !important; outline: none; }
+        input:focus { border-color: rgba(200,134,29,0.4) !important; }
         button:active { opacity: 0.85; }
       `}</style>
 
@@ -342,7 +349,7 @@ if (data.response) {
                 <div style={styles.qLabel}>Movement</div>
                 <div style={styles.qQuestion}>What did you do today?</div>
                 <div style={styles.movementList}>
-                  {['PT exercises', 'Walk or light activity', 'Stretching', 'Rest day'].map(item => {
+                  {['PT exercises', 'Walk or light activity', 'Stretching', 'Rest day', 'Planning to do my exercises'].map(item => {
                     const checked = movements.includes(item)
                     return (
                       <div key={item} style={styles.movementItem(checked)} onClick={() => toggleMovement(item)}>
@@ -353,6 +360,26 @@ if (data.response) {
                       </div>
                     )
                   })}
+                  {/* Other — reveals text input when checked */}
+                  <div style={{...styles.movementItem(movements.includes('Other')), flexDirection: 'column', alignItems: 'stretch', gap: '10px'}}
+                    onClick={() => { if (!movements.includes('Other')) toggleMovement('Other') }}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '14px'}}>
+                      <div style={styles.checkBox(movements.includes('Other'))} onClick={(e) => { e.stopPropagation(); toggleMovement('Other') }}>
+                        {movements.includes('Other') && <svg width="12" height="9" viewBox="0 0 12 9" fill="none"><path d="M1 4L4.5 7.5L11 1" stroke="#0d1825" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      </div>
+                      <span style={styles.movementLabel(movements.includes('Other'))}>Other</span>
+                    </div>
+                    {movements.includes('Other') && (
+                      <input
+                        type="text"
+                        placeholder="Pilates, meditation, swimming…"
+                        value={otherMovement}
+                        onChange={e => setOtherMovement(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        style={{ background: 'rgba(245,239,228,0.06)', border: '1px solid rgba(200,134,29,0.3)', borderRadius: '4px', padding: '10px 14px', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
