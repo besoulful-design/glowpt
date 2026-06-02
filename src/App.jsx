@@ -260,7 +260,7 @@ if (data.response) {
         body { margin: 0; background: #0d1825; }
       `}</style>
       <div style={styles.loadingWrap}>
-        <LogoMark size={80} />
+        <LogoMark size={160} />
         <div style={styles.loadingText}>Reflecting on your day…</div>
         <div style={styles.loadingDots}>
           {[0,1,2].map(i => <div key={i} style={styles.loadingDot(i)} />)}
@@ -292,7 +292,7 @@ if (data.response) {
         {screen === 'welcome' && (
           <div style={styles.welcomeWrap}>
             <div style={styles.welcomeTop}>
-              <div style={styles.logoFloat}><LogoMark size={110} /></div>
+              <div style={styles.logoFloat}><LogoMark size={220} /></div>
               <div style={styles.wordmark}>
                 <span style={styles.logoGlow}>Glow</span>
                 <span style={styles.logoPT}>PT</span>
@@ -410,7 +410,7 @@ if (data.response) {
             <div style={styles.responseTop}>
               <div style={styles.responseMark}>
                 <div style={{position:'absolute',inset:'-12px',borderRadius:'50%',background:'radial-gradient(circle,rgba(224,160,53,0.2) 0%,transparent 70%)',animation:'pulse 2.5s ease-in-out infinite'}} />
-                <LogoMark size={90} />
+                <LogoMark size={180} />
               </div>
 
               <div style={styles.responseEyebrow}>Today's reflection</div>
