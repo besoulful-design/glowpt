@@ -140,7 +140,7 @@ if (data.response) {
     logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '58px', color: '#c8861d', letterSpacing: '-0.02em', lineHeight: 1 },
     tagline: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '18px', color: 'rgba(200,134,29,0.75)', textAlign: 'center' },
     welcomeMiddle: { textAlign: 'center', padding: '0 8px' },
-    greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '32px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '16px', letterSpacing: '-0.01em' },
+    greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '32px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '36px', letterSpacing: '-0.01em' },
     greetingEm: { fontStyle: 'italic', color: '#e0a035' },
     welcomeSub: { fontSize: '15px', lineHeight: 1.6, color: 'rgba(245,239,228,0.5)', maxWidth: '30ch', margin: '0 auto' },
     welcomeBottom: { display: 'flex', flexDirection: 'column', gap: '14px' },
@@ -301,8 +301,7 @@ if (data.response) {
             </div>
             <div style={styles.welcomeMiddle}>
               <div style={styles.greeting}>
-                {greeting},<br />
-                <span style={styles.greetingEm}>Chris.</span>
+                {greeting}, <span style={styles.greetingEm}>Chris.</span>
               </div>
               <div style={styles.welcomeSub}>Your daily check-in is waiting. It only takes a moment.</div>
             </div>
