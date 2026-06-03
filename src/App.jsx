@@ -359,7 +359,7 @@ if (data.response) {
                       </div>
                     )
                   })}
-                  {/* Other — checkbox item with inline input when checked */}
+                  {/* Other — checkbox item with always-visible input */}
                   {(() => {
                     const checked = movements.includes('Other')
                     return (
@@ -371,16 +371,19 @@ if (data.response) {
                           </div>
                           <span style={styles.movementLabel(checked)}>Other</span>
                         </div>
-                        {checked && (
-                          <input
-                            type="text"
-                            placeholder="Pilates, meditation, swimming…"
-                            value={otherMovement}
-                            onChange={e => setOtherMovement(e.target.value)}
-                            onClick={e => e.stopPropagation()}
-                            style={{ background: 'rgba(245,239,228,0.06)', border: '1px solid rgba(200,134,29,0.3)', borderRadius: '4px', padding: '10px 14px', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', outline: 'none', width: '100%', boxSizing: 'border-box' }}
-                          />
-                        )}
+                        <input
+                          type="text"
+                          placeholder="Pilates, meditation, swimming…"
+                          value={otherMovement}
+                          onChange={e => {
+                            setOtherMovement(e.target.value)
+                            if (e.target.value.trim() && !movements.includes('Other')) {
+                              setMovements(prev => [...prev, 'Other'])
+                            }
+                          }}
+                          onClick={e => e.stopPropagation()}
+                          style={{ background: 'rgba(245,239,228,0.06)', border: '1px solid rgba(200,134,29,0.3)', borderRadius: '4px', padding: '10px 14px', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                        />
                       </div>
                     )
                   })()}
