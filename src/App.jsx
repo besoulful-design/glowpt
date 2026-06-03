@@ -20,7 +20,7 @@ const pastDays = [
   { id: 7, day: 'S', date: 'May 11', feeling: null, emoji: '', word: '', movements: [], note: '', response: '', done: false },
 ]
 
-const LogoMark = ({ size = 110 }) => (
+const LogoMark = ({ size = 220 }) => (
   <svg width={size} height={Math.round(size * 0.58)} viewBox="0 0 130 75" fill="none">
     <defs>
       <radialGradient id="haze" cx="50%" cy="100%" r="70%">
@@ -132,15 +132,15 @@ if (data.response) {
     screen: { maxWidth: '430px', margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '0' },
 
     // Welcome
-    welcomeWrap: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '60px 32px 48px', minHeight: '100vh' },
-    welcomeTop: { display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '40px' },
-    logoFloat: { marginBottom: '28px', animation: 'float 4s ease-in-out infinite' },
+    welcomeWrap: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px 32px 48px', minHeight: '100vh' },
+    welcomeTop: { display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '0px' },
+    logoFloat: { marginBottom: '16px', animation: 'float 4s ease-in-out infinite' },
     wordmark: { display: 'flex', alignItems: 'baseline', marginBottom: '12px' },
-    logoGlow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '52px', color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
-    logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '52px', color: '#c8861d', letterSpacing: '-0.02em', lineHeight: 1 },
-    tagline: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '16px', color: 'rgba(200,134,29,0.75)', textAlign: 'center' },
+    logoGlow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '78px', color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
+    logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '78px', color: '#c8861d', letterSpacing: '-0.02em', lineHeight: 1 },
+    tagline: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '24px', color: 'rgba(200,134,29,0.75)', textAlign: 'center' },
     welcomeMiddle: { textAlign: 'center', padding: '0 8px' },
-    greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '28px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '16px', letterSpacing: '-0.01em' },
+    greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '42px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '16px', letterSpacing: '-0.01em' },
     greetingEm: { fontStyle: 'italic', color: '#e0a035' },
     welcomeSub: { fontSize: '15px', lineHeight: 1.6, color: 'rgba(245,239,228,0.5)', maxWidth: '30ch', margin: '0 auto' },
     welcomeBottom: { display: 'flex', flexDirection: 'column', gap: '14px' },
@@ -292,7 +292,7 @@ if (data.response) {
         {screen === 'welcome' && (
           <div style={styles.welcomeWrap}>
             <div style={styles.welcomeTop}>
-              <div style={styles.logoFloat}><LogoMark size={220} /></div>
+              <div style={styles.logoFloat}><LogoMark size={330} /></div>
               <div style={styles.wordmark}>
                 <span style={styles.logoGlow}>Glow</span>
                 <span style={styles.logoPT}>PT</span>
