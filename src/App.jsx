@@ -359,25 +359,31 @@ if (data.response) {
                       </div>
                     )
                   })}
-                  {/* Other — always visible input, note-style */}
-                  <div style={styles.qBlock}>
-                    <div style={styles.qLabel}>Something else?</div>
-                    <div style={styles.qQuestion}>Pilates, swimming, meditation…</div>
-                    <input
-                      type="text"
-                      placeholder="What did you do?"
-                      value={otherMovement}
-                      onChange={e => {
-                        setOtherMovement(e.target.value)
-                        if (e.target.value.trim() && !movements.includes('Other')) {
-                          setMovements(prev => [...prev, 'Other'])
-                        } else if (!e.target.value.trim()) {
-                          setMovements(prev => prev.filter(m => m !== 'Other'))
-                        }
-                      }}
-                      style={{ background: '#1a2840', border: '1px solid rgba(245,239,228,0.08)', borderRadius: '4px', padding: '16px', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", fontSize: '15px', outline: 'none', width: '100%', boxSizing: 'border-box' }}
-                    />
-                  </div>
+                  {/* Other — checkbox item with inline input when checked */}
+                  {(() => {
+                    const checked = movements.includes('Other')
+                    return (
+                      <div style={{...styles.movementItem(checked), flexDirection: 'column', alignItems: 'stretch', gap: '10px'}}
+                        onClick={() => { if (!checked) toggleMovement('Other') }}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '14px'}}>
+                          <div style={styles.checkBox(checked)} onClick={(e) => { e.stopPropagation(); toggleMovement('Other') }}>
+                            {checked && <svg width="12" height="9" viewBox="0 0 12 9" fill="none"><path d="M1 4L4.5 7.5L11 1" stroke="#0d1825" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </div>
+                          <span style={styles.movementLabel(checked)}>Other</span>
+                        </div>
+                        {checked && (
+                          <input
+                            type="text"
+                            placeholder="Pilates, meditation, swimming…"
+                            value={otherMovement}
+                            onChange={e => setOtherMovement(e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            style={{ background: 'rgba(245,239,228,0.06)', border: '1px solid rgba(200,134,29,0.3)', borderRadius: '4px', padding: '10px 14px', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                          />
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
 
