@@ -138,7 +138,7 @@ Respond directly to Chris in second person. Reference what she actually shared. 
     wordmark: { display: 'flex', alignItems: 'baseline', marginBottom: '12px' },
     logoGlow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '52px', color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
     logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '52px', color: '#c8861d', letterSpacing: '-0.02em', lineHeight: 1 },
-    tagline: { fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '22px', color: 'rgba(200,134,29,0.85)', textAlign: 'center', letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.2 },
+    tagline: { fontFamily: "'DM Sans', sans-serif", fontWeight: 300, fontSize: '20px', color: 'rgba(200,134,29,0.8)', textAlign: 'center', letterSpacing: '0.22em', lineHeight: 1.2 },
     welcomeMiddle: { textAlign: 'center', padding: '0 8px' },
     greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '36px', letterSpacing: '-0.01em' },
     greetingEm: { fontStyle: 'italic', color: '#e0a035' },
