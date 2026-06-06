@@ -141,7 +141,7 @@ Respond directly to Chris in second person. Reference what she actually shared. 
     tagline: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '21px', color: 'rgba(200,134,29,0.85)', textAlign: 'center', letterSpacing: '0.01em', lineHeight: 1.2 },
     welcomeMiddle: { textAlign: 'center', padding: '0 8px' },
     greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '36px', letterSpacing: '-0.01em' },
-    greetingEm: { fontStyle: 'italic', color: '#e0a035' },
+    greetingEm: { color: '#e0a035' },
     welcomeSub: { fontSize: '15px', lineHeight: 1.6, color: 'rgba(245,239,228,0.5)', maxWidth: '30ch', margin: '0 auto' },
     welcomeBottom: { display: 'flex', flexDirection: 'column', gap: '14px' },
 
