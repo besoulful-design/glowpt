@@ -138,9 +138,9 @@ Respond directly to Chris in second person. Reference what she actually shared. 
     wordmark: { display: 'flex', alignItems: 'baseline', marginBottom: '12px' },
     logoGlow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '52px', color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
     logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '52px', color: '#c8861d', letterSpacing: '-0.02em', lineHeight: 1 },
-    tagline: { fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontWeight: 300, fontSize: '36px', color: 'rgba(200,134,29,0.75)', textAlign: 'center', letterSpacing: '0.02em' },
+    tagline: { fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: '22px', color: 'rgba(200,134,29,0.85)', textAlign: 'center', letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.2 },
     welcomeMiddle: { textAlign: 'center', padding: '0 8px' },
-    greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '29px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '36px', letterSpacing: '-0.01em' },
+    greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '36px', letterSpacing: '-0.01em' },
     greetingEm: { fontStyle: 'italic', color: '#e0a035' },
     welcomeSub: { fontSize: '15px', lineHeight: 1.6, color: 'rgba(245,239,228,0.5)', maxWidth: '30ch', margin: '0 auto' },
     welcomeBottom: { display: 'flex', flexDirection: 'column', gap: '14px' },
@@ -252,7 +252,7 @@ Respond directly to Chris in second person. Reference what she actually shared. 
   if (loading) return (
     <div style={styles.app}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
         @keyframes breathe { 0%,100%{opacity:0.5} 50%{opacity:1} }
         @keyframes dotPulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
@@ -272,7 +272,7 @@ Respond directly to Chris in second person. Reference what she actually shared. 
   return (
     <div style={styles.app}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
         @keyframes breathe { 0%,100%{opacity:0.5} 50%{opacity:1} }
         @keyframes dotPulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
