@@ -92,15 +92,15 @@ Her check-in today:
 Respond directly to Chris in second person. Reference what she actually shared. End with one gentle encouragement.`
 
       const result = await fetch('/.netlify/functions/ai-response', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ prompt })
-})
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      })
 
-const data = await result.json()
-if (data.response) {
-  response = data.response
-}
+      const data = await result.json()
+      if (data.response) {
+        response = data.response
+      }
     } catch (err) {
       console.log('AI error:', err)
     }
@@ -115,7 +115,7 @@ if (data.response) {
     })
     
     if (error) console.log('Save error:', error)
-      setAiResponse(response)
+    setAiResponse(response)
     
     setLoading(false)
     setScreen('response')
@@ -138,7 +138,7 @@ if (data.response) {
     wordmark: { display: 'flex', alignItems: 'baseline', marginBottom: '12px' },
     logoGlow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '52px', color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
     logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '52px', color: '#c8861d', letterSpacing: '-0.02em', lineHeight: 1 },
-    tagline: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '16px', color: 'rgba(200,134,29,0.75)', textAlign: 'center' },
+    tagline: { fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontWeight: 300, fontSize: '36px', color: 'rgba(200,134,29,0.75)', textAlign: 'center', letterSpacing: '0.02em' },
     welcomeMiddle: { textAlign: 'center', padding: '0 8px' },
     greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '29px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '36px', letterSpacing: '-0.01em' },
     greetingEm: { fontStyle: 'italic', color: '#e0a035' },
@@ -170,7 +170,7 @@ if (data.response) {
       transform: selected ? 'scale(1.06)' : 'scale(1)',
       transition: 'all 0.2s', boxShadow: selected ? '0 4px 18px rgba(200,134,29,0.4)' : 'none'
     }),
-    feelingNum: (selected) => ({ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: selected ? 600 : 400, color: selected ? '#0d1825' : 'rgba(245,239,228,0.7)', lineHeight: 1 }),
+    feelingNum: (selected) => ({ fontFamily: "'Fraunces', serif", fontSize: '36px', fontWeight: selected ? 600 : 400, color: selected ? '#0d1825' : 'rgba(245,239,228,0.7)', lineHeight: 1 }),
     feelingEmoji: { fontSize: '20px', lineHeight: 1 },
     feelingWord: (selected) => ({ fontSize: '10px', color: selected ? 'rgba(13,24,37,0.75)' : 'rgba(245,239,228,0.35)', fontWeight: 500, letterSpacing: '0.04em', textAlign: 'center', lineHeight: 1.2 }),
 
@@ -199,7 +199,7 @@ if (data.response) {
     responseTop: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: '20px' },
     responseMark: { marginBottom: '32px', position: 'relative' },
     responseEyebrow: { fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#c8861d', fontWeight: 600, marginBottom: '20px' },
-    responseMessage: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '24px', lineHeight: 1.45, color: '#f5efe4', letterSpacing: '-0.01em', marginBottom: '32px', maxWidth: '28ch' },
+    responseMessage: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.45, color: '#f5efe4', letterSpacing: '-0.01em', marginBottom: '32px', maxWidth: '28ch' },
     statsRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', width: '100%', marginBottom: '28px' },
     statCard: { background: '#1a2840', border: '1px solid rgba(200,134,29,0.2)', borderRadius: '4px', padding: '16px', textAlign: 'left' },
     statLabel: { fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c8861d', fontWeight: 600, marginBottom: '6px' },
@@ -226,7 +226,7 @@ if (data.response) {
     // Journal
     journalHeader: { padding: '56px 28px 28px', borderBottom: '1px solid rgba(245,239,228,0.07)' },
     journalBack: { fontSize: '13px', color: '#c8861d', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', marginBottom: '20px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
-    journalDayName: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.1, color: '#f5efe4', letterSpacing: '-0.02em', fontStyle: 'italic', color: '#e0a035' },
+    journalDayName: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.1, color: '#e0a035', letterSpacing: '-0.02em', fontStyle: 'italic' },
     journalDateSub: { fontSize: '13px', color: 'rgba(245,239,228,0.5)', marginTop: '6px', fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
     journalBody: { padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '60px' },
     journalSection: { display: 'flex', flexDirection: 'column', gap: '10px' },
@@ -252,7 +252,7 @@ if (data.response) {
   if (loading) return (
     <div style={styles.app}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
         @keyframes breathe { 0%,100%{opacity:0.5} 50%{opacity:1} }
         @keyframes dotPulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
@@ -272,7 +272,7 @@ if (data.response) {
   return (
     <div style={styles.app}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
         @keyframes breathe { 0%,100%{opacity:0.5} 50%{opacity:1} }
         @keyframes dotPulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
@@ -421,8 +421,7 @@ if (data.response) {
               </div>
 
               <div style={styles.responseEyebrow}>Today's reflection</div>
-              <div style={styles.responseMessage}>
-                {aiResponse}</div>
+              <div style={styles.responseMessage}>{aiResponse}</div>
 
               <div style={styles.statsRow}>
                 <div style={styles.statCard}>
