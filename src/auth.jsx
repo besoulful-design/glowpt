@@ -25,7 +25,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   // Load (and if needed, finish setting up) the profile for a signed-in user.
-  async function loadProfile(userId) {
+  // `user` is the full auth user (we read user_metadata, which travels with the
+  // account across any browser/device — unlike localStorage).
+  async function loadProfile(user) {
+    const userId = user.id
+    const meta = user.user_metadata || {}
+
     // Apply a pending clinic ONBOARD, if the user arrived from the /onboard flow.
     const onboardRaw = localStorage.getItem(PENDING_ONBOARD_KEY)
     if (onboardRaw) {
@@ -40,43 +45,46 @@ export function AuthProvider({ children }) {
       localStorage.removeItem(PENDING_ONBOARD_KEY)
     }
 
-    // Apply a pending clinic join, if the user arrived from a /join/<slug> link.
-    const pendingRaw = localStorage.getItem(PENDING_JOIN_KEY)
-    if (pendingRaw) {
-      try {
-        const { slug, fullName, consentVersion } = JSON.parse(pendingRaw)
-        const { data: clinic } = await supabase
-          .from('clinics').select('id').eq('slug', slug).single()
-        if (clinic) {
-          await supabase.from('profiles').upsert({
-            id: userId,
-            clinic_id: clinic.id,
-            role: 'patient',
-            full_name: fullName || null,
-          }, { onConflict: 'id' })
-          // Record the patient's HIPAA acknowledgment (who / when / which version).
-          if (consentVersion) {
-            await supabase.from('consents').insert({
-              user_id: userId,
-              clinic_id: clinic.id,
-              type: 'hipaa_patient_ack',
-              version: consentVersion,
-            })
-          }
+    // Load the current profile.
+    let prof = (await supabase
+      .from('profiles').select('id, clinic_id, role, full_name, therapist_id').eq('id', userId).single()).data
+
+    // Complete a pending patient JOIN if not yet attached to a clinic.
+    // Prefer sign-up metadata (survives across browsers/devices); fall back to localStorage.
+    if (!prof?.clinic_id) {
+      let joinSlug = meta.clinic_slug
+      let joinName = meta.full_name
+      let joinConsent = meta.consent_version
+      if (!joinSlug) {
+        const pendingRaw = localStorage.getItem(PENDING_JOIN_KEY)
+        if (pendingRaw) {
+          try { const p = JSON.parse(pendingRaw); joinSlug = p.slug; joinName = p.fullName; joinConsent = p.consentVersion } catch { /* ignore */ }
         }
-      } catch (err) {
-        console.log('Pending join failed:', err.message)
+      }
+      if (joinSlug) {
+        try {
+          const { data: clinic } = await supabase.from('clinics').select('id').eq('slug', joinSlug).single()
+          if (clinic) {
+            await supabase.from('profiles').upsert({
+              id: userId, clinic_id: clinic.id, role: 'patient',
+              full_name: joinName || prof?.full_name || null,
+            }, { onConflict: 'id' })
+            if (joinConsent) {
+              await supabase.from('consents').insert({
+                user_id: userId, clinic_id: clinic.id, type: 'hipaa_patient_ack', version: joinConsent,
+              })
+            }
+            prof = (await supabase
+              .from('profiles').select('id, clinic_id, role, full_name, therapist_id').eq('id', userId).single()).data || prof
+          }
+        } catch (err) {
+          console.log('Pending join failed:', err.message)
+        }
       }
       localStorage.removeItem(PENDING_JOIN_KEY)
     }
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, clinic_id, role, full_name, therapist_id')
-      .eq('id', userId)
-      .single()
-    if (error) console.log('Profile load error:', error.message)
-    setProfile(data || null)
+    setProfile(prof || null)
   }
 
   useEffect(() => {
@@ -92,7 +100,7 @@ export function AuthProvider({ children }) {
       if (session?.user) {
         setTimeout(async () => {
           if (!active) return
-          await loadProfile(session.user.id)
+          await loadProfile(session.user)
           if (active) setLoading(false)
         }, 0)
       } else {
@@ -111,7 +119,7 @@ export function AuthProvider({ children }) {
   }
 
   async function refreshProfile() {
-    if (session?.user) await loadProfile(session.user.id)
+    if (session?.user) await loadProfile(session.user)
   }
 
   const value = { session, user: session?.user ?? null, profile, loading, signOut, refreshProfile }
