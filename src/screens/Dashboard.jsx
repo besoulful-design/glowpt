@@ -3,6 +3,7 @@ import { supabase } from '../supabase'
 import { useAuth } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
 import { fetchClinicData, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
+import QRCode from 'qrcode'
 
 const FEELING_COLOR = { 1: '#c0554d', 2: '#cf7a4a', 3: '#c8861d', 4: '#9bb06a', 5: '#6fae7a' }
 
@@ -26,6 +27,11 @@ const s = {
   linkLabel: { fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c8861d', fontWeight: 600, marginBottom: 6 },
   linkUrl: { fontSize: 15, color: '#f5efe4', wordBreak: 'break-all' },
   copyBtn: { background: '#c8861d', color: '#0d1825', border: 'none', borderRadius: 4, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
+  qrCard: { background: '#1a2840', border: '1px solid rgba(200,134,29,0.2)', borderRadius: 6, padding: 20, marginBottom: 28, display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' },
+  qrImg: { width: 116, height: 116, borderRadius: 6, background: '#fff', padding: 6, flexShrink: 0 },
+  qrLabel: { fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c8861d', fontWeight: 600, marginBottom: 6 },
+  qrHint: { fontSize: 13.5, color: 'rgba(245,239,228,0.65)', lineHeight: 1.55, marginBottom: 12, maxWidth: '46ch' },
+  qrDownload: { display: 'inline-block', background: '#c8861d', color: '#0d1825', textDecoration: 'none', fontWeight: 600, fontSize: 14, padding: '10px 18px', borderRadius: 4 },
   rosterHead: { display: 'grid', gridTemplateColumns: '1.6fr 1fr 0.8fr 1.4fr 0.8fr 1.2fr', gap: 12, padding: '0 16px 10px', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
   row: { display: 'grid', gridTemplateColumns: '1.6fr 1fr 0.8fr 1.4fr 0.8fr 1.2fr', gap: 12, alignItems: 'center', background: '#1a2840', border: '1px solid rgba(245,239,228,0.06)', borderRadius: 6, padding: '14px 16px', marginBottom: 8 },
   name: { fontSize: 15, fontWeight: 500 },
@@ -58,6 +64,7 @@ export default function Dashboard() {
   const [roster, setRoster] = useState([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [qrUrl, setQrUrl] = useState('')
   const logged = useRef(false)
 
   const isManager = profile?.role === 'manager'
@@ -79,6 +86,14 @@ export default function Dashboard() {
     })()
     return () => { active = false }
   }, [profile, user])
+
+  // Generate a printable QR code of the clinic's patient invite link.
+  useEffect(() => {
+    if (!clinic) { setQrUrl(''); return }
+    const url = `${window.location.origin}/join/${clinic.slug}`
+    QRCode.toDataURL(url, { width: 320, margin: 2, color: { dark: '#0d1825', light: '#ffffff' } })
+      .then(setQrUrl).catch(() => setQrUrl(''))
+  }, [clinic])
 
   const stats = clinicStats(roster)
   const joinUrl = clinic ? `${window.location.origin}/join/${clinic.slug}` : ''
@@ -138,6 +153,17 @@ export default function Dashboard() {
               </div>
               <button style={s.copyBtn} onClick={copyLink}>{copied ? 'Copied ✓' : 'Copy link'}</button>
             </div>
+
+            {qrUrl && (
+              <div style={s.qrCard}>
+                <img src={qrUrl} alt="Patient sign-up QR code" style={s.qrImg} />
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={s.qrLabel}>Patient sign-up QR</div>
+                  <div style={s.qrHint}>Print this for your front desk and treatment rooms. Patients scan it with their phone camera to join — no links to send.</div>
+                  <a href={qrUrl} download={`glowpt-${clinic?.slug || 'clinic'}-qr.png`} style={s.qrDownload}>Download QR ↓</a>
+                </div>
+              </div>
+            )}
           </>
         )}
 
