@@ -1,6 +1,7 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './auth'
 import { AuthShell, LogoMark, ui } from './screens/AuthShell'
+import Landing from './screens/Landing'
 import Join from './screens/Join'
 import Login from './screens/Login'
 import Onboard from './screens/Onboard'
@@ -11,13 +12,13 @@ function Splash() {
   return <AuthShell><LogoMark size={200} /><div style={ui.muted}>Loading…</div></AuthShell>
 }
 
-// Decides what a signed-in user sees based on their role.
+// Decides what a visitor sees at "/": the public landing page when logged out,
+// or their app/dashboard when signed in (by role).
 function Home() {
   const { session, profile, loading } = useAuth()
-  const location = useLocation()
 
   if (loading) return <Splash />
-  if (!session) return <Navigate to="/login" replace state={{ from: location }} />
+  if (!session) return <Landing />
 
   const role = profile?.role || 'patient'
   if (role === 'therapist' || role === 'manager') return <Navigate to="/dashboard" replace />
