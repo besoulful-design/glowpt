@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
-import { useAuth, savePendingOnboard } from '../auth'
+import { savePendingOnboard } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
 
 function slugify(s) {
@@ -21,9 +20,6 @@ live with real patients.`
 
 // /onboard — a clinic creates its account, reviews the BAA, and gets its patient link.
 export default function Onboard() {
-  const { session } = useAuth()
-  const navigate = useNavigate()
-
   const [clinicName, setClinicName] = useState('')
   const [slug, setSlug] = useState('')
   const [slugEdited, setSlugEdited] = useState(false)
@@ -43,6 +39,7 @@ export default function Onboard() {
     if (!clinicName.trim()) return setError('Please enter your clinic name.')
     if (!effectiveSlug) return setError('Please enter a valid clinic web name.')
     if (!fullName.trim()) return setError('Please enter your name.')
+    if (!email.trim()) return setError('Please enter your work email.')
     if (!baaReviewed) return setError('Please confirm you’ve reviewed the BAA.')
     setBusy(true)
 
@@ -50,22 +47,15 @@ export default function Onboard() {
     const { data: existing } = await supabase.from('clinics').select('id').eq('slug', effectiveSlug).maybeSingle()
     if (existing) { setBusy(false); return setError('That clinic web name is taken — try another.') }
 
-    if (session?.user) {
-      // Already signed in — create the clinic right away.
-      const { error: rpcErr } = await supabase.rpc('provision_clinic', { p_name: clinicName.trim(), p_slug: effectiveSlug })
-      if (rpcErr) { setBusy(false); return setError(rpcErr.message) }
-      if (fullName.trim()) await supabase.from('profiles').update({ full_name: fullName.trim() }).eq('id', session.user.id)
-      setBusy(false)
-      navigate('/dashboard')
-      return
-    }
-
-    // Not signed in — stash the clinic details and send a magic link.
-    if (!email.trim()) { setBusy(false); return setError('Please enter your email.') }
+    // Always create the clinic under the entered email (a fresh manager account),
+    // via magic link — so onboarding never hijacks whoever is currently signed in.
     savePendingOnboard(clinicName.trim(), effectiveSlug, fullName.trim())
     const { error: otpErr } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: window.location.origin + '/dashboard' },
+      options: {
+        emailRedirectTo: window.location.origin + '/dashboard',
+        data: { full_name: fullName.trim(), onboard_clinic_name: clinicName.trim(), onboard_clinic_slug: effectiveSlug },
+      },
     })
     setBusy(false)
     if (otpErr) return setError(otpErr.message)
@@ -102,10 +92,8 @@ export default function Onboard() {
           onChange={e => { setSlugEdited(true); setSlug(slugify(e.target.value)) }} />
         <input style={ui.input} placeholder="Your name" value={fullName}
           onChange={e => setFullName(e.target.value)} autoComplete="name" />
-        {!session && (
-          <input style={ui.input} placeholder="Your work email" type="email" value={email}
-            onChange={e => setEmail(e.target.value)} autoComplete="email" />
-        )}
+        <input style={ui.input} placeholder="Your work email" type="email" value={email}
+          onChange={e => setEmail(e.target.value)} autoComplete="email" />
 
         <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.6)', cursor: 'pointer', marginTop: 2 }}>
           <input type="checkbox" checked={baaReviewed} onChange={e => setBaaReviewed(e.target.checked)}

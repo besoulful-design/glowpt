@@ -30,58 +30,60 @@ export function AuthProvider({ children }) {
   async function loadProfile(user) {
     const userId = user.id
     const meta = user.user_metadata || {}
-
-    // Apply a pending clinic ONBOARD, if the user arrived from the /onboard flow.
-    const onboardRaw = localStorage.getItem(PENDING_ONBOARD_KEY)
-    if (onboardRaw) {
-      try {
-        const { clinicName, slug, fullName } = JSON.parse(onboardRaw)
-        const { error } = await supabase.rpc('provision_clinic', { p_name: clinicName, p_slug: slug })
-        if (error) console.log('provision_clinic error:', error.message)
-        if (fullName) await supabase.from('profiles').update({ full_name: fullName }).eq('id', userId)
-      } catch (err) {
-        console.log('Pending onboard failed:', err.message)
-      }
-      localStorage.removeItem(PENDING_ONBOARD_KEY)
-    }
+    const COLS = 'id, clinic_id, role, full_name, therapist_id'
 
     // Load the current profile.
-    let prof = (await supabase
-      .from('profiles').select('id, clinic_id, role, full_name, therapist_id').eq('id', userId).single()).data
+    let prof = (await supabase.from('profiles').select(COLS).eq('id', userId).single()).data
 
-    // Complete a pending patient JOIN if not yet attached to a clinic.
-    // Prefer sign-up metadata (survives across browsers/devices); fall back to localStorage.
+    // If not yet attached to a clinic, finish a pending ONBOARD or JOIN.
+    // Guarded by !clinic_id so it runs only once (prevents duplicate clinics on re-login).
     if (!prof?.clinic_id) {
-      let joinSlug = meta.clinic_slug
-      let joinName = meta.full_name
-      let joinConsent = meta.consent_version
-      if (!joinSlug) {
-        const pendingRaw = localStorage.getItem(PENDING_JOIN_KEY)
-        if (pendingRaw) {
-          try { const p = JSON.parse(pendingRaw); joinSlug = p.slug; joinName = p.fullName; joinConsent = p.consentVersion } catch { /* ignore */ }
-        }
+      // Onboard details — signup metadata first, localStorage fallback.
+      let obName = meta.onboard_clinic_name
+      let obSlug = meta.onboard_clinic_slug
+      const onboardRaw = localStorage.getItem(PENDING_ONBOARD_KEY)
+      if (!obSlug && onboardRaw) {
+        try { const o = JSON.parse(onboardRaw); obName = o.clinicName; obSlug = o.slug } catch { /* ignore */ }
       }
-      if (joinSlug) {
-        try {
+      localStorage.removeItem(PENDING_ONBOARD_KEY)
+
+      // Join details — signup metadata first, localStorage fallback.
+      let joinSlug = meta.clinic_slug
+      let joinConsent = meta.consent_version
+      const pendingRaw = localStorage.getItem(PENDING_JOIN_KEY)
+      if (!joinSlug && pendingRaw) {
+        try { const p = JSON.parse(pendingRaw); joinSlug = p.slug; joinConsent = p.consentVersion } catch { /* ignore */ }
+      }
+      localStorage.removeItem(PENDING_JOIN_KEY)
+
+      const name = meta.full_name || prof?.full_name || null
+
+      try {
+        if (obSlug && obName) {
+          // Clinic onboarding: create the clinic; this user becomes its manager.
+          const { error } = await supabase.rpc('provision_clinic', { p_name: obName, p_slug: obSlug })
+          if (error) console.log('provision_clinic error:', error.message)
+          if (name) await supabase.from('profiles').update({ full_name: name }).eq('id', userId)
+        } else if (joinSlug) {
+          // Patient join: attach to an existing clinic + record HIPAA consent.
           const { data: clinic } = await supabase.from('clinics').select('id').eq('slug', joinSlug).single()
           if (clinic) {
-            await supabase.from('profiles').upsert({
-              id: userId, clinic_id: clinic.id, role: 'patient',
-              full_name: joinName || prof?.full_name || null,
-            }, { onConflict: 'id' })
+            await supabase.from('profiles').upsert(
+              { id: userId, clinic_id: clinic.id, role: 'patient', full_name: name },
+              { onConflict: 'id' },
+            )
             if (joinConsent) {
               await supabase.from('consents').insert({
                 user_id: userId, clinic_id: clinic.id, type: 'hipaa_patient_ack', version: joinConsent,
               })
             }
-            prof = (await supabase
-              .from('profiles').select('id, clinic_id, role, full_name, therapist_id').eq('id', userId).single()).data || prof
           }
-        } catch (err) {
-          console.log('Pending join failed:', err.message)
         }
+      } catch (err) {
+        console.log('Profile setup failed:', err.message)
       }
-      localStorage.removeItem(PENDING_JOIN_KEY)
+
+      prof = (await supabase.from('profiles').select(COLS).eq('id', userId).single()).data || prof
     }
 
     setProfile(prof || null)

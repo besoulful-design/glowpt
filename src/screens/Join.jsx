@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Navigate } from 'react-router-dom'
 import { supabase } from '../supabase'
-import { savePendingJoin } from '../auth'
+import { savePendingJoin, useAuth } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
 
 // /join/:slug — a patient's first entry, from their clinic's invite link.
 // Resolves the clinic by slug, collects name + email, sends a magic link.
 export default function Join() {
   const { slug } = useParams()
+  const { session, loading: authLoading } = useAuth()
   const [clinic, setClinic] = useState(undefined) // undefined = loading, null = not found
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -46,9 +47,14 @@ export default function Join() {
     setSent(true)
   }
 
-  if (clinic === undefined) {
+  if (authLoading || clinic === undefined) {
     return <AuthShell><div style={ui.muted}>Loading…</div></AuthShell>
   }
+
+  // Already signed in? Don't show the signup form — go straight into the app
+  // (which routes patients to their check-in and staff to the dashboard).
+  if (session) return <Navigate to="/" replace />
+
 
   if (clinic === null) {
     return (
