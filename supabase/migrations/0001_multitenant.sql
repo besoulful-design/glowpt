@@ -105,9 +105,12 @@ alter table public.checkins   enable row level security;
 alter table public.consents   enable row level security;
 alter table public.access_log enable row level security;
 
--- CLINICS: any authenticated user may read (needed to resolve a /join/<slug> link).
+-- CLINICS: readable by anyone, logged in OR NOT. A brand-new patient opening a
+-- /join/<slug> link has no account yet, so the clinic lookup runs as `anon` — it
+-- MUST include anon or every fresh patient join fails with "Link not found".
+-- Clinic name + slug are already public (they're in the printed invite link/QR); no PHI here.
 drop policy if exists clinics_select on public.clinics;
-create policy clinics_select on public.clinics for select to authenticated using (true);
+create policy clinics_select on public.clinics for select to anon, authenticated using (true);
 
 -- PROFILES
 drop policy if exists profiles_select_self on public.profiles;

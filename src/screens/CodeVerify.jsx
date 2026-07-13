@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { AuthShell, LogoMark, ui } from './AuthShell'
 
@@ -11,17 +12,33 @@ export default function CodeVerify({ email, onResend, onBack }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [resent, setResent] = useState(false)
+  const navigate = useNavigate()
+  const submitting = useRef(false) // guards against a double submit (iOS one-time-code autofill + tap)
 
   async function verify(e) {
     e.preventDefault()
     setError('')
+    if (submitting.current) return
     const token = code.trim()
     if (token.length < 6) return setError('Enter the full code from your email.')
+    submitting.current = true
     setBusy(true)
     const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+
+    // The code is single-use. A double submit can consume it on the first call and
+    // fail on the second, so an `error` here does NOT reliably mean sign-in failed —
+    // trust the actual session instead.
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      // Signed in. Hand off to the router ("/" routes by role); keep busy=true so the
+      // form doesn't flash back before the screen changes.
+      navigate('/', { replace: true })
+      return
+    }
+    submitting.current = false
     setBusy(false)
-    if (error) return setError('That code didn’t work — check it and try again, or resend.')
-    // Success: the auth session is now set; AuthProvider picks it up and routes.
+    setError(error ? 'That code didn’t work — check it and try again, or resend.'
+                   : 'Something went wrong signing you in — please try the code again, or resend.')
   }
 
   async function resend() {

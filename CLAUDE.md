@@ -63,7 +63,7 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 
 ## Demo vs sandbox convention
 - **Riverside PT** = the clean **sales demo** clinic (David = manager, 5 seeded patients). Never share its `/join` link; re-pristine anytime with `scripts/reset-demo.mjs`.
-- **Sandbox clinic** (e.g. "GlowPT Test") = for David + friends to dogfood daily; created self-serve via `/onboard`. Mess is fine.
+- **Sandbox clinic** = **"Ridge PT"** (created via `/onboard` with the `dwpeterson15` email as manager) = for David + friends to dogfood daily. Mess is fine.
 
 ## Status & backlog
 - **✅ V2 shipped & live** (2026-07-12): auth, multi-clinic, patient app + AI, dashboards, onboarding + BAA, consent + audit log, weekly emails scheduled, PWA install.
