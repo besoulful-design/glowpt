@@ -5,7 +5,9 @@ import { AuthShell, LogoMark, ui } from './AuthShell'
 import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist, assignTherapist, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
 import QRCode from 'qrcode'
 
-const FEELING_COLOR = { 1: '#c0554d', 2: '#cf7a4a', 3: '#c8861d', 4: '#9bb06a', 5: '#6fae7a' }
+// 1 red → 5 green. "Good" (4) is a light lime, "Great" (5) a deeper emerald, so the
+// two positive dots read as clearly different colors (they were too-similar greens before).
+const FEELING_COLOR = { 1: '#c0554d', 2: '#d07d45', 3: '#c8861d', 4: '#b6c24a', 5: '#2fa06d' }
 
 const s = {
   page: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif" },
@@ -15,7 +17,10 @@ const s = {
   wordmarkPT: { fontFamily: "'DM Sans', sans-serif", fontStyle: 'normal', fontWeight: 600, color: '#c8861d' },
   clinicName: { fontSize: 14, color: 'rgba(245,239,228,0.6)', borderLeft: '1px solid rgba(245,239,228,0.15)', paddingLeft: 12 },
   signOut: { fontSize: 13, color: 'rgba(245,239,228,0.5)', background: 'transparent', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '7px 14px', cursor: 'pointer' },
-  wrap: { maxWidth: 980, margin: '0 auto', padding: '28px 28px 60px' },
+  wrap: { maxWidth: 980, margin: '0 auto', padding: '24px clamp(14px, 4vw, 28px) 60px' },
+  // On a narrow phone the wide patient table scrolls sideways INSIDE this box, so the
+  // rest of the page still fits the screen (prevents the whole page shrinking to fit).
+  scroll: { overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 },
   h1: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: 30, marginBottom: 4 },
   sub: { fontSize: 14, color: 'rgba(245,239,228,0.5)', marginBottom: 26 },
   tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 24 },
@@ -176,7 +181,7 @@ export default function Dashboard() {
 
   return (
     <div style={s.page}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap'); * { box-sizing: border-box; } body { margin: 0; background: #0d1825; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap'); * { box-sizing: border-box; } html { -webkit-text-size-adjust: 100%; } html, body { margin: 0; background: #0d1825; overflow-x: hidden; }`}</style>
       {Bar}
       <div style={s.wrap}>
         <div style={s.h1}>{isManager ? 'Clinic overview' : 'Your patients'}</div>
@@ -265,28 +270,32 @@ export default function Dashboard() {
               ))}
               <span style={s.legendItem}><span style={s.dot(null)} /> No check-in</span>
             </div>
-            <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
-              <div>Patient</div><div>Last check-in</div><div>Streak</div><div>7-day trend</div><div>Avg</div><div>Status</div>
-              {isManager && <div>Therapist</div>}
-            </div>
-            {roster.map(r => (
-              <div key={r.id} style={{ ...s.row, gridTemplateColumns: rosterCols }}>
-                <div style={s.name}>{r.name}</div>
-                <div style={s.cell}>{relativeDay(r.lastCheckin)}</div>
-                <div style={s.cell}>{r.streak > 0 ? `${r.streak}🔥` : '—'}</div>
-                <div><Trend last7={r.last7} /></div>
-                <div style={s.cell}>{r.avg != null ? r.avg.toFixed(1) : '—'}</div>
-                <div><Flags flags={r.flags} /></div>
-                {isManager && (
-                  <div>
-                    <select style={s.sel} value={r.therapistId || ''} onChange={e => handleAssign(r.id, e.target.value || null)}>
-                      <option value="">Unassigned</option>
-                      {therapists.map(t => <option key={t.id} value={t.id}>{t.full_name || 'Therapist'}</option>)}
-                    </select>
+            <div style={s.scroll}>
+              <div style={{ minWidth: isManager ? 700 : 560 }}>
+                <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
+                  <div>Patient</div><div>Last check-in</div><div>Streak</div><div>7-day trend</div><div>Avg</div><div>Status</div>
+                  {isManager && <div>Therapist</div>}
+                </div>
+                {roster.map(r => (
+                  <div key={r.id} style={{ ...s.row, gridTemplateColumns: rosterCols }}>
+                    <div style={s.name}>{r.name}</div>
+                    <div style={s.cell}>{relativeDay(r.lastCheckin)}</div>
+                    <div style={s.cell}>{r.streak > 0 ? `${r.streak}🔥` : '—'}</div>
+                    <div><Trend last7={r.last7} /></div>
+                    <div style={s.cell}>{r.avg != null ? r.avg.toFixed(1) : '—'}</div>
+                    <div><Flags flags={r.flags} /></div>
+                    {isManager && (
+                      <div>
+                        <select style={s.sel} value={r.therapistId || ''} onChange={e => handleAssign(r.id, e.target.value || null)}>
+                          <option value="">Unassigned</option>
+                          {therapists.map(t => <option key={t.id} value={t.id}>{t.full_name || 'Therapist'}</option>)}
+                        </select>
+                      </div>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
-            ))}
+            </div>
           </>
         )}
       </div>
