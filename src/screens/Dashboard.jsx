@@ -49,10 +49,6 @@ const s = {
   notice: { fontSize: 13, color: '#9bb06a', marginTop: 12 },
   emptyTeam: { fontSize: 13.5, color: 'rgba(245,239,228,0.5)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   greet: { fontSize: 14.5, color: '#e0a035', fontWeight: 500, marginBottom: 6 },
-  nameForm: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 },
-  namePrompt: { fontSize: 14, color: 'rgba(245,239,228,0.65)' },
-  nameInput: { background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '8px 11px', color: '#f5efe4', fontSize: 14, fontFamily: 'inherit', width: 180 },
-  nameBtn: { background: '#c8861d', color: '#0d1825', border: 'none', borderRadius: 4, padding: '8px 16px', fontWeight: 600, fontSize: 14, cursor: 'pointer' },
   sel: { background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '6px 8px', color: '#f5efe4', fontSize: 13, fontFamily: 'inherit', maxWidth: '100%' },
   name: { fontSize: 15, fontWeight: 500 },
   cell: { fontSize: 14, color: 'rgba(245,239,228,0.7)' },
@@ -95,7 +91,7 @@ function greetingName(full) {
 }
 
 export default function Dashboard() {
-  const { user, profile, signOut, refreshProfile } = useAuth()
+  const { user, profile, signOut } = useAuth()
   const [clinic, setClinic] = useState(null)
   const [roster, setRoster] = useState([])
   const [therapists, setTherapists] = useState([])
@@ -106,8 +102,6 @@ export default function Dashboard() {
   const [tName, setTName] = useState('')
   const [tEmail, setTEmail] = useState('')
   const [notice, setNotice] = useState('')
-  const [nameInput, setNameInput] = useState('')
-  const [savingName, setSavingName] = useState(false)
   const logged = useRef(false)
 
   const isManager = profile?.role === 'manager'
@@ -163,16 +157,6 @@ export default function Dashboard() {
     if (error) { setRoster(prev); setNotice(`Couldn’t update assignment: ${error.message}`) }
   }
 
-  async function saveName(e) {
-    e.preventDefault()
-    const n = nameInput.trim()
-    if (!n) return
-    setSavingName(true)
-    const { error } = await supabase.from('profiles').update({ full_name: n }).eq('id', user.id)
-    setSavingName(false)
-    if (!error) { setNameInput(''); await refreshProfile() }
-  }
-
   async function handleInvite(e) {
     e.preventDefault()
     setNotice('')
@@ -214,15 +198,7 @@ export default function Dashboard() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap'); * { box-sizing: border-box; } html { -webkit-text-size-adjust: 100%; } html, body { margin: 0; background: #0d1825; overflow-x: hidden; }`}</style>
       {Bar}
       <div style={s.wrap}>
-        {staffName ? (
-          <div style={s.greet}>Welcome back, {staffName}</div>
-        ) : !loading && (
-          <form onSubmit={saveName} style={s.nameForm}>
-            <span style={s.namePrompt}>👋 What should we call you?</span>
-            <input style={s.nameInput} value={nameInput} onChange={e => setNameInput(e.target.value)} placeholder="Your name" autoComplete="name" />
-            <button style={s.nameBtn} type="submit" disabled={savingName}>{savingName ? 'Saving…' : 'Save'}</button>
-          </form>
-        )}
+        {staffName && <div style={s.greet}>Welcome back, {staffName}</div>}
         <div style={s.h1}>{isManager ? 'Clinic overview' : 'Your patients'}</div>
         <div style={s.sub}>
           {loading ? 'Loading…' : isManager
