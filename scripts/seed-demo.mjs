@@ -1,6 +1,6 @@
 // GlowPT · Demo seed (DEMO DATA ONLY — no real patients)
-// Creates a demo clinic, a manager, a therapist, and 5 patients with check-in
-// histories so the dashboards + demo look alive.
+// Creates a demo clinic, a manager, a therapist, and 6 patients (incl. a showcase
+// patient with a rich 30-day history) so the dashboards + patient Progress screen look alive.
 //
 // Run:
 //   SUPABASE_URL=https://xxxx.supabase.co \
@@ -22,8 +22,22 @@ const FEELING_WORDS = { 1: 'Really tough', 2: 'Hard day', 3: 'Getting there', 4:
 const NOTES = ['Stiff this morning but loosened up after my walk.', 'Did my exercises even though I didn’t feel like it.', 'Knee felt good today.', 'Rested — needed it.', 'Small win: stairs were easier.']
 const MOVES = [['PT exercises'], ['PT exercises', 'Walk or light activity'], ['Stretching'], ['Rest day'], ['Walk or light activity']]
 
+// A showcase patient: ~4 weeks of near-daily check-ins, trending upward, with a strong
+// current streak — makes the patient "Progress" screen (streak + 30-day trend) shine in demos.
+function showcaseCheckins() {
+  const recent = [3, 4, 3, 4, 4, 5, 4, 5, 4, 5, 5, 4, 5, 5]      // last 14 days (ago 13→0), daily → 14-day streak
+  const out = recent.map((feeling, idx) => ({ ago: 13 - idx, feeling }))
+  const earlier = [                                              // weeks 3–4: a few gaps, lower/mixed moods
+    { ago: 29, feeling: 2 }, { ago: 28, feeling: 3 }, { ago: 26, feeling: 2 }, { ago: 25, feeling: 3 },
+    { ago: 23, feeling: 3 }, { ago: 22, feeling: 2 }, { ago: 20, feeling: 4 }, { ago: 19, feeling: 3 },
+    { ago: 17, feeling: 3 }, { ago: 16, feeling: 4 }, { ago: 15, feeling: 4 },
+  ]
+  return [...earlier, ...out]
+}
+
 // [name, pattern] — pattern is an array of {ago, feeling} check-ins (days ago)
 const PATIENTS = [
+  ['Grace Bennett', showcaseCheckins(), 'dwpeterson15+grace@gmail.com'],                                      // showcase: 4 wks trending up, 14-day streak. Real alias so David can log in AS her to demo the Progress screen.
   ['Chris Alvarez', [0, 1, 2, 3, 4, 6].map((ago, i) => ({ ago, feeling: [4, 3, 4, 5, 3, 4][i] }))],       // engaged, on track
   ['Maria Chen', [0, 2, 3, 5].map((ago, i) => ({ ago, feeling: [3, 4, 2, 3][i] }))],                        // engaged, mixed
   ['James Okafor', [8, 9, 11].map((ago, i) => ({ ago, feeling: [3, 4, 3][i] }))],                           // inactive (8+ days) → flag
@@ -71,8 +85,8 @@ async function run() {
   console.log('Manager + therapist ready.')
 
   // 3) Patients + check-ins
-  for (const [name, checkins] of PATIENTS) {
-    const email = `demo-${name.toLowerCase().split(' ')[0]}@glowpt.app`
+  for (const [name, checkins, customEmail] of PATIENTS) {
+    const email = customEmail || `demo-${name.toLowerCase().split(' ')[0]}@glowpt.app`
     const user = await ensureUser(email, name, 'patient', clinic.id, therapist?.id ?? null)
     if (!user) continue
     // wipe this demo patient's existing check-ins so re-running stays clean

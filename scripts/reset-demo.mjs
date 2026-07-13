@@ -1,6 +1,6 @@
 // GlowPT · CLEAN RESET of the Riverside demo clinic (DEMO DATA ONLY)
 // Wipes all test cruft (stray patients, tangled records), makes David a clean
-// manager, and rebuilds the 5 demo patients with fresh check-in histories.
+// manager, and rebuilds the 6 demo patients (incl. showcase Grace Bennett) with fresh check-in histories.
 //
 // Run:
 //   SUPABASE_URL=https://xxxx.supabase.co \
@@ -21,7 +21,20 @@ const PROTECT = new Set([MANAGER_EMAIL, THERAPIST_EMAIL])
 const FEELING_WORDS = { 1: 'Really tough', 2: 'Hard day', 3: 'Getting there', 4: 'Good day', 5: 'Feeling great' }
 const NOTES = ['Stiff this morning but loosened up after my walk.', 'Did my exercises even though I didn’t feel like it.', 'Knee felt good today.', 'Rested — needed it.', 'Small win: stairs were easier.']
 const MOVES = [['PT exercises'], ['PT exercises', 'Walk or light activity'], ['Stretching'], ['Rest day'], ['Walk or light activity']]
+// Showcase patient — ~4 weeks of near-daily, upward-trending check-ins with a 14-day
+// streak, so the patient Progress screen (streak + 30-day trend) looks great in demos.
+function showcaseCheckins() {
+  const recent = [3, 4, 3, 4, 4, 5, 4, 5, 4, 5, 5, 4, 5, 5]      // last 14 days (ago 13→0), daily → 14-day streak
+  const out = recent.map((feeling, idx) => ({ ago: 13 - idx, feeling }))
+  const earlier = [
+    { ago: 29, feeling: 2 }, { ago: 28, feeling: 3 }, { ago: 26, feeling: 2 }, { ago: 25, feeling: 3 },
+    { ago: 23, feeling: 3 }, { ago: 22, feeling: 2 }, { ago: 20, feeling: 4 }, { ago: 19, feeling: 3 },
+    { ago: 17, feeling: 3 }, { ago: 16, feeling: 4 }, { ago: 15, feeling: 4 },
+  ]
+  return [...earlier, ...out]
+}
 const PATIENTS = [
+  ['Grace Bennett', showcaseCheckins(), 'dwpeterson15+grace@gmail.com'], // real alias so David can log in AS her to demo the Progress screen
   ['Chris Alvarez', [0, 1, 2, 3, 4, 6].map((ago, i) => ({ ago, feeling: [4, 3, 4, 5, 3, 4][i] }))],
   ['Maria Chen', [0, 2, 3, 5].map((ago, i) => ({ ago, feeling: [3, 4, 2, 3][i] }))],
   ['James Okafor', [8, 9, 11].map((ago, i) => ({ ago, feeling: [3, 4, 3][i] }))],
@@ -94,8 +107,8 @@ async function run() {
   console.log('Manager (you) + therapist set.')
 
   // 6) Rebuild the 5 demo patients + fresh check-ins
-  for (const [name, checkins] of PATIENTS) {
-    const email = `demo-${name.toLowerCase().split(' ')[0]}@glowpt.app`
+  for (const [name, checkins, customEmail] of PATIENTS) {
+    const email = customEmail || `demo-${name.toLowerCase().split(' ')[0]}@glowpt.app`
     // If a stray user with this email survived, reuse; ensureUser handles it.
     const user = await ensureUser(email, name, 'patient', clinic.id, therapist?.id ?? null)
     if (!user) continue
@@ -111,7 +124,7 @@ async function run() {
     else console.log(`  ${name}: ${rows.length} check-ins`)
   }
 
-  console.log('\n✅ Clean reset done. You are the Riverside PT manager; roster = 5 demo patients.')
+  console.log('\n✅ Clean reset done. You are the Riverside PT manager; roster = 6 demo patients (incl. showcase Grace Bennett).')
 }
 
 run()
