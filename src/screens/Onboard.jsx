@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../supabase'
 import { savePendingOnboard } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
+import CodeVerify from './CodeVerify'
 
 function slugify(s) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
@@ -33,6 +34,21 @@ export default function Onboard() {
 
   const effectiveSlug = slugEdited ? slug : slugify(clinicName)
 
+  // Create the clinic under the entered email (a fresh manager account), verified
+  // by a 6-digit code — so onboarding never hijacks whoever is currently signed in.
+  async function sendCode() {
+    savePendingOnboard(clinicName.trim(), effectiveSlug, fullName.trim())
+    const { error: otpErr } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        emailRedirectTo: window.location.origin + '/dashboard',
+        data: { full_name: fullName.trim(), onboard_clinic_name: clinicName.trim(), onboard_clinic_slug: effectiveSlug },
+      },
+    })
+    if (otpErr) { setError(otpErr.message); return false }
+    return true
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
@@ -47,33 +63,13 @@ export default function Onboard() {
     const { data: existing } = await supabase.from('clinics').select('id').eq('slug', effectiveSlug).maybeSingle()
     if (existing) { setBusy(false); return setError('That clinic web name is taken — try another.') }
 
-    // Always create the clinic under the entered email (a fresh manager account),
-    // via magic link — so onboarding never hijacks whoever is currently signed in.
-    savePendingOnboard(clinicName.trim(), effectiveSlug, fullName.trim())
-    const { error: otpErr } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        emailRedirectTo: window.location.origin + '/dashboard',
-        data: { full_name: fullName.trim(), onboard_clinic_name: clinicName.trim(), onboard_clinic_slug: effectiveSlug },
-      },
-    })
+    const ok = await sendCode()
     setBusy(false)
-    if (otpErr) return setError(otpErr.message)
-    setSent(true)
+    if (ok) setSent(true)
   }
 
-  if (sent) {
-    return (
-      <AuthShell>
-        <LogoMark size={160} />
-        <div style={ui.title}>Check your email</div>
-        <div style={ui.muted}>
-          We sent a sign-in link to <strong style={{ color: '#f5efe4' }}>{email}</strong>. Tap it and your
-          clinic <strong style={{ color: '#f5efe4' }}>{clinicName}</strong> will be ready.
-        </div>
-      </AuthShell>
-    )
-  }
+  if (sent) return <CodeVerify email={email.trim()} onResend={sendCode} onBack={() => setSent(false)} />
+
 
   return (
     <AuthShell>
@@ -93,7 +89,8 @@ export default function Onboard() {
         <input style={ui.input} placeholder="Your name" value={fullName}
           onChange={e => setFullName(e.target.value)} autoComplete="name" />
         <input style={ui.input} placeholder="Your work email" type="email" value={email}
-          onChange={e => setEmail(e.target.value)} autoComplete="email" />
+          onChange={e => setEmail(e.target.value)}
+          autoComplete="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
 
         <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.6)', cursor: 'pointer', marginTop: 2 }}>
           <input type="checkbox" checked={baaReviewed} onChange={e => setBaaReviewed(e.target.checked)}

@@ -3,6 +3,7 @@ import { useParams, Navigate } from 'react-router-dom'
 import { supabase } from '../supabase'
 import { savePendingJoin, useAuth } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
+import CodeVerify from './CodeVerify'
 
 // /join/:slug — a patient's first entry, from their clinic's invite link.
 // Resolves the clinic by slug, collects name + email, sends a magic link.
@@ -25,6 +26,21 @@ export default function Join() {
       .then(({ data }) => setClinic(data ?? null))
   }, [slug])
 
+  async function sendCode() {
+    savePendingJoin(slug, fullName.trim(), CONSENT_VERSION)
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        emailRedirectTo: window.location.origin,
+        // Stored on the user account so name + clinic survive the code being
+        // entered / link opened anywhere.
+        data: { full_name: fullName.trim(), clinic_slug: slug, consent_version: CONSENT_VERSION },
+      },
+    })
+    if (error) { setError(error.message); return false }
+    return true
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
@@ -32,19 +48,9 @@ export default function Join() {
     if (!email.trim()) return setError('Please enter your email.')
     if (!consented) return setError('Please agree to the privacy notice to continue.')
     setBusy(true)
-    savePendingJoin(slug, fullName.trim(), CONSENT_VERSION)
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        emailRedirectTo: window.location.origin,
-        // Stored on the user account so name + clinic survive even if the magic
-        // link opens in a different browser/app than where the form was filled.
-        data: { full_name: fullName.trim(), clinic_slug: slug, consent_version: CONSENT_VERSION },
-      },
-    })
+    const ok = await sendCode()
     setBusy(false)
-    if (error) return setError(error.message)
-    setSent(true)
+    if (ok) setSent(true)
   }
 
   if (authLoading || clinic === undefined) {
@@ -66,18 +72,8 @@ export default function Join() {
     )
   }
 
-  if (sent) {
-    return (
-      <AuthShell>
-        <LogoMark size={160} />
-        <div style={ui.title}>Check your email</div>
-        <div style={ui.muted}>
-          We sent a sign-in link to <strong style={{ color: '#f5efe4' }}>{email}</strong>.
-          Tap it to start your first check-in with {clinic.name}.
-        </div>
-      </AuthShell>
-    )
-  }
+  if (sent) return <CodeVerify email={email.trim()} onResend={sendCode} onBack={() => setSent(false)} />
+
 
   return (
     <AuthShell>
@@ -89,7 +85,8 @@ export default function Join() {
         <input style={ui.input} placeholder="Your name" value={fullName}
           onChange={e => setFullName(e.target.value)} autoComplete="name" />
         <input style={ui.input} placeholder="Your email" type="email" value={email}
-          onChange={e => setEmail(e.target.value)} autoComplete="email" />
+          onChange={e => setEmail(e.target.value)}
+          autoComplete="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
         <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.6)', cursor: 'pointer', marginTop: 2 }}>
           <input type="checkbox" checked={consented} onChange={e => setConsented(e.target.checked)}
             style={{ marginTop: 3, accentColor: '#c8861d', width: 16, height: 16, flexShrink: 0 }} />
@@ -101,9 +98,9 @@ export default function Join() {
           </span>
         </label>
         {error && <div style={ui.error}>{error}</div>}
-        <button style={ui.btn} disabled={busy}>{busy ? 'Sending…' : 'Send my sign-in link →'}</button>
+        <button style={ui.btn} disabled={busy}>{busy ? 'Sending…' : 'Send my code →'}</button>
       </form>
-      <div style={ui.fine}>No password needed. We’ll email you a secure link.</div>
+      <div style={ui.fine}>No password needed. We’ll email you a 6-digit code.</div>
 
       {showPrivacy && (
         <div onClick={() => setShowPrivacy(false)}
