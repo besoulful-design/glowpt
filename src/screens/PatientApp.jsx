@@ -85,15 +85,39 @@ function streakMessage(s) {
   return 'Incredible consistency 🌟'
 }
 
+const avgFeeling = arr => { const fs = arr.filter(d => d.feeling != null).map(d => d.feeling); return fs.length ? fs.reduce((a, b) => a + b, 0) / fs.length : null }
+
 // Gentle, never-clinical read on the last 30 days (recent week vs the week before).
 function trendMessage(days) {
-  const avg = arr => { const fs = arr.filter(d => d.feeling != null).map(d => d.feeling); return fs.length ? fs.reduce((a, b) => a + b, 0) / fs.length : null }
-  const recent = avg(days.slice(-7)), prev = avg(days.slice(-14, -7))
+  const recent = avgFeeling(days.slice(-7)), prev = avgFeeling(days.slice(-14, -7))
   if (recent == null) return 'Check in to start building your trend.'
   if (prev == null) return 'Keep checking in to see your trend take shape.'
   if (recent >= prev + 0.4) return 'You’re trending up lately 🌤'
   if (recent <= prev - 0.4) return 'Some tougher days recently — gentle steps still count 💛'
   return 'You’re holding steady — consistency matters most 🌱'
+}
+
+// One-line takeaway for the month: average mood + how many days.
+function monthSummary(days) {
+  const fs = days.filter(d => d.feeling != null).map(d => d.feeling)
+  if (!fs.length) return null
+  const avg = fs.reduce((a, b) => a + b, 0) / fs.length
+  const rounded = Math.max(1, Math.min(5, Math.round(avg)))
+  return { avg: avg.toFixed(1), rounded, count: fs.length }
+}
+
+// Average mood per week for the last 4 weeks (oldest → newest), for the mini bar chart.
+function weeklyAverages(days) {
+  const buckets = [
+    { label: '3 wks ago', slice: days.slice(2, 9) },
+    { label: '2 wks ago', slice: days.slice(9, 16) },
+    { label: '1 wk ago', slice: days.slice(16, 23) },
+    { label: 'This week', slice: days.slice(23, 30) },
+  ]
+  return buckets.map(b => {
+    const avg = avgFeeling(b.slice)
+    return { label: b.label, avg, rounded: avg ? Math.max(1, Math.min(5, Math.round(avg))) : null }
+  })
 }
 
 const LogoMark = ({ size = 220 }) => (
@@ -302,11 +326,17 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     streakUnit: { fontSize: '15px', fontWeight: 600, color: '#f5efe4', marginTop: '6px', letterSpacing: '0.02em' },
     streakMsg: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '14px', color: 'rgba(245,239,228,0.6)', marginTop: '10px' },
     trendSection: { width: '100%' },
-    trendRow: { display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '4px' },
-    trendDot: (f) => ({ width: '12px', height: '12px', borderRadius: '50%', background: f ? FEELING_COLOR[f] : 'rgba(245,239,228,0.09)', border: f ? 'none' : '1px solid rgba(245,239,228,0.12)' }),
-    trendLegend: { display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '14px', fontSize: '11px', color: 'rgba(245,239,228,0.5)' },
-    legendItem: { display: 'inline-flex', alignItems: 'center', gap: '6px' },
-    legendDot: (f) => ({ width: '10px', height: '10px', borderRadius: '50%', background: FEELING_COLOR[f] }),
+    monthSummaryRow: { display: 'flex', alignItems: 'center', gap: '14px', marginTop: '6px', marginBottom: '20px' },
+    monthEmoji: { fontSize: '34px', lineHeight: 1 },
+    monthAvgVal: { fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#f5efe4', lineHeight: 1.1 },
+    monthAvgUnit: { fontSize: '13px', color: 'rgba(245,239,228,0.45)' },
+    monthAvgWord: { fontSize: '13px', color: 'rgba(245,239,228,0.55)', fontStyle: 'italic', fontFamily: "'Fraunces', serif", marginTop: '4px' },
+    weekBars: { display: 'flex', justifyContent: 'space-between', gap: '12px' },
+    weekCol: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' },
+    weekVal: { fontSize: '11px', fontWeight: 600, color: 'rgba(245,239,228,0.7)', height: '14px', marginBottom: '5px' },
+    weekBarArea: { width: '100%', height: '84px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' },
+    weekBar: (f, pct) => ({ width: '58%', maxWidth: '30px', height: `${pct}%`, minHeight: '6px', borderRadius: '4px 4px 0 0', background: f ? FEELING_COLOR[f] : 'rgba(245,239,228,0.12)', transition: 'height 0.3s' }),
+    weekLabel: { fontSize: '10px', color: 'rgba(245,239,228,0.5)', marginTop: '9px', textAlign: 'center', lineHeight: 1.2 },
     responseBottom: { width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' },
     journalHeader: { padding: '56px 28px 28px', borderBottom: '1px solid rgba(245,239,228,0.07)' },
     journalBack: { fontSize: '13px', color: '#c8861d', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', marginBottom: '20px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
@@ -487,16 +517,34 @@ Respond directly to ${firstName} in second person. Reference what they actually 
               </div>
 
               <div style={styles.trendSection}>
-                <div style={styles.streakLabel}>Last 30 days</div>
-                <div style={styles.trendRow}>
-                  {history.map((d, i) => <div key={i} style={styles.trendDot(d.feeling)} title={d.label} />)}
-                </div>
-                <div style={styles.trendLegend}>
-                  {[1, 3, 5].map(n => (
-                    <span key={n} style={styles.legendItem}><span style={styles.legendDot(n)} /> {feelingData[n].word}</span>
-                  ))}
-                  <span style={styles.legendItem}><span style={{ ...styles.legendDot(1), background: 'rgba(245,239,228,0.12)' }} /> No check-in</span>
-                </div>
+                <div style={styles.streakLabel}>Your month</div>
+                {(() => {
+                  const sum = monthSummary(history)
+                  const weeks = weeklyAverages(history)
+                  if (!sum) return <div style={styles.monthAvgWord}>Check in over the next few days to see your monthly summary.</div>
+                  return (
+                    <>
+                      <div style={styles.monthSummaryRow}>
+                        <span style={styles.monthEmoji}>{feelingData[sum.rounded].emoji}</span>
+                        <div>
+                          <div style={styles.monthAvgVal}>{sum.avg} <span style={styles.monthAvgUnit}>avg mood</span></div>
+                          <div style={styles.monthAvgWord}>Mostly {feelingData[sum.rounded].word.toLowerCase()} · {sum.count} check-ins in 30 days</div>
+                        </div>
+                      </div>
+                      <div style={styles.weekBars}>
+                        {weeks.map((w, i) => (
+                          <div key={i} style={styles.weekCol}>
+                            <div style={styles.weekVal}>{w.avg ? w.avg.toFixed(1) : ''}</div>
+                            <div style={styles.weekBarArea}>
+                              <div style={styles.weekBar(w.rounded, w.avg ? (w.avg / 5) * 100 : 0)} />
+                            </div>
+                            <div style={styles.weekLabel}>{w.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )
+                })()}
                 <div style={styles.streakHint}>{trendMessage(history)}</div>
               </div>
 
