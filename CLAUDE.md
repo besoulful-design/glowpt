@@ -20,7 +20,7 @@ A daily wellness check-in app for physical therapy patients. Patient does a 30-s
 |---|---|
 | Frontend | React 19 + Vite |
 | Routing | react-router-dom |
-| Database + Auth | Supabase (magic-link passwordless) |
+| Database + Auth | Supabase (passwordless — 6-digit email OTP code) |
 | Hosting / deploy | Netlify (auto-deploys on push to `main`) |
 | AI reflections | Anthropic Claude (Haiku) via a **Supabase Edge Function** |
 | Email | Resend (weekly summaries; scheduled via Supabase Cron/pg_cron) |
@@ -43,7 +43,7 @@ A daily wellness check-in app for physical therapy patients. Patient does a 30-s
 
 ## Architecture (V2)
 - **Multi-tenant:** tables `clinics`, `profiles` (role: `patient` | `therapist` | `manager`), `checkins` (keyed on existing `user_id` + `clinic_id`), `consents`, `access_log`. Row-Level Security keeps each clinic private.
-- **Auth:** Supabase magic link. Patients join via `/join/<clinic-slug>`. Name/clinic/consent are stored in the signup **user_metadata** so they survive the link opening in any browser/app. Supabase "Confirm email" is OFF (the magic-link click IS the verification).
+- **Auth:** Supabase passwordless **6-digit email code** (OTP). Flow = `signInWithOtp` → user types the code into the same tab → `verifyOtp` (shared `CodeVerify` screen used by Login/Join/Onboard). Chosen over magic links because links open in whatever email app, breaking session persistence on phones; the code keeps everything in one tab. **Requires the Supabase "Magic Link" + "Confirm sign up" email templates to include `{{ .Token }}`.** Name/clinic/consent ride in signup **user_metadata** so they survive regardless of device. "Confirm email" is OFF.
 - **AI:** patient text goes to the `ai-response` Edge Function (keeps PHI inside Supabase — HIPAA-*ready*).
 - **Dashboards:** manager = clinic-wide engagement; therapist = caseload; both show streaks, 7-day trend, and flags (Inactive 5+ days / Low-mood 2+ low days). Staff views write an `access_log` entry.
 - **Weekly emails (PHI-free nudges):** `weekly-summary` Edge Function computes numbers in Supabase and sends via Resend. Patient email = own name + check-in count + link; clinic email = aggregates only, no names. Scheduled: Supabase Cron `weekly_summary`, `0 12 * * 1` (Mon 8am ET).
