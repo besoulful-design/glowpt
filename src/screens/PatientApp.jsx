@@ -53,6 +53,9 @@ function buildWeek(checkins) {
 // with Good/Great kept clearly distinct).
 const FEELING_COLOR = { 1: '#c0554d', 2: '#d07d45', 3: '#c8861d', 4: '#b6c24a', 5: '#2fa06d' }
 
+// Shared card surface for the Progress screen sections.
+const CARD = { background: '#1a2840', border: '1px solid rgba(200,134,29,0.16)', borderRadius: '12px', padding: '20px' }
+
 // Build the last 30 days (oldest → newest), one slot per day, from check-in rows.
 function build30Days(checkins) {
   const base = new Date(); base.setHours(0, 0, 0, 0)
@@ -325,8 +328,9 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     streakBig: { fontFamily: "'Fraunces', serif", fontWeight: 400, fontSize: '66px', color: '#e0a035', lineHeight: 1, letterSpacing: '-0.03em' },
     streakUnit: { fontSize: '15px', fontWeight: 600, color: '#f5efe4', marginTop: '6px', letterSpacing: '0.02em' },
     streakMsg: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '14px', color: 'rgba(245,239,228,0.6)', marginTop: '10px' },
-    trendSection: { width: '100%' },
-    monthSummaryRow: { display: 'flex', alignItems: 'center', gap: '14px', marginTop: '6px', marginBottom: '20px' },
+    trendSection: { ...CARD },
+    cardSection: { ...CARD },
+    monthSummaryRow: { display: 'flex', alignItems: 'center', gap: '14px', marginTop: '12px', marginBottom: '20px' },
     monthEmoji: { fontSize: '34px', lineHeight: 1 },
     monthAvgVal: { fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#f5efe4', lineHeight: 1.1 },
     monthAvgUnit: { fontSize: '13px', color: 'rgba(245,239,228,0.45)' },
@@ -548,9 +552,9 @@ Respond directly to ${firstName} in second person. Reference what they actually 
                 <div style={styles.streakHint}>{trendMessage(history)}</div>
               </div>
 
-              <div style={styles.streakSection}>
-                <div style={styles.streakLabel}>This week — tap a day</div>
-                <div style={styles.streakDots}>
+              <div style={{ ...styles.cardSection, padding: '20px 16px' }}>
+                <div style={{ ...styles.streakLabel, paddingLeft: '4px' }}>This week — tap a day</div>
+                <div style={{ ...styles.streakDots, justifyContent: 'space-between', gap: '4px' }}>
                   {week.map(d => (
                     <div key={d.id} style={styles.streakDot(d.done, d.today)} onClick={() => openJournal(d)}>{d.day}</div>
                   ))}
