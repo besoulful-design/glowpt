@@ -39,24 +39,30 @@ export function AuthProvider({ children }) {
     // Guarded by !clinic_id so it runs only once (prevents duplicate clinics on re-login).
     if (!prof?.clinic_id) {
       // Onboard details — signup metadata first, localStorage fallback.
+      // NOTE: signup metadata (user_metadata) only gets written for a BRAND-NEW email;
+      // it's ignored for an email that already existed. So we ALWAYS read the localStorage
+      // backup too (same tab as the form) — including the name — so setup captures it
+      // regardless of whether the account is new or pre-existing.
       let obName = meta.onboard_clinic_name
       let obSlug = meta.onboard_clinic_slug
+      let obFullName = null
       const onboardRaw = localStorage.getItem(PENDING_ONBOARD_KEY)
-      if (!obSlug && onboardRaw) {
-        try { const o = JSON.parse(onboardRaw); obName = o.clinicName; obSlug = o.slug } catch { /* ignore */ }
+      if (onboardRaw) {
+        try { const o = JSON.parse(onboardRaw); obFullName = o.fullName || null; if (!obSlug) { obName = o.clinicName; obSlug = o.slug } } catch { /* ignore */ }
       }
       localStorage.removeItem(PENDING_ONBOARD_KEY)
 
-      // Join details — signup metadata first, localStorage fallback.
+      // Join details — signup metadata first, localStorage fallback (name included).
       let joinSlug = meta.clinic_slug
       let joinConsent = meta.consent_version
+      let joinFullName = null
       const pendingRaw = localStorage.getItem(PENDING_JOIN_KEY)
-      if (!joinSlug && pendingRaw) {
-        try { const p = JSON.parse(pendingRaw); joinSlug = p.slug; joinConsent = p.consentVersion } catch { /* ignore */ }
+      if (pendingRaw) {
+        try { const p = JSON.parse(pendingRaw); joinFullName = p.fullName || null; if (!joinSlug) { joinSlug = p.slug; joinConsent = p.consentVersion } } catch { /* ignore */ }
       }
       localStorage.removeItem(PENDING_JOIN_KEY)
 
-      const name = meta.full_name || prof?.full_name || null
+      const name = meta.full_name || obFullName || joinFullName || prof?.full_name || null
 
       try {
         if (obSlug && obName) {
