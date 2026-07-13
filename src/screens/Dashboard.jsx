@@ -105,6 +105,9 @@ export default function Dashboard() {
   const logged = useRef(false)
 
   const isManager = profile?.role === 'manager'
+  // Prefer the profile name; fall back to the name saved on the login account
+  // (some manager profiles were created before the name landed on the profile row).
+  const staffName = greetingName(profile?.full_name || user?.user_metadata?.full_name)
 
   useEffect(() => {
     if (!profile?.clinic_id) { setLoading(false); return }
@@ -195,7 +198,7 @@ export default function Dashboard() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap'); * { box-sizing: border-box; } html { -webkit-text-size-adjust: 100%; } html, body { margin: 0; background: #0d1825; overflow-x: hidden; }`}</style>
       {Bar}
       <div style={s.wrap}>
-        {greetingName(profile?.full_name) && <div style={s.greet}>Welcome back, {greetingName(profile?.full_name)}</div>}
+        {staffName && <div style={s.greet}>Welcome back, {staffName}</div>}
         <div style={s.h1}>{isManager ? 'Clinic overview' : 'Your patients'}</div>
         <div style={s.sub}>
           {loading ? 'Loading…' : isManager
