@@ -35,7 +35,7 @@ export default function Login() {
     <AuthShell>
       <LogoMark size={200} />
       <div style={ui.title}>Sign in to GlowPT</div>
-      <div style={ui.muted}>Enter your email and we’ll send you a 6-digit sign-in code.</div>
+      <div style={ui.muted}>Enter your email and we’ll send you a sign-in code.</div>
       <form onSubmit={handleSubmit} style={ui.form}>
         <input style={ui.input} placeholder="Your email" type="email" value={email}
           onChange={e => setEmail(e.target.value)}

@@ -16,7 +16,7 @@ export default function CodeVerify({ email, onResend, onBack }) {
     e.preventDefault()
     setError('')
     const token = code.trim()
-    if (token.length < 6) return setError('Enter the 6-digit code from your email.')
+    if (token.length < 6) return setError('Enter the full code from your email.')
     setBusy(true)
     const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
     setBusy(false)
@@ -36,14 +36,14 @@ export default function CodeVerify({ email, onResend, onBack }) {
       <LogoMark size={160} />
       <div style={ui.title}>Enter your code</div>
       <div style={ui.muted}>
-        We emailed a 6-digit code to <strong style={{ color: '#f5efe4' }}>{email}</strong>. Enter it to sign in.
+        We emailed a code to <strong style={{ color: '#f5efe4' }}>{email}</strong>. Enter it to sign in.
       </div>
       <form onSubmit={verify} style={ui.form}>
         <input
-          style={{ ...ui.input, textAlign: 'center', fontSize: 24, letterSpacing: '0.35em', fontWeight: 600 }}
+          style={{ ...ui.input, textAlign: 'center', fontSize: 24, letterSpacing: '0.3em', fontWeight: 600 }}
           value={code}
-          onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-          inputMode="numeric" autoComplete="one-time-code" placeholder="000000" maxLength={6} autoFocus
+          onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 10))}
+          inputMode="numeric" autoComplete="one-time-code" placeholder="Enter code" maxLength={10} autoFocus
         />
         {error && <div style={ui.error}>{error}</div>}
         <button style={ui.btn} disabled={busy}>{busy ? 'Verifying…' : 'Verify & sign in →'}</button>

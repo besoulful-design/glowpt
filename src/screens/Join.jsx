@@ -100,7 +100,7 @@ export default function Join() {
         {error && <div style={ui.error}>{error}</div>}
         <button style={ui.btn} disabled={busy}>{busy ? 'Sending…' : 'Send my code →'}</button>
       </form>
-      <div style={ui.fine}>No password needed. We’ll email you a 6-digit code.</div>
+      <div style={ui.fine}>No password needed. We’ll email you a code.</div>
 
       {showPrivacy && (
         <div onClick={() => setShowPrivacy(false)}
