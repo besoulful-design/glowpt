@@ -48,6 +48,7 @@ const s = {
   pending: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', marginTop: 12, lineHeight: 1.6 },
   notice: { fontSize: 13, color: '#9bb06a', marginTop: 12 },
   emptyTeam: { fontSize: 13.5, color: 'rgba(245,239,228,0.5)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
+  greet: { fontSize: 14.5, color: '#e0a035', fontWeight: 500, marginBottom: 6 },
   sel: { background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '6px 8px', color: '#f5efe4', fontSize: 13, fontFamily: 'inherit', maxWidth: '100%' },
   name: { fontSize: 15, fontWeight: 500 },
   cell: { fontSize: 14, color: 'rgba(245,239,228,0.7)' },
@@ -77,6 +78,16 @@ function Trend({ last7 }) {
 function Flags({ flags }) {
   if (!flags.length) return <span style={s.ok}>On track</span>
   return <span>{flags.map(f => <span key={f} style={s.pill(f)}>{f === 'low' ? 'Low mood' : 'Inactive'}</span>)}</span>
+}
+
+// Friendly greeting name. Keep a leading title with the name ("Dr. Sam"), otherwise
+// just the first name ("David") so staff are greeted personally, not formally.
+const TITLES = new Set(['dr', 'dr.', 'mr', 'mr.', 'mrs', 'mrs.', 'ms', 'ms.', 'miss', 'prof', 'prof.'])
+function greetingName(full) {
+  if (!full) return ''
+  const parts = full.trim().split(/\s+/)
+  if (parts.length > 1 && TITLES.has(parts[0].toLowerCase())) return `${parts[0]} ${parts[1]}`
+  return parts[0]
 }
 
 export default function Dashboard() {
@@ -184,6 +195,7 @@ export default function Dashboard() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap'); * { box-sizing: border-box; } html { -webkit-text-size-adjust: 100%; } html, body { margin: 0; background: #0d1825; overflow-x: hidden; }`}</style>
       {Bar}
       <div style={s.wrap}>
+        {greetingName(profile?.full_name) && <div style={s.greet}>Welcome back, {greetingName(profile?.full_name)}</div>}
         <div style={s.h1}>{isManager ? 'Clinic overview' : 'Your patients'}</div>
         <div style={s.sub}>
           {loading ? 'Loading…' : isManager
