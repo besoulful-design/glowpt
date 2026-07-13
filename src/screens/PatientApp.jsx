@@ -49,6 +49,53 @@ function buildWeek(checkins) {
   })
 }
 
+// Mood colors for the 30-day trend — matches the clinic dashboard (1 red → 5 green,
+// with Good/Great kept clearly distinct).
+const FEELING_COLOR = { 1: '#c0554d', 2: '#d07d45', 3: '#c8861d', 4: '#b6c24a', 5: '#2fa06d' }
+
+// Build the last 30 days (oldest → newest), one slot per day, from check-in rows.
+function build30Days(checkins) {
+  const base = new Date(); base.setHours(0, 0, 0, 0)
+  return Array.from({ length: 30 }, (_, i) => {
+    const date = new Date(base)
+    date.setDate(base.getDate() - (29 - i))
+    const match = checkins.find(c => sameLocalDay(new Date(c.created_at), date))
+    return {
+      feeling: match?.feeling ?? null,
+      done: !!match,
+      label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    }
+  })
+}
+
+// Consecutive days checked in, ending today (or yesterday if today isn't done yet).
+function streakFromDays(days) {
+  let i = days.length - 1
+  if (i >= 0 && !days[i].done) i-- // today not done yet is fine — count from yesterday
+  let streak = 0
+  while (i >= 0 && days[i].done) { streak++; i-- }
+  return streak
+}
+
+function streakMessage(s) {
+  if (s <= 0) return 'Check in today to start your streak.'
+  if (s === 1) return 'Great start — one day down.'
+  if (s < 4) return 'You’re building momentum.'
+  if (s < 7) return 'You’re on a roll!'
+  return 'Incredible consistency 🌟'
+}
+
+// Gentle, never-clinical read on the last 30 days (recent week vs the week before).
+function trendMessage(days) {
+  const avg = arr => { const fs = arr.filter(d => d.feeling != null).map(d => d.feeling); return fs.length ? fs.reduce((a, b) => a + b, 0) / fs.length : null }
+  const recent = avg(days.slice(-7)), prev = avg(days.slice(-14, -7))
+  if (recent == null) return 'Check in to start building your trend.'
+  if (prev == null) return 'Keep checking in to see your trend take shape.'
+  if (recent >= prev + 0.4) return 'You’re trending up lately 🌤'
+  if (recent <= prev - 0.4) return 'Some tougher days recently — gentle steps still count 💛'
+  return 'You’re holding steady — consistency matters most 🌱'
+}
+
 const LogoMark = ({ size = 220 }) => (
   <svg width={size} height={Math.round(size * 0.58)} viewBox="0 0 130 75" fill="none">
     <defs>
@@ -86,6 +133,10 @@ export default function PatientApp() {
   const [greeting, setGreeting] = useState('Good evening')
   const [aiResponse, setAiResponse] = useState('')
   const [week, setWeek] = useState([])
+  const [history, setHistory] = useState([])
+  const [streak, setStreak] = useState(0)
+  const [totalCheckins, setTotalCheckins] = useState(0)
+  const [journalReturn, setJournalReturn] = useState('response')
 
   useEffect(() => {
     const hour = new Date().getHours()
@@ -94,20 +145,29 @@ export default function PatientApp() {
     else setGreeting('Good evening')
   }, [])
 
-  const loadWeek = useCallback(async () => {
+  // One load powers everything: this week's tappable days, the 30-day trend, the
+  // streak, and the all-time check-in count. Pulls the last 30 days in one query.
+  const loadData = useCallback(async () => {
     if (!user) return
-    const monday = startOfWeek(new Date())
+    const since = new Date(); since.setHours(0, 0, 0, 0); since.setDate(since.getDate() - 29)
     const { data, error } = await supabase
       .from('checkins')
       .select('feeling, feeling_word, movements, other_movement, note, ai_response, created_at')
       .eq('user_id', user.id)
-      .gte('created_at', monday.toISOString())
+      .gte('created_at', since.toISOString())
       .order('created_at', { ascending: true })
-    if (error) { console.log('Load week error:', error.message); return }
-    setWeek(buildWeek(data || []))
+    if (error) { console.log('Load error:', error.message); return }
+    const rows = data || []
+    const days = build30Days(rows)
+    setWeek(buildWeek(rows))
+    setHistory(days)
+    setStreak(streakFromDays(days))
+    const { count } = await supabase
+      .from('checkins').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+    setTotalCheckins(count || 0)
   }, [user])
 
-  useEffect(() => { loadWeek() }, [loadWeek])
+  useEffect(() => { loadData() }, [loadData])
 
   const weekCount = week.filter(d => d.done).length
   const today = new Date()
@@ -159,7 +219,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     if (error) console.log('Save error:', error.message)
 
     setAiResponse(response)
-    await loadWeek()
+    await loadData()
     setLoading(false)
     setScreen('response')
   }
@@ -174,6 +234,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
 
   const openJournal = (day) => {
     if (!day.done) return
+    setJournalReturn(screen) // remember where we came from (response or progress)
     setJournalDay(day)
     setScreen('journal')
   }
@@ -229,6 +290,23 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     streakDots: { display: 'flex', gap: '8px', justifyContent: 'center' },
     streakDot: (done, isToday) => ({ width: '38px', height: '38px', borderRadius: '50%', background: isToday ? '#c8861d' : done ? 'rgba(224,160,53,0.15)' : '#1a2840', border: `1px solid ${done || isToday ? '#c8861d' : 'rgba(245,239,228,0.1)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: isToday ? '#0d1825' : done ? '#e0a035' : 'rgba(245,239,228,0.5)', fontWeight: isToday ? 700 : 600, cursor: done ? 'pointer' : 'default', boxShadow: isToday ? '0 4px 14px rgba(200,134,29,0.4)' : 'none', transition: 'all 0.2s' }),
     streakHint: { fontSize: '11px', color: 'rgba(245,239,228,0.35)', fontStyle: 'italic', fontFamily: "'Fraunces', serif", textAlign: 'center', marginTop: '10px' },
+    // Progress screen
+    progressWrap: { display: 'flex', flexDirection: 'column', minHeight: '100vh' },
+    progressHeader: { padding: '56px 28px 18px' },
+    progressBack: { fontSize: '13px', color: '#c8861d', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', marginBottom: '18px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+    progressTitle: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '34px', color: '#f5efe4', letterSpacing: '-0.02em', lineHeight: 1.1 },
+    progressSub: { fontSize: '14px', color: 'rgba(245,239,228,0.5)', marginTop: '8px', fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
+    progressBody: { padding: '8px 28px 40px', display: 'flex', flexDirection: 'column', gap: '26px', flex: 1 },
+    streakHero: { background: 'linear-gradient(135deg, rgba(200,134,29,0.16), rgba(13,24,37,0))', border: '1px solid rgba(200,134,29,0.28)', borderRadius: '10px', padding: '26px 20px', textAlign: 'center' },
+    streakBig: { fontFamily: "'Fraunces', serif", fontWeight: 400, fontSize: '66px', color: '#e0a035', lineHeight: 1, letterSpacing: '-0.03em' },
+    streakUnit: { fontSize: '15px', fontWeight: 600, color: '#f5efe4', marginTop: '6px', letterSpacing: '0.02em' },
+    streakMsg: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '14px', color: 'rgba(245,239,228,0.6)', marginTop: '10px' },
+    trendSection: { width: '100%' },
+    trendRow: { display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '4px' },
+    trendDot: (f) => ({ width: '12px', height: '12px', borderRadius: '50%', background: f ? FEELING_COLOR[f] : 'rgba(245,239,228,0.09)', border: f ? 'none' : '1px solid rgba(245,239,228,0.12)' }),
+    trendLegend: { display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '14px', fontSize: '11px', color: 'rgba(245,239,228,0.5)' },
+    legendItem: { display: 'inline-flex', alignItems: 'center', gap: '6px' },
+    legendDot: (f) => ({ width: '10px', height: '10px', borderRadius: '50%', background: FEELING_COLOR[f] }),
     responseBottom: { width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' },
     journalHeader: { padding: '56px 28px 28px', borderBottom: '1px solid rgba(245,239,228,0.07)' },
     journalBack: { fontSize: '13px', color: '#c8861d', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', marginBottom: '20px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
@@ -299,8 +377,8 @@ Respond directly to ${firstName} in second person. Reference what they actually 
             </div>
             <div style={styles.welcomeBottom}>
               <button style={styles.btnPrimary} onClick={startNewCheckin}>Start today's check-in →</button>
-              {weekCount > 0 && (
-                <button style={styles.btnSecondary} onClick={() => setScreen('response')}>View my progress</button>
+              {totalCheckins > 0 && (
+                <button style={styles.btnSecondary} onClick={() => setScreen('progress')}>View my progress</button>
               )}
             </div>
           </div>
@@ -381,6 +459,66 @@ Respond directly to ${firstName} in second person. Reference what they actually 
           </div>
         )}
 
+        {screen === 'progress' && (
+          <div style={styles.progressWrap}>
+            <div style={styles.progressHeader}>
+              <div style={styles.progressBack} onClick={() => setScreen('welcome')}>← Back</div>
+              <div style={styles.progressTitle}>Your progress</div>
+              <div style={styles.progressSub}>Every check-in is a step forward, {firstName}.</div>
+            </div>
+            <div style={styles.progressBody}>
+              <div style={styles.streakHero}>
+                <div style={styles.streakBig}>{streak}</div>
+                <div style={styles.streakUnit}>day streak{streak > 0 ? ' 🔥' : ''}</div>
+                <div style={styles.streakMsg}>{streakMessage(streak)}</div>
+              </div>
+
+              <div style={styles.statsRow}>
+                <div style={styles.statCard}>
+                  <div style={styles.statLabel}>This week</div>
+                  <div style={styles.statValue}>{weekCount}</div>
+                  <div style={styles.statSub}>days checked in</div>
+                </div>
+                <div style={styles.statCard}>
+                  <div style={styles.statLabel}>All time</div>
+                  <div style={styles.statValue}>{totalCheckins}</div>
+                  <div style={styles.statSub}>check-ins</div>
+                </div>
+              </div>
+
+              <div style={styles.trendSection}>
+                <div style={styles.streakLabel}>Last 30 days</div>
+                <div style={styles.trendRow}>
+                  {history.map((d, i) => <div key={i} style={styles.trendDot(d.feeling)} title={d.label} />)}
+                </div>
+                <div style={styles.trendLegend}>
+                  {[1, 3, 5].map(n => (
+                    <span key={n} style={styles.legendItem}><span style={styles.legendDot(n)} /> {feelingData[n].word}</span>
+                  ))}
+                  <span style={styles.legendItem}><span style={{ ...styles.legendDot(1), background: 'rgba(245,239,228,0.12)' }} /> No check-in</span>
+                </div>
+                <div style={styles.streakHint}>{trendMessage(history)}</div>
+              </div>
+
+              <div style={styles.streakSection}>
+                <div style={styles.streakLabel}>This week — tap a day</div>
+                <div style={styles.streakDots}>
+                  {week.map(d => (
+                    <div key={d.id} style={styles.streakDot(d.done, d.today)} onClick={() => openJournal(d)}>{d.day}</div>
+                  ))}
+                </div>
+                <div style={styles.streakHint}>Tap a completed day to read your entry</div>
+              </div>
+            </div>
+
+            <div style={{ ...styles.responseBottom, padding: '0 28px 40px' }}>
+              {week.find(d => d.today)?.done
+                ? <button style={styles.btnPrimary} onClick={() => setScreen('welcome')}>Done ✓</button>
+                : <button style={styles.btnPrimary} onClick={startNewCheckin}>Start today's check-in →</button>}
+            </div>
+          </div>
+        )}
+
         {screen === 'response' && (
           <div style={styles.responseWrap}>
             <div style={styles.responseTop}>
@@ -425,7 +563,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
         {screen === 'journal' && journalDay && (
           <div>
             <div style={styles.journalHeader}>
-              <div style={styles.journalBack} onClick={() => setScreen('response')}>← Back</div>
+              <div style={styles.journalBack} onClick={() => setScreen(journalReturn)}>← Back</div>
               <div style={styles.journalDayName}>{journalDay.date}</div>
               <div style={styles.journalDateSub}>{journalDay.word}</div>
             </div>
