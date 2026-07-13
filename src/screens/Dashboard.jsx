@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
-import { fetchClinicData, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
+import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist, assignTherapist, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
 import QRCode from 'qrcode'
 
 const FEELING_COLOR = { 1: '#c0554d', 2: '#cf7a4a', 3: '#c8861d', 4: '#9bb06a', 5: '#6fae7a' }
@@ -32,8 +32,18 @@ const s = {
   qrLabel: { fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c8861d', fontWeight: 600, marginBottom: 6 },
   qrHint: { fontSize: 13.5, color: 'rgba(245,239,228,0.65)', lineHeight: 1.55, marginBottom: 12, maxWidth: '46ch' },
   qrDownload: { display: 'inline-block', background: '#c8861d', color: '#0d1825', textDecoration: 'none', fontWeight: 600, fontSize: 14, padding: '10px 18px', borderRadius: 4 },
-  rosterHead: { display: 'grid', gridTemplateColumns: '1.6fr 1fr 0.8fr 1.4fr 0.8fr 1.2fr', gap: 12, padding: '0 16px 10px', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
-  row: { display: 'grid', gridTemplateColumns: '1.6fr 1fr 0.8fr 1.4fr 0.8fr 1.2fr', gap: 12, alignItems: 'center', background: '#1a2840', border: '1px solid rgba(245,239,228,0.06)', borderRadius: 6, padding: '14px 16px', marginBottom: 8 },
+  // Care team (manager)
+  care: { background: '#1a2840', border: '1px solid rgba(200,134,29,0.18)', borderRadius: 6, padding: '18px 20px', marginBottom: 28 },
+  careHead: { fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c8861d', fontWeight: 600, marginBottom: 14 },
+  theraRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(245,239,228,0.06)', fontSize: 14.5 },
+  theraCount: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
+  inviteForm: { display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' },
+  inviteInput: { flex: '1 1 150px', background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '9px 12px', color: '#f5efe4', fontSize: 14, fontFamily: 'inherit' },
+  inviteBtn: { background: '#c8861d', color: '#0d1825', border: 'none', borderRadius: 4, padding: '9px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
+  pending: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', marginTop: 12, lineHeight: 1.6 },
+  notice: { fontSize: 13, color: '#9bb06a', marginTop: 12 },
+  emptyTeam: { fontSize: 13.5, color: 'rgba(245,239,228,0.5)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
+  sel: { background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '6px 8px', color: '#f5efe4', fontSize: 13, fontFamily: 'inherit', maxWidth: '100%' },
   name: { fontSize: 15, fontWeight: 500 },
   cell: { fontSize: 14, color: 'rgba(245,239,228,0.7)' },
   dot: (f) => ({ width: 12, height: 12, borderRadius: '50%', background: f ? FEELING_COLOR[f] : 'rgba(245,239,228,0.12)', display: 'inline-block' }),
@@ -44,8 +54,14 @@ const s = {
   legend: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, padding: '0 16px 16px', fontSize: 12, color: 'rgba(245,239,228,0.55)' },
   legendLabel: { fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
   legendItem: { display: 'inline-flex', alignItems: 'center', gap: 6 },
+  rosterHead: { display: 'grid', gap: 12, padding: '0 16px 10px', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
+  row: { display: 'grid', gap: 12, alignItems: 'center', background: '#1a2840', border: '1px solid rgba(245,239,228,0.06)', borderRadius: 6, padding: '14px 16px', marginBottom: 8 },
   empty: { background: '#1a2840', border: '1px dashed rgba(200,134,29,0.3)', borderRadius: 8, padding: 32, textAlign: 'center', color: 'rgba(245,239,228,0.6)' },
 }
+
+// Roster grid columns — managers get an extra "Therapist" (assign) column.
+const COLS_MANAGER = '1.5fr 0.9fr 0.6fr 1.1fr 0.5fr 0.95fr 1.1fr'
+const COLS_THERAPIST = '1.6fr 1fr 0.8fr 1.4fr 0.8fr 1.2fr'
 
 function Trend({ last7 }) {
   const dots = [...last7]
@@ -62,9 +78,14 @@ export default function Dashboard() {
   const { user, profile, signOut } = useAuth()
   const [clinic, setClinic] = useState(null)
   const [roster, setRoster] = useState([])
+  const [therapists, setTherapists] = useState([])
+  const [invites, setInvites] = useState([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [qrUrl, setQrUrl] = useState('')
+  const [tName, setTName] = useState('')
+  const [tEmail, setTEmail] = useState('')
+  const [notice, setNotice] = useState('')
   const logged = useRef(false)
 
   const isManager = profile?.role === 'manager'
@@ -78,6 +99,12 @@ export default function Dashboard() {
       if (!active) return
       setClinic(c)
       setRoster(buildRoster(patients, checkins))
+      if (isManager) {
+        const [ther, inv] = await Promise.all([fetchTherapists(profile.clinic_id), fetchPendingInvites(profile.clinic_id)])
+        if (!active) return
+        setTherapists(ther)
+        setInvites(inv)
+      }
       setLoading(false)
       if (!logged.current) {
         logged.current = true
@@ -85,7 +112,7 @@ export default function Dashboard() {
       }
     })()
     return () => { active = false }
-  }, [profile, user])
+  }, [profile, user, isManager])
 
   // Generate a printable QR code of the clinic's patient invite link.
   useEffect(() => {
@@ -102,6 +129,26 @@ export default function Dashboard() {
     navigator.clipboard?.writeText(joinUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 1800)
+  }
+
+  async function handleAssign(patientId, therapistId) {
+    const prev = roster
+    setRoster(rs => rs.map(r => (r.id === patientId ? { ...r, therapistId } : r))) // optimistic
+    const { error } = await assignTherapist(patientId, therapistId)
+    if (error) { setRoster(prev); setNotice(`Couldn’t update assignment: ${error.message}`) }
+  }
+
+  async function handleInvite(e) {
+    e.preventDefault()
+    setNotice('')
+    const name = tName.trim(), email = tEmail.trim()
+    if (!name) return setNotice('Enter the therapist’s name.')
+    if (!email) return setNotice('Enter the therapist’s email.')
+    const { error } = await inviteTherapist(email, name)
+    if (error) return setNotice(`Couldn’t send invite: ${error.message}`)
+    setTName(''); setTEmail('')
+    setNotice(`Invited ${name}. They’ll appear as a therapist once they sign in at the login page with ${email}.`)
+    setInvites(await fetchPendingInvites(profile.clinic_id))
   }
 
   const Bar = (
@@ -125,6 +172,8 @@ export default function Dashboard() {
     )
   }
 
+  const rosterCols = isManager ? COLS_MANAGER : COLS_THERAPIST
+
   return (
     <div style={s.page}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap'); * { box-sizing: border-box; } body { margin: 0; background: #0d1825; }`}</style>
@@ -134,7 +183,7 @@ export default function Dashboard() {
         <div style={s.sub}>
           {loading ? 'Loading…' : isManager
             ? 'Engagement across your patient roster this week.'
-            : 'How your patients are doing between visits. Flagged patients first.'}
+            : 'How your assigned patients are doing between visits. Flagged patients first.'}
         </div>
 
         {isManager && !loading && (
@@ -164,12 +213,44 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
+
+            {/* Care team — invite therapists and see how many patients each carries. */}
+            <div style={s.care}>
+              <div style={s.careHead}>Care team</div>
+              {therapists.length === 0 && invites.length === 0 && (
+                <div style={s.emptyTeam}>No therapists yet. Invite one below — once they sign in, you can assign patients to them.</div>
+              )}
+              {therapists.map(t => {
+                const load = roster.filter(r => r.therapistId === t.id).length
+                return (
+                  <div key={t.id} style={s.theraRow}>
+                    <span>{t.full_name || 'Therapist'}</span>
+                    <span style={s.theraCount}>{load} {load === 1 ? 'patient' : 'patients'}</span>
+                  </div>
+                )
+              })}
+              <form onSubmit={handleInvite} style={s.inviteForm}>
+                <input style={s.inviteInput} placeholder="Therapist name" value={tName} onChange={e => setTName(e.target.value)} autoComplete="name" />
+                <input style={s.inviteInput} placeholder="Therapist email" type="email" value={tEmail} onChange={e => setTEmail(e.target.value)}
+                  autoComplete="off" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+                <button style={s.inviteBtn} type="submit">Invite therapist →</button>
+              </form>
+              {notice && <div style={s.notice}>{notice}</div>}
+              {invites.length > 0 && (
+                <div style={s.pending}>
+                  <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Pending (waiting for first sign-in):</strong><br />
+                  {invites.map(i => `${i.full_name || '—'} · ${i.email}`).join('  ·  ')}
+                </div>
+              )}
+            </div>
           </>
         )}
 
         {!loading && roster.length === 0 && (
           <div style={s.empty}>
-            No patients yet.{isManager ? ' Share your invite link above to get your first patients checking in.' : ' Once patients join, they’ll appear here.'}
+            {isManager
+              ? 'No patients yet. Share your invite link above to get your first patients checking in.'
+              : 'No patients assigned to you yet. Your clinic manager assigns patients to therapists.'}
           </div>
         )}
 
@@ -184,17 +265,26 @@ export default function Dashboard() {
               ))}
               <span style={s.legendItem}><span style={s.dot(null)} /> No check-in</span>
             </div>
-            <div style={s.rosterHead}>
+            <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
               <div>Patient</div><div>Last check-in</div><div>Streak</div><div>7-day trend</div><div>Avg</div><div>Status</div>
+              {isManager && <div>Therapist</div>}
             </div>
             {roster.map(r => (
-              <div key={r.id} style={s.row}>
+              <div key={r.id} style={{ ...s.row, gridTemplateColumns: rosterCols }}>
                 <div style={s.name}>{r.name}</div>
                 <div style={s.cell}>{relativeDay(r.lastCheckin)}</div>
                 <div style={s.cell}>{r.streak > 0 ? `${r.streak}🔥` : '—'}</div>
                 <div><Trend last7={r.last7} /></div>
                 <div style={s.cell}>{r.avg != null ? r.avg.toFixed(1) : '—'}</div>
                 <div><Flags flags={r.flags} /></div>
+                {isManager && (
+                  <div>
+                    <select style={s.sel} value={r.therapistId || ''} onChange={e => handleAssign(r.id, e.target.value || null)}>
+                      <option value="">Unassigned</option>
+                      {therapists.map(t => <option key={t.id} value={t.id}>{t.full_name || 'Therapist'}</option>)}
+                    </select>
+                  </div>
+                )}
               </div>
             ))}
           </>

@@ -1,10 +1,12 @@
 import { supabase } from '../supabase'
 
-// Fetch a clinic's patients and their check-ins (RLS ensures we only get this clinic's rows).
+// Fetch a clinic's patients and their check-ins.
+// RLS scopes the rows automatically: a manager gets the whole clinic; a therapist
+// gets ONLY their assigned patients — so the same call is correct for both roles.
 export async function fetchClinicData(clinicId) {
   const [patientsRes, checkinsRes] = await Promise.all([
     supabase.from('profiles')
-      .select('id, full_name, created_at')
+      .select('id, full_name, created_at, therapist_id')
       .eq('clinic_id', clinicId).eq('role', 'patient'),
     supabase.from('checkins')
       .select('user_id, feeling, feeling_word, note, created_at')
@@ -12,6 +14,32 @@ export async function fetchClinicData(clinicId) {
       .order('created_at', { ascending: false }),
   ])
   return { patients: patientsRes.data || [], checkins: checkinsRes.data || [] }
+}
+
+// The clinic's therapists (for the manager's assign dropdown + care-team list).
+export async function fetchTherapists(clinicId) {
+  const { data } = await supabase.from('profiles')
+    .select('id, full_name')
+    .eq('clinic_id', clinicId).eq('role', 'therapist')
+    .order('full_name')
+  return data || []
+}
+
+// Therapists a manager has invited who haven't signed in yet.
+export async function fetchPendingInvites(clinicId) {
+  const { data } = await supabase.from('staff_invites')
+    .select('email, full_name, role')
+    .eq('clinic_id', clinicId).is('consumed_at', null)
+    .order('created_at', { ascending: false })
+  return data || []
+}
+
+// Manager actions (backed by SECURITY DEFINER RPCs that enforce manager + same-clinic).
+export function inviteTherapist(email, fullName) {
+  return supabase.rpc('invite_staff', { p_email: email, p_full_name: fullName, p_role: 'therapist' })
+}
+export function assignTherapist(patientId, therapistId) {
+  return supabase.rpc('assign_therapist', { p_patient: patientId, p_therapist: therapistId })
 }
 
 function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x }
@@ -50,6 +78,7 @@ export function buildRoster(patients, checkins) {
     return {
       id: p.id,
       name: p.full_name || 'New patient',
+      therapistId: p.therapist_id || null,
       count: cs.length,
       lastCheckin: last?.created_at || null,
       daysSince,

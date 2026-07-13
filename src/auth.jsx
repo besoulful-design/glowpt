@@ -64,7 +64,14 @@ export function AuthProvider({ children }) {
           const { error } = await supabase.rpc('provision_clinic', { p_name: obName, p_slug: obSlug })
           if (error) console.log('provision_clinic error:', error.message)
           if (name) await supabase.from('profiles').update({ full_name: name }).eq('id', userId)
-        } else if (joinSlug) {
+        }
+        // Not onboarding or joining as a patient? They may be a staff member a
+        // manager invited by email — attach them as therapist/manager to that clinic.
+        if (!obSlug && !joinSlug) {
+          const { error } = await supabase.rpc('accept_staff_invite')
+          if (error) console.log('accept_staff_invite error:', error.message)
+        }
+        if (joinSlug) {
           // Patient join: attach to an existing clinic + record HIPAA consent.
           const { data: clinic } = await supabase.from('clinics').select('id').eq('slug', joinSlug).single()
           if (clinic) {

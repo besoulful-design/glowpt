@@ -42,10 +42,11 @@ A daily wellness check-in app for physical therapy patients. Patient does a 30-s
 | Env (local, gitignored) | `.env` |
 
 ## Architecture (V2)
-- **Multi-tenant:** tables `clinics`, `profiles` (role: `patient` | `therapist` | `manager`), `checkins` (keyed on existing `user_id` + `clinic_id`), `consents`, `access_log`. Row-Level Security keeps each clinic private.
+- **Multi-tenant:** tables `clinics`, `profiles` (role: `patient` | `therapist` | `manager`; patients carry `therapist_id` = assigned PT), `checkins` (keyed on existing `user_id` + `clinic_id`), `consents`, `access_log`, `staff_invites`. Row-Level Security keeps each clinic private.
+- **Staff invites (V2.1):** a manager invites a therapist by email (`invite_staff` RPC → `staff_invites` row); the therapist becomes staff on first sign-in (`accept_staff_invite` RPC, called from `loadProfile`) — role is set server-side so a patient can't self-promote. Manager assigns patients to therapists (`assign_therapist` RPC). Migration `supabase/migrations/0002_therapists.sql`.
 - **Auth:** Supabase passwordless **6-digit email code** (OTP). Flow = `signInWithOtp` → user types the code into the same tab → `verifyOtp` (shared `CodeVerify` screen used by Login/Join/Onboard). Chosen over magic links because links open in whatever email app, breaking session persistence on phones; the code keeps everything in one tab. **Requires the Supabase "Magic Link" + "Confirm sign up" email templates to include `{{ .Token }}`.** Name/clinic/consent ride in signup **user_metadata** so they survive regardless of device. "Confirm email" is OFF.
 - **AI:** patient text goes to the `ai-response` Edge Function (keeps PHI inside Supabase — HIPAA-*ready*).
-- **Dashboards:** manager = clinic-wide engagement; therapist = caseload; both show streaks, 7-day trend, and flags (Inactive 5+ days / Low-mood 2+ low days). Staff views write an `access_log` entry.
+- **Dashboards:** manager = clinic-wide engagement + care-team management (invite therapists, assign patients); therapist = ONLY their assigned caseload (enforced by RLS, not just UI). Both show streaks, 7-day trend, and flags (Inactive 5+ days / Low-mood 2+ low days). Staff views write an `access_log` entry.
 - **Weekly emails (PHI-free nudges):** `weekly-summary` Edge Function computes numbers in Supabase and sends via Resend. Patient email = own name + check-in count + link; clinic email = aggregates only, no names. Scheduled: Supabase Cron `weekly_summary`, `0 12 * * 1` (Mon 8am ET).
 
 ## Environment variables
