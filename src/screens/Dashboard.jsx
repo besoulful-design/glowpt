@@ -34,7 +34,7 @@ const s = {
   linkUrl: { fontSize: 15, color: '#f5efe4', wordBreak: 'break-all' },
   copyBtn: { background: '#c8861d', color: '#0d1825', border: 'none', borderRadius: 4, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   qrCard: { background: '#1a2840', border: '1px solid rgba(200,134,29,0.2)', borderRadius: 6, padding: 20, marginBottom: 28, display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' },
-  qrImg: { width: 116, height: 116, borderRadius: 6, background: '#fff', padding: 6, flexShrink: 0 },
+  qrImg: { width: 104, height: 104, borderRadius: 6, background: '#fff', padding: 6, flexShrink: 0 },
   qrLabel: { fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c8861d', fontWeight: 600, marginBottom: 6 },
   qrHint: { fontSize: 13.5, color: 'rgba(245,239,228,0.65)', lineHeight: 1.55, marginBottom: 12, maxWidth: '46ch' },
   qrDownload: { display: 'inline-block', background: '#c8861d', color: '#0d1825', textDecoration: 'none', fontWeight: 600, fontSize: 14, padding: '10px 18px', borderRadius: 4 },
@@ -68,8 +68,12 @@ const s = {
 }
 
 // Roster grid columns — managers get an extra "Therapist" (assign) column.
-const COLS_MANAGER = '1.5fr 0.9fr 0.6fr 1.1fr 0.5fr 0.95fr 1.1fr'
-const COLS_THERAPIST = '1.6fr 1fr 0.8fr 1.4fr 0.8fr 1.2fr'
+// Header + each patient row are SEPARATE grids, so the short columns (streak,
+// trend, avg, status) are given fixed px widths and the text columns a min floor
+// — that way every grid resolves identical column edges and things line up.
+// (Bare `fr` sizes to each row's own content, which is what made them drift.)
+const COLS_MANAGER = 'minmax(120px,1.4fr) minmax(72px,0.9fr) 60px 152px 50px 104px minmax(120px,1.2fr)'
+const COLS_THERAPIST = 'minmax(130px,1.6fr) minmax(80px,1fr) 60px 152px 50px 104px'
 
 function Trend({ last7 }) {
   const days = [...last7]
@@ -234,7 +238,7 @@ export default function Dashboard() {
             {qrUrl && (
               <div style={s.qrCard}>
                 <img src={qrUrl} alt="Patient sign-up QR code" style={s.qrImg} />
-                <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ flex: 1, minWidth: 130 }}>
                   <div style={s.qrLabel}>Patient sign-up QR</div>
                   <div style={s.qrHint}>Print this for your front desk and treatment rooms. Patients scan it with their phone camera to join — no links to send.</div>
                   <a href={qrUrl} download={`glowpt-${clinic?.slug || 'clinic'}-qr.png`} style={s.qrDownload}>Download QR ↓</a>
@@ -294,19 +298,19 @@ export default function Dashboard() {
               <span style={s.legendItem}><span style={s.noCheckin} /> No check-in</span>
             </div>
             <div style={s.scroll}>
-              <div style={{ minWidth: isManager ? 700 : 560 }}>
+              <div style={{ minWidth: isManager ? 800 : 680 }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
-                  <div>Patient</div><div>Last check-in</div><div>Streak</div><div>7-day trend</div><div>Avg</div><div>Status</div>
+                  <div>Patient</div><div>Last check-in</div><div style={{ textAlign: 'center' }}>Streak</div><div>7-day trend</div><div style={{ textAlign: 'center' }}>Avg</div><div style={{ textAlign: 'center' }}>Status</div>
                   {isManager && <div>Therapist</div>}
                 </div>
                 {roster.map(r => (
                   <div key={r.id} style={{ ...s.row, gridTemplateColumns: rosterCols }}>
                     <div style={s.name}>{r.name}</div>
                     <div style={s.cell}>{relativeDay(r.lastCheckin)}</div>
-                    <div style={s.cell}>{r.streak > 0 ? `${r.streak}🔥` : '—'}</div>
+                    <div style={{ ...s.cell, textAlign: 'center' }}>{r.streak > 0 ? `${r.streak}🔥` : '—'}</div>
                     <div><Trend last7={r.last7} /></div>
-                    <div style={s.cell}>{r.avg != null ? r.avg.toFixed(1) : '—'}</div>
-                    <div><Flags flags={r.flags} /></div>
+                    <div style={{ ...s.cell, textAlign: 'center' }}>{r.avg != null ? r.avg.toFixed(1) : '—'}</div>
+                    <div style={{ textAlign: 'center' }}><Flags flags={r.flags} /></div>
                     {isManager && (
                       <div>
                         <select style={s.sel} value={r.therapistId || ''} onChange={e => handleAssign(r.id, e.target.value || null)}>
