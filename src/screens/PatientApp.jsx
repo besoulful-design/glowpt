@@ -1,14 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../auth'
-
-const feelingData = {
-  1: { emoji: '😔', word: 'Really tough' },
-  2: { emoji: '😕', word: 'Hard day' },
-  3: { emoji: '🙂', word: 'Getting there' },
-  4: { emoji: '😊', word: 'Good day' },
-  5: { emoji: '😄', word: 'Feeling great' },
-}
+import { FEELINGS as feelingData } from '../lib/feelings'
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] // Mon → Sun
 

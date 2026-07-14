@@ -3,11 +3,12 @@ import { supabase } from '../supabase'
 import { useAuth } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
 import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist, assignTherapist, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
+import { FEELINGS } from '../lib/feelings'
 import QRCode from 'qrcode'
 
-// 1 red → 5 green. "Good" (4) is a light lime, "Great" (5) a deeper emerald, so the
-// two positive dots read as clearly different colors (they were too-similar greens before).
-const FEELING_COLOR = { 1: '#c0554d', 2: '#d07d45', 3: '#c8861d', 4: '#b6c24a', 5: '#2fa06d' }
+// The 7-day trend shows the SAME emoji faces the patient taps at check-in (from
+// ../lib/feelings) — so staff and patient share one language. "Who needs attention"
+// is carried by the Status pills (Low mood / Inactive), not by color.
 
 const s = {
   page: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif" },
@@ -52,7 +53,8 @@ const s = {
   sel: { background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '6px 8px', color: '#f5efe4', fontSize: 13, fontFamily: 'inherit', maxWidth: '100%' },
   name: { fontSize: 15, fontWeight: 500 },
   cell: { fontSize: 14, color: 'rgba(245,239,228,0.7)' },
-  dot: (f) => ({ width: 12, height: 12, borderRadius: '50%', background: f ? FEELING_COLOR[f] : 'rgba(245,239,228,0.12)', display: 'inline-block' }),
+  face: { fontSize: 17, lineHeight: 1, cursor: 'default' },
+  noCheckin: { width: 12, height: 12, borderRadius: '50%', background: 'rgba(245,239,228,0.12)', display: 'inline-block' },
   pill: (kind) => ({ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, marginRight: 6, display: 'inline-block',
     background: kind === 'low' ? 'rgba(192,85,77,0.18)' : 'rgba(200,134,29,0.16)',
     color: kind === 'low' ? '#e79a92' : '#e0a035', border: `1px solid ${kind === 'low' ? 'rgba(192,85,77,0.4)' : 'rgba(200,134,29,0.4)'}` }),
@@ -70,9 +72,15 @@ const COLS_MANAGER = '1.5fr 0.9fr 0.6fr 1.1fr 0.5fr 0.95fr 1.1fr'
 const COLS_THERAPIST = '1.6fr 1fr 0.8fr 1.4fr 0.8fr 1.2fr'
 
 function Trend({ last7 }) {
-  const dots = [...last7]
-  while (dots.length < 7) dots.unshift(null)
-  return <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}>{dots.map((f, i) => <span key={i} style={s.dot(f)} />)}</span>
+  const days = [...last7]
+  while (days.length < 7) days.unshift(null)
+  return (
+    <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}>
+      {days.map((f, i) => f
+        ? <span key={i} style={s.face} title={FEELINGS[f].word}>{FEELINGS[f].emoji}</span>
+        : <span key={i} style={s.noCheckin} title="No check-in" />)}
+    </span>
+  )
 }
 
 function Flags({ flags }) {
@@ -280,10 +288,10 @@ export default function Dashboard() {
               <span style={s.legendLabel}>7-day trend — daily feeling</span>
               {[1, 2, 3, 4, 5].map(n => (
                 <span key={n} style={s.legendItem}>
-                  <span style={s.dot(n)} /> {['Really tough', 'Hard', 'Okay', 'Good', 'Great'][n - 1]}
+                  <span style={s.face}>{FEELINGS[n].emoji}</span> {FEELINGS[n].word}
                 </span>
               ))}
-              <span style={s.legendItem}><span style={s.dot(null)} /> No check-in</span>
+              <span style={s.legendItem}><span style={s.noCheckin} /> No check-in</span>
             </div>
             <div style={s.scroll}>
               <div style={{ minWidth: isManager ? 700 : 560 }}>
