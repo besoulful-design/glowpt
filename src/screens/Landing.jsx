@@ -30,7 +30,7 @@ export default function Landing() {
         </div>
         <div style={s.tagline}>One good day at a time.</div>
 
-        <div style={s.headline}>The daily check-in that keeps your patients engaged between visits.</div>
+        <div style={s.headline}>A daily check-in to keep patients engaged between visits.</div>
         <div style={s.sub}>A 30-second check-in with warm, personal encouragement — so more patients finish their plan of care.</div>
 
         <div style={s.btns}>

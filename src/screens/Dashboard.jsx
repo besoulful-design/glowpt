@@ -75,8 +75,8 @@ const s = {
 // trend, avg, status) are given fixed px widths and the text columns a min floor
 // — that way every grid resolves identical column edges and things line up.
 // (Bare `fr` sizes to each row's own content, which is what made them drift.)
-const COLS_MANAGER = 'minmax(120px,1.4fr) minmax(72px,0.9fr) 60px 172px 50px 104px minmax(120px,1.2fr)'
-const COLS_THERAPIST = 'minmax(130px,1.6fr) minmax(80px,1fr) 60px 172px 50px 104px'
+const COLS_MANAGER = 'minmax(120px,1.4fr) minmax(72px,0.9fr) 60px 172px 78px 104px minmax(120px,1.2fr)'
+const COLS_THERAPIST = 'minmax(130px,1.6fr) minmax(80px,1fr) 60px 172px 78px 104px'
 
 function Trend({ last7 }) {
   const days = [...last7]
@@ -303,7 +303,7 @@ export default function Dashboard() {
               <span style={s.legendItem}><span style={s.noCheckin} /> No check-in</span>
             </div>
             <div style={s.scroll}>
-              <div style={{ minWidth: isManager ? 820 : 700 }}>
+              <div style={{ minWidth: isManager ? 848 : 728 }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
                   <div>Patient</div><div>Last check-in</div><div style={{ textAlign: 'center' }}>Streak</div><div>7-day trend</div><div style={{ textAlign: 'center' }}>Avg</div><div style={{ textAlign: 'center' }}>Status</div>
                   {isManager && <div>Therapist</div>}
@@ -314,7 +314,11 @@ export default function Dashboard() {
                     <div style={s.cell}>{relativeDay(r.lastCheckin)}</div>
                     <div style={{ ...s.cell, textAlign: 'center' }}>{r.streak > 0 ? `${r.streak}🔥` : '—'}</div>
                     <div><Trend last7={r.last7} /></div>
-                    <div style={{ ...s.cell, textAlign: 'center' }}>{r.avg != null ? r.avg.toFixed(1) : '—'}</div>
+                    <div style={{ ...s.cell, textAlign: 'center' }}>
+                      {r.avg != null
+                        ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'center' }}><span style={s.slot} title={FEELINGS[Math.round(r.avg)].word}>{FEELINGS[Math.round(r.avg)].emoji}</span>{r.avg.toFixed(1)}</span>
+                        : '—'}
+                    </div>
                     <div style={{ textAlign: 'center' }}><Flags flags={r.flags} /></div>
                     {isManager && (
                       <div>
