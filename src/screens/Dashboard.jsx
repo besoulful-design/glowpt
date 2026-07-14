@@ -53,7 +53,10 @@ const s = {
   sel: { background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '6px 8px', color: '#f5efe4', fontSize: 13, fontFamily: 'inherit', maxWidth: '100%' },
   name: { fontSize: 15, fontWeight: 500 },
   cell: { fontSize: 14, color: 'rgba(245,239,228,0.7)' },
-  face: { fontSize: 17, lineHeight: 1, cursor: 'default' },
+  face: { fontSize: 17, lineHeight: 1 },
+  // Each of the 7 trend days is an equal-width slot so emoji (which render wider
+  // than their font-size) always fit the column and line up evenly.
+  slot: { width: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1, cursor: 'default' },
   noCheckin: { width: 12, height: 12, borderRadius: '50%', background: 'rgba(245,239,228,0.12)', display: 'inline-block' },
   pill: (kind) => ({ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, marginRight: 6, display: 'inline-block',
     background: kind === 'low' ? 'rgba(192,85,77,0.18)' : 'rgba(200,134,29,0.16)',
@@ -72,17 +75,19 @@ const s = {
 // trend, avg, status) are given fixed px widths and the text columns a min floor
 // — that way every grid resolves identical column edges and things line up.
 // (Bare `fr` sizes to each row's own content, which is what made them drift.)
-const COLS_MANAGER = 'minmax(120px,1.4fr) minmax(72px,0.9fr) 60px 152px 50px 104px minmax(120px,1.2fr)'
-const COLS_THERAPIST = 'minmax(130px,1.6fr) minmax(80px,1fr) 60px 152px 50px 104px'
+const COLS_MANAGER = 'minmax(120px,1.4fr) minmax(72px,0.9fr) 60px 172px 50px 104px minmax(120px,1.2fr)'
+const COLS_THERAPIST = 'minmax(130px,1.6fr) minmax(80px,1fr) 60px 172px 50px 104px'
 
 function Trend({ last7 }) {
   const days = [...last7]
   while (days.length < 7) days.unshift(null)
   return (
-    <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}>
-      {days.map((f, i) => f
-        ? <span key={i} style={s.face} title={FEELINGS[f].word}>{FEELINGS[f].emoji}</span>
-        : <span key={i} style={s.noCheckin} title="No check-in" />)}
+    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+      {days.map((f, i) => (
+        <span key={i} style={s.slot} title={f ? FEELINGS[f].word : 'No check-in'}>
+          {f ? FEELINGS[f].emoji : <span style={s.noCheckin} />}
+        </span>
+      ))}
     </span>
   )
 }
@@ -298,7 +303,7 @@ export default function Dashboard() {
               <span style={s.legendItem}><span style={s.noCheckin} /> No check-in</span>
             </div>
             <div style={s.scroll}>
-              <div style={{ minWidth: isManager ? 800 : 680 }}>
+              <div style={{ minWidth: isManager ? 820 : 700 }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
                   <div>Patient</div><div>Last check-in</div><div style={{ textAlign: 'center' }}>Streak</div><div>7-day trend</div><div style={{ textAlign: 'center' }}>Avg</div><div style={{ textAlign: 'center' }}>Status</div>
                   {isManager && <div>Therapist</div>}
