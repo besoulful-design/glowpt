@@ -6,9 +6,9 @@ import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist,
 import { FEELINGS } from '../lib/feelings'
 import QRCode from 'qrcode'
 
-// The 7-day trend shows the SAME emoji faces the patient taps at check-in (from
+// The 3-day trend shows the SAME emoji faces the patient taps at check-in (from
 // ../lib/feelings) — so staff and patient share one language. "Who needs attention"
-// is carried by the Status pills (Low mood / Inactive), not by color.
+// is carried by the flag pills (Low mood / Inactive) shown right next to the name.
 
 const s = {
   page: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif" },
@@ -51,7 +51,7 @@ const s = {
   emptyTeam: { fontSize: 13.5, color: 'rgba(245,239,228,0.5)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   greet: { fontSize: 14.5, color: '#e0a035', fontWeight: 500, marginBottom: 6 },
   sel: { background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '6px 8px', color: '#f5efe4', fontSize: 13, fontFamily: 'inherit', maxWidth: '100%' },
-  name: { fontSize: 15, fontWeight: 500 },
+  name: { fontSize: 15, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   cell: { fontSize: 14, color: 'rgba(245,239,228,0.7)' },
   face: { fontSize: 17, lineHeight: 1 },
   // Each of the 7 trend days is an equal-width slot so emoji (which render wider
@@ -72,15 +72,17 @@ const s = {
 
 // Roster grid columns — managers get an extra "Therapist" (assign) column.
 // Header + each patient row are SEPARATE grids, so the short columns (streak,
-// trend, avg, status) are given fixed px widths and the text columns a min floor
+// trend, avg) are given fixed px widths and the text columns a min floor
 // — that way every grid resolves identical column edges and things line up.
 // (Bare `fr` sizes to each row's own content, which is what made them drift.)
-const COLS_MANAGER = 'minmax(120px,1.4fr) minmax(72px,0.9fr) 60px 172px 78px 104px minmax(120px,1.2fr)'
-const COLS_THERAPIST = 'minmax(130px,1.6fr) minmax(80px,1fr) 60px 172px 78px 104px'
+// The flag (Low mood / Inactive) now sits inline next to the name, so there's
+// no separate Status column.
+const COLS_MANAGER = 'minmax(150px,1.6fr) minmax(72px,0.9fr) 60px 84px 78px minmax(120px,1.2fr)'
+const COLS_THERAPIST = 'minmax(150px,1.6fr) minmax(80px,1fr) 60px 84px 78px'
 
-function Trend({ last7 }) {
-  const days = [...last7]
-  while (days.length < 7) days.unshift(null)
+function Trend({ last3 }) {
+  const days = [...last3]
+  while (days.length < 3) days.unshift(null)
   return (
     <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
       {days.map((f, i) => (
@@ -92,9 +94,11 @@ function Trend({ last7 }) {
   )
 }
 
-function Flags({ flags }) {
-  if (!flags.length) return <span style={s.ok}>On track</span>
-  return <span>{flags.map(f => <span key={f} style={s.pill(f)}>{f === 'low' ? 'Low mood' : 'Inactive'}</span>)}</span>
+// Flag pills shown inline next to the patient's name. Nothing renders when a
+// patient is on track — no news is good news.
+function NameFlags({ flags }) {
+  if (!flags.length) return null
+  return flags.map(f => <span key={f} style={s.pill(f)}>{f === 'low' ? 'Low mood' : 'Inactive'}</span>)
 }
 
 // Friendly greeting name. Keep a leading title with the name ("Dr. Sam"), otherwise
@@ -294,7 +298,7 @@ export default function Dashboard() {
         {!loading && roster.length > 0 && (
           <>
             <div style={s.legend}>
-              <span style={s.legendLabel}>7-day trend — daily feeling</span>
+              <span style={s.legendLabel}>3-day trend — daily feeling</span>
               {[1, 2, 3, 4, 5].map(n => (
                 <span key={n} style={s.legendItem}>
                   <span style={s.face}>{FEELINGS[n].emoji}</span> {FEELINGS[n].word}
@@ -303,23 +307,22 @@ export default function Dashboard() {
               <span style={s.legendItem}><span style={s.noCheckin} /> No check-in</span>
             </div>
             <div style={s.scroll}>
-              <div style={{ minWidth: isManager ? 848 : 728 }}>
+              <div style={{ minWidth: isManager ? 680 : 560 }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
-                  <div>Patient</div><div>Last check-in</div><div style={{ textAlign: 'center' }}>Streak</div><div>7-day trend</div><div style={{ textAlign: 'center' }}>Avg</div><div style={{ textAlign: 'center' }}>Status</div>
+                  <div>Patient</div><div>Last check-in</div><div style={{ textAlign: 'center' }}>Streak</div><div>3-day trend</div><div style={{ textAlign: 'center' }}>Avg</div>
                   {isManager && <div>Therapist</div>}
                 </div>
                 {roster.map(r => (
                   <div key={r.id} style={{ ...s.row, gridTemplateColumns: rosterCols }}>
-                    <div style={s.name}>{r.name}</div>
+                    <div style={s.name}><span>{r.name}</span><NameFlags flags={r.flags} /></div>
                     <div style={s.cell}>{relativeDay(r.lastCheckin)}</div>
                     <div style={{ ...s.cell, textAlign: 'center' }}>{r.streak > 0 ? `${r.streak}🔥` : '—'}</div>
-                    <div><Trend last7={r.last7} /></div>
+                    <div><Trend last3={r.last3} /></div>
                     <div style={{ ...s.cell, textAlign: 'center' }}>
                       {r.avg != null
                         ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'center' }}><span style={s.slot} title={FEELINGS[Math.round(r.avg)].word}>{FEELINGS[Math.round(r.avg)].emoji}</span>{r.avg.toFixed(1)}</span>
                         : '—'}
                     </div>
-                    <div style={{ textAlign: 'center' }}><Flags flags={r.flags} /></div>
                     {isManager && (
                       <div>
                         <select style={s.sel} value={r.therapistId || ''} onChange={e => handleAssign(r.id, e.target.value || null)}>

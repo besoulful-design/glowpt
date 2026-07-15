@@ -226,7 +226,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
       console.log('AI error:', err)
     }
 
-    const { error } = await supabase.from('checkins').insert({
+    const payload = {
       user_id: user.id,
       clinic_id: profile?.clinic_id ?? null,
       feeling: selectedFeeling,
@@ -235,8 +235,33 @@ Respond directly to ${firstName} in second person. Reference what they actually 
       other_movement: otherMovement.trim() || null,
       note,
       ai_response: response,
-    })
-    if (error) console.log('Save error:', error.message)
+    }
+
+    // One check-in per calendar day: if they already checked in today, UPDATE that
+    // row instead of adding a duplicate. We ask for the updated row back (.select());
+    // if the update touches nothing (e.g. the checkins UPDATE RLS policy isn't in
+    // place yet), we fall back to an insert so a save is never silently lost.
+    const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0)
+    const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1)
+    const { data: existingRows } = await supabase
+      .from('checkins').select('id')
+      .eq('user_id', user.id)
+      .gte('created_at', dayStart.toISOString())
+      .lt('created_at', dayEnd.toISOString())
+      .order('created_at', { ascending: true }).limit(1)
+    const existingId = existingRows?.[0]?.id
+
+    let saved = false
+    if (existingId) {
+      const { data: upd, error: updErr } = await supabase
+        .from('checkins').update(payload).eq('id', existingId).select('id')
+      if (updErr) console.log('Update error:', updErr.message)
+      saved = !!(upd && upd.length)
+    }
+    if (!saved) {
+      const { error: insErr } = await supabase.from('checkins').insert(payload)
+      if (insErr) console.log('Save error:', insErr.message)
+    }
 
     setAiResponse(response)
     await loadData()

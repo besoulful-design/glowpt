@@ -67,7 +67,7 @@ export function buildRoster(patients, checkins) {
     const cs = byUser[p.id] || []
     const last = cs[0]
     const daysSince = last ? daysBetween(new Date(), last.created_at) : null
-    const last7 = cs.slice(0, 7).map(c => c.feeling).reverse() // oldest→newest of the recent 7
+    const last3 = cs.slice(0, 3).map(c => c.feeling).reverse() // oldest→newest of the recent 3
     const rated = cs.map(c => c.feeling).filter(f => typeof f === 'number')
     const avg = rated.length ? rated.reduce((a, b) => a + b, 0) / rated.length : null
 
@@ -83,7 +83,7 @@ export function buildRoster(patients, checkins) {
       lastCheckin: last?.created_at || null,
       daysSince,
       streak: computeStreak(cs),
-      last7,
+      last3,
       avg,
       flags,
     }
