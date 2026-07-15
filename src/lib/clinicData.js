@@ -6,7 +6,7 @@ import { supabase } from '../supabase'
 export async function fetchClinicData(clinicId) {
   const [patientsRes, checkinsRes] = await Promise.all([
     supabase.from('profiles')
-      .select('id, full_name, created_at, therapist_id')
+      .select('id, full_name, created_at, therapist_id, discharged_at')
       .eq('clinic_id', clinicId).eq('role', 'patient'),
     supabase.from('checkins')
       .select('user_id, feeling, feeling_word, note, created_at')
@@ -40,6 +40,13 @@ export function inviteTherapist(email, fullName) {
 }
 export function assignTherapist(patientId, therapistId) {
   return supabase.rpc('assign_therapist', { p_patient: patientId, p_therapist: therapistId })
+}
+// Soft-delete: hide a patient from the roster (data kept, reversible via restorePatient).
+export function dischargePatient(patientId) {
+  return supabase.rpc('discharge_patient', { p_patient: patientId })
+}
+export function restorePatient(patientId) {
+  return supabase.rpc('restore_patient', { p_patient: patientId })
 }
 
 function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x }

@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { useAuth } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
-import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist, assignTherapist, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
+import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist, assignTherapist, dischargePatient, restorePatient, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
 import { FEELINGS } from '../lib/feelings'
 import QRCode from 'qrcode'
 
@@ -68,6 +68,13 @@ const s = {
   rosterHead: { display: 'grid', gap: 12, padding: '0 16px 10px', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
   row: { display: 'grid', gap: 12, alignItems: 'center', background: '#1a2840', border: '1px solid rgba(245,239,228,0.06)', borderRadius: 6, padding: '14px 16px', marginBottom: 8 },
   empty: { background: '#1a2840', border: '1px dashed rgba(200,134,29,0.3)', borderRadius: 8, padding: 32, textAlign: 'center', color: 'rgba(245,239,228,0.6)' },
+  // Discharge (soft-delete) controls
+  dischargeBtn: { background: 'transparent', border: 'none', padding: '2px 0', color: 'rgba(231,154,146,0.75)', fontSize: 11.5, fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '0.02em' },
+  dischargedWrap: { marginTop: 18 },
+  dischargedToggle: { background: 'transparent', border: 'none', color: 'rgba(245,239,228,0.5)', fontSize: 12.5, fontWeight: 600, letterSpacing: '0.04em', cursor: 'pointer', padding: '6px 0', fontFamily: 'inherit' },
+  dischargedList: { marginTop: 6, background: '#1a2840', border: '1px solid rgba(245,239,228,0.08)', borderRadius: 6, padding: '6px 14px' },
+  dischargedRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid rgba(245,239,228,0.05)', fontSize: 14, color: 'rgba(245,239,228,0.7)' },
+  restoreBtn: { background: 'transparent', border: '1px solid rgba(200,134,29,0.4)', borderRadius: 4, padding: '4px 12px', color: '#e0a035', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
 }
 
 // Roster grid columns — managers get an extra "Therapist" (assign) column.
@@ -115,6 +122,8 @@ export default function Dashboard() {
   const { user, profile, signOut } = useAuth()
   const [clinic, setClinic] = useState(null)
   const [roster, setRoster] = useState([])
+  const [discharged, setDischarged] = useState([])
+  const [showDischarged, setShowDischarged] = useState(false)
   const [therapists, setTherapists] = useState([])
   const [invites, setInvites] = useState([])
   const [loading, setLoading] = useState(true)
@@ -130,15 +139,24 @@ export default function Dashboard() {
   // (some manager profiles were created before the name landed on the profile row).
   const staffName = greetingName(profile?.full_name || user?.user_metadata?.full_name)
 
+  // Load the roster, splitting active patients from discharged (soft-deleted) ones.
+  // Reused after a discharge/restore so the lists refresh without a full reload.
+  const loadRoster = useCallback(async () => {
+    const { patients, checkins } = await fetchClinicData(profile.clinic_id)
+    const active = patients.filter(p => !p.discharged_at)
+    setRoster(buildRoster(active, checkins))
+    setDischarged(patients.filter(p => p.discharged_at).map(p => ({ id: p.id, name: p.full_name || 'Patient' })))
+  }, [profile])
+
   useEffect(() => {
     if (!profile?.clinic_id) { setLoading(false); return }
     let active = true
     ;(async () => {
       const { data: c } = await supabase.from('clinics').select('id, name, slug').eq('id', profile.clinic_id).single()
-      const { patients, checkins } = await fetchClinicData(profile.clinic_id)
       if (!active) return
       setClinic(c)
-      setRoster(buildRoster(patients, checkins))
+      await loadRoster()
+      if (!active) return
       if (isManager) {
         const [ther, inv] = await Promise.all([fetchTherapists(profile.clinic_id), fetchPendingInvites(profile.clinic_id)])
         if (!active) return
@@ -152,7 +170,7 @@ export default function Dashboard() {
       }
     })()
     return () => { active = false }
-  }, [profile, user, isManager])
+  }, [profile, user, isManager, loadRoster])
 
   // Generate a printable QR code of the clinic's patient invite link.
   useEffect(() => {
@@ -176,6 +194,21 @@ export default function Dashboard() {
     setRoster(rs => rs.map(r => (r.id === patientId ? { ...r, therapistId } : r))) // optimistic
     const { error } = await assignTherapist(patientId, therapistId)
     if (error) { setRoster(prev); setNotice(`Couldn’t update assignment: ${error.message}`) }
+  }
+
+  async function handleDischarge(patientId, name) {
+    if (!window.confirm(`Discharge ${name}? They’ll be hidden from your roster, but their check-ins are kept and you can restore them anytime.`)) return
+    setNotice('')
+    const { error } = await dischargePatient(patientId)
+    if (error) return setNotice(`Couldn’t discharge ${name}: ${error.message}`)
+    await loadRoster()
+  }
+
+  async function handleRestore(patientId) {
+    setNotice('')
+    const { error } = await restorePatient(patientId)
+    if (error) return setNotice(`Couldn’t restore: ${error.message}`)
+    await loadRoster()
   }
 
   async function handleInvite(e) {
@@ -324,11 +357,12 @@ export default function Dashboard() {
                         : '—'}
                     </div>
                     {isManager && (
-                      <div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
                         <select style={s.sel} value={r.therapistId || ''} onChange={e => handleAssign(r.id, e.target.value || null)}>
                           <option value="">Unassigned</option>
                           {therapists.map(t => <option key={t.id} value={t.id}>{t.full_name || 'Therapist'}</option>)}
                         </select>
+                        <button style={s.dischargeBtn} onClick={() => handleDischarge(r.id, r.name)}>Discharge</button>
                       </div>
                     )}
                   </div>
@@ -336,6 +370,24 @@ export default function Dashboard() {
               </div>
             </div>
           </>
+        )}
+
+        {isManager && discharged.length > 0 && (
+          <div style={s.dischargedWrap}>
+            <button style={s.dischargedToggle} onClick={() => setShowDischarged(v => !v)}>
+              {showDischarged ? '▾' : '▸'} Discharged ({discharged.length})
+            </button>
+            {showDischarged && (
+              <div style={s.dischargedList}>
+                {discharged.map(d => (
+                  <div key={d.id} style={s.dischargedRow}>
+                    <span>{d.name}</span>
+                    <button style={s.restoreBtn} onClick={() => handleRestore(d.id)}>Restore</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
