@@ -15,7 +15,10 @@ const db = createClient(url, key, { auth: { autoRefreshToken: false, persistSess
 
 const CLINIC = { name: 'Riverside PT', slug: 'riverside-pt' }
 const MANAGER_EMAIL = 'besoulful@gmail.com'          // David — kept & set as manager, never deleted
-const THERAPIST_EMAIL = 'demo-therapist@glowpt.app'
+// Demo accounts use real Gmail +aliases so the weekly email DELIVERS. Fake
+// @glowpt.app addresses hard-bounce (no mailbox) and damage our sending reputation.
+const alias = (n) => `dwpeterson15+${n}@gmail.com`
+const THERAPIST_EMAIL = alias('samtorres')
 const PROTECT = new Set([MANAGER_EMAIL, THERAPIST_EMAIL])
 
 const FEELING_WORDS = { 1: 'Really tough', 2: 'Hard day', 3: 'Getting there', 4: 'Good day', 5: 'Feeling great' }
@@ -108,7 +111,7 @@ async function run() {
 
   // 6) Rebuild the 5 demo patients + fresh check-ins
   for (const [name, checkins, customEmail] of PATIENTS) {
-    const email = customEmail || `demo-${name.toLowerCase().split(' ')[0]}@glowpt.app`
+    const email = customEmail || alias(name.toLowerCase().split(' ')[0])
     // If a stray user with this email survived, reuse; ensureUser handles it.
     const user = await ensureUser(email, name, 'patient', clinic.id, therapist?.id ?? null)
     if (!user) continue

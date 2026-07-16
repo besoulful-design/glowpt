@@ -18,6 +18,10 @@ if (!url || !key) { console.error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KE
 const db = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 
 const CLINIC = { name: 'Riverside PT', slug: 'riverside-pt' }
+// Demo accounts use David's real Gmail +aliases (all land in his inbox) so the weekly
+// email actually DELIVERS. Fake @glowpt.app addresses hard-bounce — glowpt.app has no
+// mailbox — and bounces wreck the sending reputation of our own verified domain.
+const alias = (n) => `dwpeterson15+${n}@gmail.com`
 const FEELING_WORDS = { 1: 'Really tough', 2: 'Hard day', 3: 'Getting there', 4: 'Good day', 5: 'Feeling great' }
 const NOTES = ['Stiff this morning but loosened up after my walk.', 'Did my exercises even though I didn’t feel like it.', 'Knee felt good today.', 'Rested — needed it.', 'Small win: stairs were easier.']
 const MOVES = [['PT exercises'], ['PT exercises', 'Walk or light activity'], ['Stretching'], ['Rest day'], ['Walk or light activity']]
@@ -80,13 +84,13 @@ async function run() {
   console.log('Clinic:', CLINIC.name, clinic.id)
 
   // 2) Staff
-  const manager = await ensureUser('demo-manager@glowpt.app', 'Dana Reeves', 'manager', clinic.id)
-  const therapist = await ensureUser('demo-therapist@glowpt.app', 'Sam Torres', 'therapist', clinic.id)
+  const manager = await ensureUser(alias('dana'), 'Dana Reeves', 'manager', clinic.id)
+  const therapist = await ensureUser(alias('samtorres'), 'Sam Torres', 'therapist', clinic.id)
   console.log('Manager + therapist ready.')
 
   // 3) Patients + check-ins
   for (const [name, checkins, customEmail] of PATIENTS) {
-    const email = customEmail || `demo-${name.toLowerCase().split(' ')[0]}@glowpt.app`
+    const email = customEmail || alias(name.toLowerCase().split(' ')[0])
     const user = await ensureUser(email, name, 'patient', clinic.id, therapist?.id ?? null)
     if (!user) continue
     // wipe this demo patient's existing check-ins so re-running stays clean
@@ -102,7 +106,7 @@ async function run() {
     else console.log(`  ${name}: ${rows.length} check-ins`)
   }
 
-  console.log('\nDone. Manager login: demo-manager@glowpt.app  ·  Patient link: /join/' + CLINIC.slug)
+  console.log('\nDone. Manager login: ' + alias('dana') + '  ·  Patient link: /join/' + CLINIC.slug)
 }
 
 run()
