@@ -82,7 +82,7 @@ export default function Onboard() {
         <input style={ui.input} placeholder="Clinic name (e.g. Riverside PT)" value={clinicName}
           onChange={e => { setClinicName(e.target.value); if (!slugEdited) setSlug(slugify(e.target.value)) }} />
         <div style={{ textAlign: 'left', fontSize: 12, color: 'rgba(245,239,228,0.4)', marginTop: -4 }}>
-          Patient link: glowpt-app.netlify.app/join/<strong style={{ color: '#c8861d' }}>{effectiveSlug || 'your-clinic'}</strong>
+          Patient link: {window.location.host}/join/<strong style={{ color: '#c8861d' }}>{effectiveSlug || 'your-clinic'}</strong>
         </div>
         <input style={ui.input} placeholder="Clinic web name" value={effectiveSlug}
           onChange={e => { setSlugEdited(true); setSlug(slugify(e.target.value)) }} />
