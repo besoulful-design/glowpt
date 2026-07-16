@@ -6,6 +6,7 @@ import Join from './screens/Join'
 import Login from './screens/Login'
 import Onboard from './screens/Onboard'
 import PatientApp from './screens/PatientApp'
+import NoClinic from './screens/NoClinic'
 import Dashboard from './screens/Dashboard'
 
 function Splash() {
@@ -22,6 +23,9 @@ function Home() {
 
   const role = profile?.role || 'patient'
   if (role === 'therapist' || role === 'manager') return <Navigate to="/dashboard" replace />
+  // A patient with no clinic has nowhere for their check-ins to go — sending them into
+  // PatientApp would save entries with clinic_id = null that no dashboard can ever see.
+  if (!profile?.clinic_id) return <NoClinic />
   return <PatientApp />
 }
 
