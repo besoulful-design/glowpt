@@ -65,15 +65,39 @@ Deno.serve(async (req) => {
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
 
   try {
-    const [{ data: clinics }, { data: profiles }, { data: checkins }, { data: userList }] = await Promise.all([
+    const [clinicsRes, profilesRes, checkinsRes, usersRes] = await Promise.all([
       supabase.from("clinics").select("id, name"),
       supabase.from("profiles").select("id, clinic_id, role, full_name"),
       supabase.from("checkins").select("user_id, created_at").gte("created_at", weekAgo),
       supabase.auth.admin.listUsers(),
     ])
 
+    // FAIL LOUDLY. These errors used to be discarded: a dead service key looked
+    // EXACTLY like a quiet week — every query returned null, the loop ran zero
+    // times, and this still answered {ok:true, queued:0, sent:0} with a 200.
+    // That is how a broken weekly email went unnoticed. Never swallow these again.
+    const errors = [
+      clinicsRes.error && `clinics: ${clinicsRes.error.message}`,
+      profilesRes.error && `profiles: ${profilesRes.error.message}`,
+      checkinsRes.error && `checkins: ${checkinsRes.error.message}`,
+      usersRes.error && `listUsers: ${usersRes.error.message}`,
+    ].filter(Boolean)
+    if (errors.length) {
+      console.error("weekly-summary CANNOT READ DATA:", errors.join(" | "))
+      return new Response(JSON.stringify({ ok: false, errors }), {
+        status: 500, headers: { "Content-Type": "application/json" },
+      })
+    }
+
+    const clinics = clinicsRes.data
+    const profiles = profilesRes.data
+    const checkins = checkinsRes.data
+    const userList = usersRes.data
+
     const emailById: Record<string, string> = {}
     for (const u of userList?.users ?? []) if (u.email) emailById[u.id] = u.email
+    // A clinic with zero reachable emails means the key can't read auth.users.
+    console.log(`weekly-summary: ${clinics?.length ?? 0} clinics, ${profiles?.length ?? 0} profiles, ${Object.keys(emailById).length} emails resolved`)
 
     // count distinct check-in days per user this week
     const daysByUser: Record<string, Set<string>> = {}
