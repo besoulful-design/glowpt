@@ -16,6 +16,10 @@ A daily wellness check-in app for physical therapy patients. Patient does a 30-s
 - **Keep the code split** into multiple files (router + `screens/` + `lib/` + `auth.jsx`) — do NOT collapse back into one giant `App.jsx`.
 - **Read the current source files before editing them.** David deploys via `git push`; the files on disk are the source of truth.
 - Never commit secrets. All `.env*` files are gitignored.
+- **Redact secrets in anything David pastes or screenshots back (his explicit ask, 2026-07-17).** Two rules, both on you (Claude):
+  1. **Commands you hand him to copy/paste must never print a secret.** Use a placeholder he fills locally (`Authorization: Bearer <YOUR-KEY>`, or an env var like `PGPASSWORD=… node …`), never a literal key. Nothing sensitive should ever be echoed to his terminal.
+  2. **Queries whose output would contain a secret must be written to hide it, so a screenshot he sends back is safe by construction.** The live example: `cron.job.command` holds a plaintext service key, so ask for `select jobid, schedule, jobname from cron.job` (dropping `command`) or a redacted expression, never `select command…`. Read status codes / values back in *words* instead of dumping the raw secret.
+  - **Why it matters:** David rotates any key that lands in a screenshot, which is a real, repeated time sink. Design outputs to be screenshot-safe up front. See the Secret-key hygiene note under Status & backlog.
 
 ## Tech stack
 | Layer | Tool |
@@ -63,14 +67,50 @@ A daily wellness check-in app for physical therapy patients. Patient does a 30-s
 - **Positioning:** GlowPT is NOT an HEP/exercise-program tool (clinics resist those). Its wedge is the daily emotional/adherence check-in no other clinic tool owns. Target buyers: clinic owners + office/practice managers (often on Instagram, not LinkedIn).
 
 ## HIPAA guardrail (do not violate)
-Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/committed clinic + signed BAAs.** Go-live flips (gated on first paying clinic): Supabase Team plan (~$599/mo) + Supabase BAA + Anthropic BAA + **Resend BAA (flagged 2026-07-15 — was missing from this list)**. Why Resend counts: the weekly *patient* email carries their name + email + check-in count, which identifies a person AND reveals they're a PT patient → individually identifiable health info that Resend transmits → business associate. (The *clinic* email is aggregates-only and genuinely PHI-free.) **Verify Resend can sign a BAA and on which plan BEFORE go-live** — if it can't, the email vendor changes. Netlify only serves the static frontend (PHI goes browser→Supabase directly, never through Netlify), so it's not treated as a business associate. Also needs the `access_log` (done) before a real clinic dashboard. David + friends testing on the sandbox = demo data, not real PHI — that's fine.
+Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/committed clinic + signed BAAs.** Go-live flips (gated on first paying clinic): Supabase Team plan (~$599/mo) + Supabase BAA + Anthropic BAA + **Resend BAA (flagged 2026-07-15 — was missing from this list)**. Why Resend counts: the weekly *patient* email carries their name + email + check-in count, which identifies a person AND reveals they're a PT patient → individually identifiable health info that Resend transmits → business associate. (The *clinic* email is aggregates-only and genuinely PHI-free.) **Verify Resend can sign a BAA and on which plan BEFORE go-live** — if it can't, the email vendor changes. **ANSWERED 2026-07-17: Resend has no HIPAA/BAA option → the whole stack is moving to AWS (email becomes SES). The go-live infra path is now the AWS migration (RDS + Cognito + Lambda + SES under one AWS BAA, plus the Anthropic BAA), NOT Supabase Team + Resend. See ⭐⭐ CURRENT INITIATIVE above.** The demo-data-only rule in this guardrail is unchanged and still governs until a paying clinic + signed BAAs. Netlify only serves the static frontend (PHI goes browser→Supabase directly, never through Netlify), so it's not treated as a business associate. Also needs the `access_log` (done) before a real clinic dashboard. David + friends testing on the sandbox = demo data, not real PHI — that's fine.
 
 ## Demo vs sandbox convention
 - **Riverside PT** = the clean **sales demo** clinic (David = manager via `besoulful@gmail.com`; **6 seeded patients** incl. showcase **Grace Bennett** = `dwpeterson15+grace@gmail.com`, ~25 check-ins over 30 days trending up with a 14-day streak — log in AS her to demo the patient **Progress screen**). Never share its `/join` link; re-pristine with `scripts/reset-demo.mjs`.
 - **Sandbox = "Ridge PT"** (created via `/onboard`, manager `dwpeterson15@gmail.com`) = for David + friends to dogfood. Test logins (Gmail `+aliases` → all land in his inbox): therapist `dwpeterson15+therapist1@gmail.com` ("Dr. Sam"), patients `dwpeterson15+patient1@gmail.com` (Tim Long, assigned to Dr. Sam), "Charlie" (`+charlie@gmail.com`), "Davey" (`+test@gmail.com`, re-joined properly via `/join/ridge-pt` 2026-07-15, assigned to Dr. Sam). Mess is fine — but **make new test patients via the clinic's `/join/<slug>` link, NOT by typing an email into `/login`**, or they land with no clinic (see V2.4). Deleted 2026-07-15 as orphans: `+timmy@gmail.com` ("Timmy"), `+test2@gmail.com`.
 - **Login-code emails use Supabase's built-in rate-limited mailer (~few/hr)** — heavy same-day testing can exhaust it; codes then don't arrive (check spam, wait, or do the custom-SMTP work).
 
-## ⭐ START HERE (next session — written 2026-07-16 evening)
+## ⭐⭐ CURRENT INITIATIVE (2026-07-17): migrating off Supabase + Resend to AWS
+
+**Decided, not under discussion.** Resend has **no** HIPAA/BAA option (that's what kicked this off), and Supabase Team + its HIPAA add-on runs ~$950/mo, which doesn't clear GlowPT's own cost until the 4th clinic. AWS is ~$60–120/mo with **one free, self-serve BAA** covering RDS + Cognito + Lambda + SES. The cheap window is open **only because no real PHI exists yet** (demo clinics only) — it closes the moment a real patient logs in. Target: real patients in ~2 weeks (David's own date, promised to nobody, movable).
+
+**Who does what:** **claude.ai = architect** (wrote the planning docs, lives in the web chat, no repo access). **Claude Code (me) = builder** (executes here). **Planning is done; from here it's David + Claude Code.** Only re-engage claude.ai if David wants a second architect opinion on a big call.
+
+**Planning docs (repo root; all local/uncommitted except the committed baseline):**
+- `glowpt-supabase-inventory.md` — full Supabase surface (37 runtime call sites = 23 simple + 14 complex; 6 tables; 0 storage; 0 realtime; 1 auth flow; 6 RPCs already server-side).
+- `glowpt-aws-decisions-and-task-1.md` — the 7 settled decisions (app-owned `public.users`; `current_user_id()` via **txn-scoped** `set_config`; EventBridge+Lambda replaces pg_cron; consents narrowed to caseload; etc.).
+- `glowpt-task-1-findings.md` — baseline schema findings.
+- `glowpt-aws-migration-plan.md` — **the 6-phase build plan; these are my build instructions.**
+- `glowpt-profiles-update-fix-design.md` — approved design for the 10.2 fix.
+
+**Progress:**
+- ✅ **Task 1 done:** live schema dumped to **`supabase/migrations/0000_baseline.sql`** (committed; produced via Node introspection, not pg_dump, which wouldn't install without David's admin password). First time the repo describes its own `checkins` table. Facts: `movements` is **`text[]`**; `checkins.user_id` **does** carry a 5th FK to `auth.users`; server is **Postgres 17.6**. The Supabase DB password was reset 2026-07-17 for the pooler dump; nothing in the live system uses it.
+- ✅ **10.2 fix designed + approved by David:** a column-scoped UPDATE grant (`full_name` only) + a `join_clinic()` SECURITY DEFINER function (role pinned to `'patient'`, refuses staff, atomic consent) + no direct app INSERT on `profiles`. Full SQL in the design doc.
+- ⏳ **Phase 0 (David's):** AWS org, BAA at org root, RDS, SES production access. In progress.
+
+**⚠️ Two RLS holes found — REPORT, do NOT fix on Supabase; they die in the port (demo-data-only today, so latent not live):**
+1. **`profiles_update_self` (Obs 10.2):** scopes the row but not the columns → any authenticated user sets their own `role='manager'` + `clinic_id=<any>` and reads that clinic's PHI. Fix designed (above).
+2. **Three orphan V1-era policies on `checkins`** that no migration file contains (found only by dumping the live DB) — including **`"Allow anonymous inserts for testing"` = `for insert to public with check (true)`**, which OR's over every other policy and has **silently defeated the `0004` clinic backstop since it shipped**. Anyone holding the public key from the JS bundle can insert check-ins. **Must NOT be carried to RDS.**
+
+**The 6 phases:** 0 Foundation (David) → 1 **Schema (most important; do not rush, do not start tired)** → 2 Auth (Cognito, passwordless email OTP) → 3 API (Lambda + API Gateway; RLS is the boundary, not the authorizer) → 4 Functions (`ai-response` gets a real authorizer + stops being CORS `*`; `weekly-summary` rewritten for SES + EventBridge) → 5 Frontend (`supabase-js` out, fetch in) → 6 Cutover (no data migration; rebuild demo clinics; keep Supabase as the rollback).
+
+**Rules that fail SILENTLY if wrong (nothing errors, tests pass, RLS does nothing):**
+- `set_config('app.user_id', <sub>, true)` **transaction-scoped, ALWAYS.** Never a session-level `set` — RDS Proxy multiplexes connections across users → a leaked value is a cross-tenant PHI read. The value comes from a **verified Cognito JWT**, never a header/body/path.
+- The Lambda connects as a dedicated **non-owner** role `glowpt_app` — an owner is exempt from RLS unless FORCE is set.
+- `ALTER TABLE … FORCE ROW LEVEL SECURITY` on **all 6** tables.
+- Helper funcs (`auth_role`, `auth_clinic_id`, `is_my_patient`) stay **SECURITY DEFINER** + `SET row_security = off`, owned by a role that is **not** `glowpt_app`, or they recurse/deadlock under FORCE. (Confirmed 2026-07-17: all three are already SECURITY DEFINER, STABLE, `search_path=public`, owned by `postgres` on Supabase.)
+- **No identifier (uuid, email, check-in id) in any URL path or query string** — CDNs and API Gateway log paths.
+- Keep **Netlify BA-free**: the moment a Netlify Function exists, Netlify becomes a business associate. `netlify.toml` declares an empty functions dir — consider deleting it.
+
+**The old weekly-email fix (was START HERE #1) is now folded into Phase 4** — rewritten for SES + EventBridge with **batch send + fail-loud (`sent === queued`)**. Still broken on prod today (drops 1 of 13), but it gets fixed as part of the migration rather than twice on two email providers.
+
+---
+
+## ⭐ START HERE (weekly-email era — written 2026-07-16 evening; items 1 & 3 now handled inside the AWS plan above, read that first)
 
 **1. Weekly email: finish it. `sent` must equal `queued` — ZERO drops. David's explicit bar.**
 Tonight's real (non-dryRun) run: **`{queued: 13, sent: 12}` — 12 delivered, 1 silently dropped.** The dropped one is **Davey (`dwpeterson15+test@gmail.com`)** — he is **absent from Resend's log entirely** (not failed, not bounced), which means Resend **refused the API call before logging it**. Cause: `weekly-summary` fires all 13 sends back-to-back in a `for` loop, and **Resend rate-limits to ~2 requests/second**. The 13th fell off.
