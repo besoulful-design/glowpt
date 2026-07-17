@@ -17,7 +17,7 @@ A daily wellness check-in app for physical therapy patients. Patient does a 30-s
 - **Read the current source files before editing them.** David deploys via `git push`; the files on disk are the source of truth.
 - Never commit secrets. All `.env*` files are gitignored.
 - **Redact secrets in anything David pastes or screenshots back (his explicit ask, 2026-07-17).** Two rules, both on you (Claude):
-  1. **Commands you hand him to copy/paste must never print a secret.** Use a placeholder he fills locally (`Authorization: Bearer <YOUR-KEY>`, or an env var like `PGPASSWORD=… node …`), never a literal key. Nothing sensitive should ever be echoed to his terminal.
+  1. **Commands you hand him to copy/paste must never print a secret.** Use an obvious placeholder in place of any key — write `Authorization: Bearer [REDACTED]` (use `[REDACTED]` as the standard word, matching claude.ai; `<YOUR-KEY>` only where he genuinely fills it in), or route it through an env var like `PGPASSWORD=… node …` — never a literal key. Nothing sensitive should ever be echoed to his terminal.
   2. **Queries whose output would contain a secret must be written to hide it, so a screenshot he sends back is safe by construction.** The live example: `cron.job.command` holds a plaintext service key, so ask for `select jobid, schedule, jobname from cron.job` (dropping `command`) or a redacted expression, never `select command…`. Read status codes / values back in *words* instead of dumping the raw secret.
   - **Why it matters:** David rotates any key that lands in a screenshot, which is a real, repeated time sink. Design outputs to be screenshot-safe up front. See the Secret-key hygiene note under Status & backlog.
 
