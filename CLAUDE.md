@@ -1,5 +1,5 @@
 # GlowPT — Project Guide (for Claude Code)
-*Living doc. Loaded automatically every session when working in this folder. Updated 2026-07-13.*
+*Living doc. Loaded automatically every session when working in this folder. Updated 2026-08-02.*
 
 ## What it is
 A daily wellness check-in app for physical therapy patients. Patient does a 30-second check-in (feeling 1–5, movement, a note) and gets a warm, AI-written reflection. Their clinic gets dashboards + a weekly summary. **Clinics subscribe; patients use it free** as a value-add.
@@ -90,7 +90,7 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 **Progress:**
 - ✅ **Task 1 done:** live schema dumped to **`supabase/migrations/0000_baseline.sql`** (committed; produced via Node introspection, not pg_dump, which wouldn't install without David's admin password). First time the repo describes its own `checkins` table. Facts: `movements` is **`text[]`**; `checkins.user_id` **does** carry a 5th FK to `auth.users`; server is **Postgres 17.6**. The Supabase DB password was reset 2026-07-17 for the pooler dump; nothing in the live system uses it.
 - ✅ **10.2 fix designed + approved by David:** a column-scoped UPDATE grant (`full_name` only) + a `join_clinic()` SECURITY DEFINER function (role pinned to `'patient'`, refuses staff, atomic consent) + no direct app INSERT on `profiles`. Full SQL in the design doc.
-- ⏳ **Phase 0 (David's):** AWS org, BAA at org root, RDS, SES production access. In progress.
+- ✅ **Phase 0 (David's) — DONE 2026-08-02, except SES production access** (deliberately deferred to the build session — see "AWS account facts" below). AWS org + Workloads OU + `glowpt-prod` account created; **org-level AWS BAA accepted & Active** (covers every current/future member account); IAM Identity Center (SSO) stood up with `david` + AdministratorAccess on both accounts; $150/mo budget with alerts; `us-east-1` everywhere. Full IDs and open items in the dedicated section below.
 
 **⚠️ Two RLS holes found — REPORT, do NOT fix on Supabase; they die in the port (demo-data-only today, so latent not live):**
 1. **`profiles_update_self` (Obs 10.2):** scopes the row but not the columns → any authenticated user sets their own `role='manager'` + `clinic_id=<any>` and reads that clinic's PHI. Fix designed (above).
@@ -107,6 +107,66 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 - Keep **Netlify BA-free**: the moment a Netlify Function exists, Netlify becomes a business associate. `netlify.toml` declares an empty functions dir — consider deleting it.
 
 **The old weekly-email fix (was START HERE #1) is now folded into Phase 4** — rewritten for SES + EventBridge with **batch send + fail-loud (`sent === queued`)**. Still broken on prod today (drops 1 of 13), but it gets fixed as part of the migration rather than twice on two email providers.
+
+---
+
+## AWS account facts (Phase 0 — permanent reference, from claude.ai handover 2026-08-02)
+
+**This is the permanent home for AWS account facts. Do NOT copy any of this into the FranklinAI website project instructions — that project explicitly excludes GlowPT/AWS backend and legal-entity matters.** Region is `us-east-1` everywhere unless stated.
+
+**Legal entity (the BAA binds to this):**
+- **FranklinAI Solutions LLC**, Pennsylvania, entity #0015737128, EIN in hand.
+- The AWS **management account's Company name** field reads exactly `FranklinAI Solutions LLC` (no comma). **The org BAA binds to this field — do not change it.** The account's **Full name** is David Peterson (individual contact) — correct and expected.
+- Billing address = David's home, 6210 Ridge Ave #3, Philadelphia PA 19128. Registered-agent (ZenBusiness) and IRS addresses differ on purpose — normal, not a problem. Tax settings (TRN/legal name) are intentionally blank; optional, no dependency.
+
+**Organization structure:** Root → `Workloads` OU → `glowpt-prod`, with the management account at Root.
+
+| Item | Value |
+|---|---|
+| Organization ID | `o-4js89l459j` |
+| Feature set | All features enabled |
+| Root ID | `r-i93g` |
+| Workloads OU | `ou-i93g-vvz3dnxq` |
+| Management account | `FranklinAI` — `456112636877` — root email `besoulful+aws-franklinai@gmail.com` |
+| Member account (workloads) | `glowpt-prod` — `463556655381` — root email `besoulful+aws-glowpt@gmail.com` |
+
+`OrganizationAccountAccessRole` left in place on `glowpt-prod` at creation.
+
+**BAA — Active, effective 2026-08-02:**
+- **AWS Organizations Business Associate Addendum accepted at the ORG level** from the management account (AWS Artifact → Agreements → Organization agreements). Coverage is **automatic for the management account and every current & future member account** (incl. `glowpt-prod`) — **no per-account BAA needed.** It's a click-accept addendum binding the entity in the Company-name field; it never prompts for a typed entity name.
+- The separate **HCLS BAA Addendum was deliberately NOT accepted** (it would let the Amazon Connect Health Team de-identify data for service improvement — not needed). Leave it Inactive.
+- **Attorney review was skipped by David's explicit decision** — recorded so it isn't silently re-litigated.
+- BAA reminder: PHI accounts must use **only HIPAA-eligible services** and **encrypt PHI in transit and at rest**.
+
+**IAM Identity Center (SSO) — how David signs in:**
+| Item | Value |
+|---|---|
+| Instance type | Organization instance |
+| Instance ID / ARN | `ssoins-72237eeae3063609` / `arn:aws:sso:::instance/ssoins-72237eeae3063609` |
+| Identity Store ID | `d-906678b3ec` |
+| **AWS access portal URL** | `https://d-906678b3ec.awsapps.com/start` (permanent; both accounts reachable from one login) |
+| Issuer URL (OIDC) | `https://identitycenter.amazonaws.com/ssoins-72237eeae3063609` |
+| Region | `us-east-1` (permanent — moving it means delete + rebuild) |
+| Identity source | Identity Center directory (built-in) |
+- **User:** `david` / David Peterson / `david@franklinaisolutions.com` (enabled).
+- **Permission set:** `AdministratorAccess` (predefined), **8-hour** session, no relay state.
+- **Assignments:** `david` + `AdministratorAccess` → **both** `FranklinAI` and `glowpt-prod` (provisioned & confirmed).
+
+**Credentials model — SSO only:**
+- **No IAM users, no long-lived access keys — none are to be created.** Console via the portal URL above.
+- **CLI/SDK:** `aws configure sso` against the portal URL, profile region `us-east-1`.
+- Root creds for both accounts live in the password manager with virtual MFA; **root is retired to billing changes + account closure only.**
+- **Default console region** set to `us-east-1` under User settings in both accounts (per-user, per-account — doesn't follow the identity across accounts).
+
+**Cost controls:** budget `franklinai-monthly` in the **management account** (billing is consolidated there), **$150/mo**, all services, alerts to `david@franklinaisolutions.com` at 85% actual / 100% actual / 100% forecasted.
+
+### AWS open items (carry into the build session)
+
+1. **⚠️ SES production access — DO THIS FIRST in the build session.** `glowpt-prod` SES is **in the sandbox** (us-east-1: 200 emails/24h, 1/sec, verified addresses only). **Production access was NOT requested** — the current flow requires a **verified sending identity (domain) BEFORE** the human-reviewed request, and applying with nothing verified risks a denial (worse than not applying). **Correct sequence:** verify the sending domain/subdomain (e.g. `franklinaisolutions.com`) with **DKIM CNAMEs at GoDaddy → wait for DNS → then request production access.** Approval takes ~24h–few days, so **fire it as early in the build as the domain allows.** Agreed use-case text: *GlowPT is a patient-engagement app for PT clinics; transactional email only (daily check-in reminders, weekly summaries, account notifications) to enrolled patients + clinic staff; no marketing; opt-out via unsubscribe + through their clinic; bounces/complaints monitored via SNS, hard bounces auto-suppressed.*
+2. **🔑 Second MFA device — parked but load-bearing; do NOT fold into a build session.** `david` has **exactly one** MFA credential — Touch ID (WebAuthn) on his **current MacBook**, and **he's replacing that laptop in ~1 week.** Safe path: **while the old laptop still works**, sign into the portal on the **new** machine and register its built-in authenticator as a 2nd device (no lockout window). An authenticator-app registration failed twice ("It's not you, it's us") — likely a TOTP code entered late in its 30s window (AWS wants two consecutive codes) or iPhone clock drift (Settings → General → Date & Time → Set Automatically). David wants this handled separately.
+3. **Low priority:** SCP to stop member accounts creating their own Identity Center instances; Identity Center instance name (cosmetic); Billing tax TRN/legal name; **CloudTrail** (flagged "Recommended", not yet configured — revisit when PHI is in scope, since audit logging is a HIPAA expectation).
+
+**Session logistics for handing AWS steps to David:** one step per message; **name the account AND region before every step** (SES especially is per-account, per-region); no optional side-quests mid-task; **verify the current console flow before sending him into it** (buttons have moved); direct answers to direct questions; he's new to AWS, not slow — **explain what a thing is *for* before the clicks.** QR-code steps go on the laptop with the phone as scanner, never the reverse.
 
 ---
 
