@@ -168,6 +168,21 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 
 **Session logistics for handing AWS steps to David:** one step per message; **name the account AND region before every step** (SES especially is per-account, per-region); no optional side-quests mid-task; **verify the current console flow before sending him into it** (buttons have moved); direct answers to direct questions; he's new to AWS, not slow — **explain what a thing is *for* before the clicks.** QR-code steps go on the laptop with the phone as scanner, never the reverse.
 
+### SES progress (2026-08-02, with Claude Code)
+
+- In **`glowpt-prod` / us-east-1**, created the **`glowpt.app`** domain identity with **Easy DKIM (RSA-2048)**. **Chose glowpt.app over franklinaisolutions.com** for (1) reputation isolation — `franklinaisolutions.com` is David's *live Outlook/M365 mailbox*, don't entangle its sending rep; (2) patient brand match (From = links = glowpt.app); (3) SES lives in the GlowPT-specific account. Status: **Verification pending.**
+- SES generated **3 DKIM CNAME records** (selectors `oywd4wwe6vrs52ej4oxql2itjng2xii7`, `hayzzrqkvjcittop66mqhh32vf2mbeik`, `loiu67ydd2en4wjihmazytwqk7437io7`; each Value = `<selector>.dkim.amazonses.com`). **Still need publishing to `glowpt.app`'s DNS.**
+- **DNS correction to the handover:** BOTH `glowpt.app` AND `franklinaisolutions.com` are on **Netlify DNS** (`nsone.net`), **NOT GoDaddy** — so all SES records go in **Netlify**. (`franklinai.com` is parked on Efty, not ours to use.) In Netlify the CNAME **Name** field takes only the part before `.glowpt.app` (e.g. `oywd4wwe6…._domainkey`); Netlify appends the domain — pasting the full name double-appends and silently fails.
+- Deferred to a 2nd pass after DKIM verifies: **custom MAIL FROM (`bounce.glowpt.app`) + SNS bounce/complaint handling**, then **request SES production access** (use-case text is in the open-items list above).
+
+### ⛔ BLOCKED: Netlify login / 2FA (2026-08-02) — resolve FIRST next session
+
+Couldn't publish the DKIM records because David couldn't clear Netlify's 2FA. **Findings so next time is fast:**
+- **Login method = Email** (Netlify's own login page shows *"Last used: Email"*), user **`besoulful@gmail.com`**; **password autofills from Apple Passwords** fine. Do NOT use the Google/GitHub buttons — they drop into different/empty accounts and throw "Unauthorized." Don't click "Log in with a different user."
+- **The wall is TOTP 2FA whose secret is MISSING.** It is **not in Google Authenticator** (that app holds only AWS: one `Amazon Web Services: iPhone@456112636877` + **three duplicate `AWS SSO: david`** entries to clean up during the AWS-MFA task) and **not in Apple Passwords** (the **Codes** smart-folder = **0**, i.e. no login has a stored TOTP). **Root cause of David's repeated failures: he was entering AWS codes into the Netlify 2FA box.** Not a typing/clock problem — the clock is correct.
+- **Way in next session:** Netlify **"Use a recovery code"** on the 2FA screen (hunt the saved codes — Netlify setup email or a saved file) **OR** a **Netlify support 2FA reset** (routine, confirms identity). Then **immediately re-enroll 2FA into an app David controls + SAVE the recovery codes**, and **untangle the 3 Netlify credential entries** (2× `besoulful@gmail.com`, 1× `team@mckenziesportsphysicaltherapy…`) that feed the account-maze.
+- **David's authenticator/laptop-change anxiety is real and load-bearing** (he's replacing this MacBook ~1 week from 2026-08-02; see AWS open item #2). Go slow, one factor at a time, reassure. He works primarily on iPhone.
+
 ---
 
 ## ⭐ START HERE (weekly-email era — written 2026-07-16 evening; items 1 & 3 now handled inside the AWS plan above, read that first)
