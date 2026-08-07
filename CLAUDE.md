@@ -80,12 +80,19 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 
 **Who does what:** **claude.ai = architect** (wrote the planning docs, lives in the web chat, no repo access). **Claude Code (me) = builder** (executes here). **Planning is done; from here it's David + Claude Code.** Only re-engage claude.ai if David wants a second architect opinion on a big call.
 
+> ### ▶ NEXT SESSION STARTS HERE (updated 2026-08-07, end of a big session)
+> **Done to date:** Phase 0 account foundation ✅ · SES set up (DKIM/MAIL FROM/SNS ✅, **production access UNDER REVIEW — David replied 8/7, waiting on AWS**) · **Phase 1 (schema) DONE + PROVEN** (`db/schema.sql`, both RLS holes closed + both integrity tightenings on, **14/14 tests pass** via `bash db/tests/run_tests.sh` on local Postgres 18) · **Phase 2 (Cognito auth) DESIGNED** (`glowpt-aws-phase2-auth-design.md`, decision = clinic-only accounts) · **IaC decided = AWS CDK (TypeScript).**
+> **David is WAITING ON SES APPROVAL before the next build session** (he's checking the case + dashboard quota himself).
+> **The next major push (do NOT start tired; it touches live AWS + costs money):** build the **AWS foundation in CDK** — VPC + RDS Postgres **17.6** (encryption-at-rest AT CREATION) + `rds.force_ssl=1` + RDS Proxy + backups + NAT/VPC-endpoints + CloudTrail(6yr) + SES config set TLS `Require`. Then apply `db/schema.sql` to RDS and **re-run the test suite on 17.6** (confirms the BYPASSRLS role creation works on RDS — the one open schema caveat). Then Phase 2.3 (provision Cognito + post-confirmation Lambda in CDK), then Phases 3-6. Go one step at a time, name account+region before each step.
+
 **Planning docs (repo root; all local/uncommitted except the committed baseline):**
 - `glowpt-supabase-inventory.md` — full Supabase surface (37 runtime call sites = 23 simple + 14 complex; 6 tables; 0 storage; 0 realtime; 1 auth flow; 6 RPCs already server-side).
 - `glowpt-aws-decisions-and-task-1.md` — the 7 settled decisions (app-owned `public.users`; `current_user_id()` via **txn-scoped** `set_config`; EventBridge+Lambda replaces pg_cron; consents narrowed to caseload; etc.).
 - `glowpt-task-1-findings.md` — baseline schema findings.
 - `glowpt-aws-migration-plan.md` — **the 6-phase build plan; these are my build instructions.**
 - `glowpt-profiles-update-fix-design.md` — approved design for the 10.2 fix.
+- `glowpt-aws-phase2-auth-design.md` — **Phase 2 Cognito auth design (2026-08-07).**
+- **COMMITTED build artifacts (Phase 1):** `db/schema.sql` (the single schema-of-record for AWS), `db/tests/rls_tests.sql` + `db/tests/run_tests.sh` (14/14 RLS/attack tests, re-runnable on any local Postgres).
 
 **Progress:**
 - ✅ **Task 1 done:** live schema dumped to **`supabase/migrations/0000_baseline.sql`** (committed; produced via Node introspection, not pg_dump, which wouldn't install without David's admin password). First time the repo describes its own `checkins` table. Facts: `movements` is **`text[]`**; `checkins.user_id` **does** carry a 5th FK to `auth.users`; server is **Postgres 17.6**. The Supabase DB password was reset 2026-07-17 for the pooler dump; nothing in the live system uses it.
