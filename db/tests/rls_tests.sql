@@ -131,4 +131,20 @@ begin
   perform set_config('app.user_id','55555555-5555-5555-5555-555555555555', true);
   select count(*) into n from public.checkins;    -- only clinic B has 1 (Pat B1)
   raise notice '% T12 manager B checkin visibility (want 1, clinic B only) -> %', case when n=1 then 'PASS:' else 'FAIL:' end, n;
+
+  -- T13 TIGHTENING P2: a second check-in the same UTC day for the same patient
+  -- (Pat A1 already has one from seeding) must be blocked by the unique index.
+  perform set_config('app.user_id', pat_a1::text, true);
+  denied := false;
+  begin
+    insert into public.checkins (user_id, clinic_id, feeling)
+      values (current_user_id(), auth_clinic_id(), 3);
+  exception when unique_violation then denied := true; end;
+  raise notice '% T13 duplicate same-day checkin blocked', case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T14 TIGHTENING P1: checkins.user_id is now NOT NULL at the schema level.
+  select attnotnull into denied
+    from pg_attribute
+    where attrelid = 'public.checkins'::regclass and attname = 'user_id';
+  raise notice '% T14 checkins.user_id is NOT NULL', case when denied then 'PASS:' else 'FAIL:' end;
 end $$;

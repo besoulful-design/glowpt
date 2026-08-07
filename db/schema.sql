@@ -555,18 +555,30 @@ alter function public.restore_patient(uuid)                   owner to glowpt_au
 alter function public.register_user(uuid, citext, text)       owner to glowpt_auth;
 
 
--- ============================ PROPOSED, NOT APPLIED ============================
--- These are changes, not ports, so per the plan they are proposed for David's
--- decision rather than smuggled in. Uncomment only on an explicit "yes".
+-- ============================ INTEGRITY TIGHTENINGS (approved by David 2026-08-07) ============================
+-- Improvements over the live Supabase schema, not faithful ports. Applied on an
+-- empty schema, so no backfill concerns.
+
+-- (P1) Every check-in must have an author. The live column was nullable only
+--      because checkins predates the migrations. The app path already always
+--      sets user_id (RLS requires user_id = current_user_id()); this is the
+--      defense-in-depth backstop for any non-app code path.
+alter table public.checkins alter column user_id set not null;
+
+-- (P2) One check-in per user per (UTC) calendar day, enforced in the database so
+--      the same-day re-entry logic no longer relies on the app winning a
+--      read-then-write race. The app's same-day path UPDATEs the existing row
+--      rather than inserting, so it is unaffected; this only blocks true dups.
 --
--- (P1) Make checkins.user_id NOT NULL. Every real check-in has an author; the
---      live column is nullable only because it predates the migrations. Safe if
---      no legitimate row ever has a null user_id.
---   alter table public.checkins alter column user_id set not null;
---
--- (P2) One-check-in-per-user-per-day at the DB level, closing the same-day
---      duplicate race that today relies on the app winning a read-then-write.
---      CAVEAT: "day" is timezone-dependent; this uses UTC date to match the
---      column's UTC default. Confirm that matches the product's notion of a day.
---   create unique index checkins_one_per_day
---     on public.checkins (user_id, ((created_at at time zone 'utc')::date));
+--      "UTC day" needs an IMMUTABLE expression for the index. `created_at AT TIME
+--      ZONE 'UTC'` is only STABLE (timezone rules can change in general), so
+--      Postgres rejects it directly. For the FIXED 'UTC' zone the result is
+--      genuinely constant, so we wrap it in an IMMUTABLE helper (the standard
+--      idiom) and index on that.
+create or replace function public.utc_date(ts timestamptz) returns date
+  language sql immutable
+as $$ select (ts at time zone 'UTC')::date $$;
+grant execute on function public.utc_date(timestamptz) to glowpt_app;
+
+create unique index checkins_one_per_day
+  on public.checkins (user_id, public.utc_date(created_at));
