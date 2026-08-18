@@ -96,17 +96,12 @@ export class Auth extends Construct {
       // password sign-in is not offered through this client at all.
       authFlows: { user: true },
 
-      // No Hosted UI / managed login, so turn OFF all OAuth flows (CDK would
-      // otherwise default the authorization-code AND implicit grants on with a
-      // placeholder callback). The app authenticates via the SDK's USER_AUTH
-      // flow, which uses no OAuth grant and no callback URL.
-      oAuth: {
-        flows: {
-          authorizationCodeGrant: false,
-          implicitCodeGrant: false,
-          clientCredentials: false,
-        },
-      },
+      // No Hosted UI / managed login at all. disableOAuth turns off every OAuth
+      // interaction cleanly (sets AllowedOAuthFlowsUserPoolClient=false). Setting
+      // the flows individually to false instead leaves the client in a state
+      // Cognito rejects ("AllowedOAuthFlows/Scopes required if OAuth allowed").
+      // The app authenticates via the SDK's USER_AUTH flow, which uses no OAuth.
+      disableOAuth: true,
 
       // Do not reveal whether an email is registered. This matters here beyond
       // the usual: a "yes" would confirm someone is a GlowPT (PT) patient.
