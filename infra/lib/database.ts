@@ -3,6 +3,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as kms from 'aws-cdk-lib/aws-kms';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 
 export interface DatabaseProps {
   vpc: ec2.Vpc;
@@ -19,6 +20,14 @@ export interface DatabaseProps {
 export class Database extends Construct {
   public readonly instance: rds.DatabaseInstance;
   public readonly proxy: rds.DatabaseProxy;
+  /**
+   * Credentials for the glowpt_postconfirm DB role, registered with the proxy.
+   * CDK generates the password; a deploy-time bastion step sets the DB role's
+   * password to match (ALTER ROLE), the same out-of-band pattern used for the
+   * admin role. The Lambda never reads this secret: it authenticates to the
+   * proxy with an IAM token, and the proxy uses this secret to reach the DB.
+   */
+  public readonly postconfirmSecret: secretsmanager.Secret;
 
   constructor(scope: Construct, id: string, props: DatabaseProps) {
     super(scope, id);
@@ -69,16 +78,34 @@ export class Database extends Construct {
       removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
     });
 
+    // The glowpt_postconfirm role's credentials. Username is fixed; the password
+    // is generated here and reconciled onto the DB role at deploy time. No
+    // punctuation, so it pastes cleanly into an ALTER ROLE over the bastion.
+    this.postconfirmSecret = new secretsmanager.Secret(this, 'PostconfirmSecret', {
+      secretName: 'glowpt/db/postconfirm',
+      description: 'glowpt_postconfirm DB role credentials (used by the RDS Proxy)',
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({ username: 'glowpt_postconfirm' }),
+        generateStringKey: 'password',
+        excludePunctuation: true,
+        passwordLength: 32,
+      },
+    });
+
     // RDS Proxy: required, not an optimization (Rule 9). Lambda plus Postgres
     // exhausts raw connections without it. TLS from the client to the proxy is
-    // mandatory here.
+    // mandatory here. IAM auth lets the post-confirmation Lambda connect with a
+    // short-lived token instead of a stored password; the proxy holds both the
+    // admin secret and the postconfirm secret and uses the matching one per the
+    // connecting DB username.
     this.proxy = new rds.DatabaseProxy(this, 'Proxy', {
       proxyTarget: rds.ProxyTarget.fromInstance(this.instance),
-      secrets: [this.instance.secret!],
+      secrets: [this.instance.secret!, this.postconfirmSecret],
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [props.proxySecurityGroup],
       requireTLS: true,
+      iamAuth: true,
     });
   }
 }

@@ -6,6 +6,7 @@ import { Database } from './database';
 import { Audit } from './audit';
 import { Email } from './email';
 import { Auth } from './auth';
+import { PostConfirmation } from './post-confirm';
 import { Bastion } from './bastion';
 
 /**
@@ -38,6 +39,15 @@ export class InfraStack extends cdk.Stack {
     // The config set is referenced by name, so make the ordering explicit.
     auth.node.addDependency(email);
 
+    // The post-confirmation Lambda: creates the user + attaches the clinic in
+    // RDS the instant Cognito confirms an email. Reaches the proxy over IAM auth.
+    new PostConfirmation(this, 'PostConfirmation', {
+      vpc: network.vpc,
+      proxy: database.proxy,
+      proxySecurityGroup: network.proxySecurityGroup,
+      userPool: auth.userPool,
+    });
+
     // SSM jump-host for one-off DB admin, and the firewall openings that let it
     // reach the database and the proxy on Postgres port 5432.
     const bastion = new Bastion(this, 'Bastion', { vpc: network.vpc });
@@ -66,6 +76,10 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'DbSecretArn', {
       value: database.instance.secret!.secretArn,
       description: 'Secrets Manager ARN holding the DB admin credentials',
+    });
+    new cdk.CfnOutput(this, 'PostconfirmSecretArn', {
+      value: database.postconfirmSecret.secretArn,
+      description: 'Secrets Manager ARN for the glowpt_postconfirm role (proxy uses it)',
     });
     new cdk.CfnOutput(this, 'BastionInstanceId', {
       value: bastion.host.instanceId,
