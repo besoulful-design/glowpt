@@ -5,6 +5,7 @@ import { Network } from './network';
 import { Database } from './database';
 import { Audit } from './audit';
 import { Email } from './email';
+import { Auth } from './auth';
 import { Bastion } from './bastion';
 
 /**
@@ -27,7 +28,15 @@ export class InfraStack extends cdk.Stack {
     });
 
     new Audit(this, 'Audit');
-    new Email(this, 'Email');
+    const email = new Email(this, 'Email');
+
+    // Phase 2 auth: the Cognito user pool that emails sign-in codes, routing
+    // them through the TLS-required SES configuration set above.
+    const auth = new Auth(this, 'Auth', {
+      configurationSetName: email.configurationSet.configurationSetName,
+    });
+    // The config set is referenced by name, so make the ordering explicit.
+    auth.node.addDependency(email);
 
     // SSM jump-host for one-off DB admin, and the firewall openings that let it
     // reach the database and the proxy on Postgres port 5432.
