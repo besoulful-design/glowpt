@@ -71,9 +71,13 @@ export const handler = async (
     // TODO(go-live): pin the RDS global CA before real patients, so the proxy
     // certificate is verified, not just the channel encrypted.
     ssl: { rejectUnauthorized: false },
-    // IAM tokens expire; keep the connection attempt tight.
+    // Keep the attempt tight. Both of these are enforced client-side by node-pg,
+    // so they are safe through RDS Proxy. NOTE: do NOT set statement_timeout here.
+    // It is a server startup option and RDS Proxy rejects it ("Feature not
+    // supported"), which fails the whole connection. query_timeout is the
+    // client-side equivalent and is proxy-safe.
     connectionTimeoutMillis: 8000,
-    statement_timeout: 10000,
+    query_timeout: 10000,
   });
 
   try {
