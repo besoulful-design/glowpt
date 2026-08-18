@@ -76,6 +76,16 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 
 ## ⭐⭐ CURRENT INITIATIVE (2026-07-17): migrating off Supabase + Resend to AWS
 
+**📍 STATUS AT A GLANCE (2026-08-10):**
+- **The live app (glowpt.app, iPhone) is STILL 100% Supabase + Resend.** Unchanged. Keep using it normally. The AWS backend is being built ALONGSIDE it and is NOT connected to the app yet.
+- **The switch is ONE event at the very end (Phase 6 cutover), never gradual.** Supabase stays live as the rollback until then. No real PHI yet, so no data migration and nothing to break for real people.
+- **DONE + PROVEN ON AWS:** Phase 0 (foundation: VPC, encrypted Multi-AZ RDS Postgres 17.6, RDS Proxy, CloudTrail, SES TLS config set) and Phase 1 (schema: applied to the real `glowpt` DB, all 7 tables FORCE RLS, **14/14 security tests pass on RDS 17.6**, BYPASSRLS caveat resolved). These were the two hardest, highest-risk phases.
+- **▶ NEXT = Phase 2 (Cognito auth).** Cognito handles passwordless login AND is what first turns SES sending on (login codes via SES).
+- **5 phases left:** 2 Auth (Cognito + login-code email) → 3 API (Lambdas) → 4 Functions (AI replies + weekly SES email) → 5 Frontend (point app at AWS) → 6 Cutover (switch + retire Supabase).
+- **Email on AWS = SES** (Amazon Simple Email Service; replaces Resend). Set up + out of sandbox; config set `glowpt-transactional` (TLS Require). Sends NOTHING until Phase 2 (login codes) and Phase 4 (weekly summaries) wire it.
+
+*(Full detail in the NEXT SESSION block and Progress section below.)*
+
 **Decided, not under discussion.** Resend has **no** HIPAA/BAA option (that's what kicked this off), and Supabase Team + its HIPAA add-on runs ~$950/mo, which doesn't clear GlowPT's own cost until the 4th clinic. AWS is ~$60–120/mo with **one free, self-serve BAA** covering RDS + Cognito + Lambda + SES. The cheap window is open **only because no real PHI exists yet** (demo clinics only) — it closes the moment a real patient logs in. Target: real patients in ~2 weeks (David's own date, promised to nobody, movable).
 
 **Who does what:** **claude.ai = architect** (wrote the planning docs, lives in the web chat, no repo access). **Claude Code (me) = builder** (executes here). **Planning is done; from here it's David + Claude Code.** Only re-engage claude.ai if David wants a second architect opinion on a big call.
