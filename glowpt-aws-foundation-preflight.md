@@ -13,8 +13,13 @@ SES production access is **granted** (out of the sandbox: 50,000 emails/day, 14/
 
 **The next session builds the actual cloud infrastructure in code (AWS CDK).** That's a big one: it touches live AWS and starts costing a little money. We do it slowly, one step at a time, on a fresh head — not tired.
 
-## Before that session: 3 small setup steps (no AWS cost)
-These just install tools on the laptop and connect them to your AWS account. Nothing here builds anything or spends money. All three are currently **missing** (checked 2026-08-10).
+## ✅ Before that session: 3 small setup steps — ALL DONE 2026-08-10
+These just install tools on the laptop and connect them to your AWS account. Nothing here builds anything or spends money. **All three completed 2026-08-10:**
+- ✅ AWS CLI v2 = `2.36.25`
+- ✅ AWS CDK = `2.1137.0`
+- ✅ CLI signed into AWS: profile **`glowpt-prod`**, region `us-east-1`, verified as `david` / AdministratorAccess on account 463556655381. Use `--profile glowpt-prod` on commands; re-auth with `aws sso login --profile glowpt-prod` when the 8-hour session lapses.
+
+*(Original step-by-step kept below for reference / the new laptop.)*
 
 **1. Install the AWS CLI (command-line tool).**
 - What it is: the official app that lets the laptop talk to AWS.
