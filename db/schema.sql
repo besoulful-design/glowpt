@@ -24,11 +24,15 @@
 --   6. consents therapist read narrowed to caseload (Decision Q4).
 --
 -- Roles (see the ROLES section for the full rationale):
---   glowpt_owner : owns the tables. NOLOGIN, no bypass. FORCE applies to it too.
---   glowpt_auth  : owns the SECURITY DEFINER functions. NOLOGIN, BYPASSRLS.
---                  This is the trusted internal role (Supabase's "postgres").
---   glowpt_app   : the ONLY login role; the Lambda connects as this. Non-owner,
---                  minimal grants, fully subject to RLS.
+--   glowpt_owner       : owns the tables. NOLOGIN, no bypass. FORCE applies to it too.
+--   glowpt_auth        : owns the SECURITY DEFINER functions. NOLOGIN, BYPASSRLS.
+--                        This is the trusted internal role (Supabase's "postgres").
+--   glowpt_app         : the general app login role; the API Lambdas connect as
+--                        this. Non-owner, minimal grants, fully subject to RLS.
+--                        It CANNOT call register_user (cannot mint identities).
+--   glowpt_postconfirm : the Cognito post-confirmation Lambda's own login role.
+--                        EXECUTE on ONLY the four sign-up functions, nothing else.
+--                        This is the least-privilege home for identity creation.
 --
 -- NOTE (migration standing rule): no em dashes anywhere in this file.
 -- ============================================================================
@@ -50,8 +54,17 @@ create extension if not exists citext;     -- case-insensitive email
 --     that bypasses RLS. That role is glowpt_auth (BYPASSRLS).
 --   * But Rule 3 wants FORCE to bite even the TABLE owner as a backstop. So the
 --     table owner (glowpt_owner) must NOT have BYPASSRLS.
---   * Therefore table-owner and function-owner are split. Only glowpt_app logs
---     in, and RLS fully governs it.
+--   * Therefore table-owner and function-owner are split. glowpt_app and
+--     glowpt_postconfirm are the two login roles, and RLS fully governs both.
+--
+-- Why a FOURTH role, glowpt_postconfirm (Phase 2 refinement):
+--   * Identity creation (register_user) is the one privileged act that mints a
+--     new users + profiles row. If the general app role could do it, a bug or a
+--     stolen glowpt_app credential could create arbitrary identity rows.
+--   * So identity creation gets its OWN login role, used by nothing but the
+--     Cognito post-confirmation Lambda. It holds EXECUTE on exactly the four
+--     sign-up functions (register_user + the three attach RPCs) and NOTHING
+--     else: no table grants, no other functions. glowpt_app loses register_user.
 --
 -- RDS caveat to confirm at provisioning: creating a BYPASSRLS role may require
 -- privileges rds_superuser does or does not have depending on engine version.
@@ -66,7 +79,10 @@ begin
     create role glowpt_auth nologin bypassrls;
   end if;
   if not exists (select from pg_roles where rolname = 'glowpt_app') then
-    create role glowpt_app login;   -- password set out of band
+    create role glowpt_app login;          -- password set out of band
+  end if;
+  if not exists (select from pg_roles where rolname = 'glowpt_postconfirm') then
+    create role glowpt_postconfirm login;  -- password set out of band
   end if;
 end $$;
 
@@ -76,7 +92,7 @@ grant glowpt_owner, glowpt_auth, glowpt_app to current_user;
 
 -- Leave Supabase's wide-open default posture behind (Rule 2 spirit).
 revoke all on schema public from public;
-grant usage on schema public to glowpt_app, glowpt_auth, glowpt_owner;
+grant usage on schema public to glowpt_app, glowpt_auth, glowpt_owner, glowpt_postconfirm;
 
 
 -- ============================ TABLES ============================
@@ -510,6 +526,11 @@ grant select, insert, update on public.consents      to glowpt_auth;
 grant select, insert, update on public.staff_invites to glowpt_auth;
 
 -- Functions: revoke the PUBLIC default, then grant EXECUTE explicitly.
+-- NOTE: register_user is deliberately ABSENT from glowpt_app's list. Identity
+-- creation belongs to glowpt_postconfirm alone (granted just below). The three
+-- attach RPCs (provision_clinic / join_clinic / accept_staff_invite) DO stay on
+-- glowpt_app as well, since the frontend re-runs them as an idempotent safety
+-- net on first sign-in if the post-confirmation Lambda ever missed.
 revoke execute on all functions in schema public from public;
 grant execute on function
   public.current_user_id(),
@@ -523,9 +544,30 @@ grant execute on function
   public.invite_staff(text, text, text),
   public.assign_therapist(uuid, uuid),
   public.discharge_patient(uuid),
-  public.restore_patient(uuid),
-  public.register_user(uuid, citext, text)
+  public.restore_patient(uuid)
 to glowpt_app;
+
+-- glowpt_postconfirm: the Cognito post-confirmation Lambda's role. It may run
+-- ONLY the four sign-up functions and touches no table directly (all its work
+-- goes through these SECURITY DEFINER functions, owned by glowpt_auth). It is
+-- the ONLY role that can call register_user. current_user_id() is not granted:
+-- the Lambda sets app.user_id via the set_config() built-in, and the attach RPCs
+-- read it internally as their definer, not as glowpt_postconfirm.
+grant execute on function
+  public.register_user(uuid, citext, text),
+  public.provision_clinic(text, text),
+  public.join_clinic(text, text, text),
+  public.accept_staff_invite()
+to glowpt_postconfirm;
+
+-- Phase 3 note (self-heal edge, parked deliberately): the frontend safety-net
+-- re-attach runs as glowpt_app, which can call join_clinic / accept_staff_invite
+-- but NOT register_user. Those RPCs insert into profiles, whose id FK-references
+-- users(id). So they self-heal a partial post-confirm (identity row created,
+-- attach missed) but NOT a total post-confirm miss (no users row at all). The
+-- Phase 3 API's first-sign-in path must therefore be able to ensure the identity
+-- row (e.g. invoke register_user through the post-confirm capability), not rely
+-- on glowpt_app alone. Recorded here so it is designed, not discovered.
 
 
 -- ============================ OWNERSHIP ============================

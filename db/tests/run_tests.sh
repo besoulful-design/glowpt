@@ -26,6 +26,10 @@ echo "Rebuilding $DB ..."
 echo "Applying db/schema.sql ..."
 "$PSQL" -d "$DB" -h "$HOST" -p "$PORT" -q -v ON_ERROR_STOP=1 -f "$ROOT/db/schema.sql"
 
+echo "Seeding identities (as glowpt_postconfirm, the Lambda's role) ..."
+"$PSQL" -U glowpt_postconfirm -d "$DB" -h "$HOST" -p "$PORT" -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/seed_identities.sql" 2>&1 | grep -E "PASS:|FAIL:" || true
+
 echo "Running RLS tests (as glowpt_app) ..."
 "$PSQL" -U glowpt_app -d "$DB" -h "$HOST" -p "$PORT" -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/rls_tests.sql" 2>&1 | grep -E "PASS:|FAIL:" || true

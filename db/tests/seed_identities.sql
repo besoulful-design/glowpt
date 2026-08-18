@@ -1,0 +1,29 @@
+-- GlowPT: identity seed. Run as role glowpt_postconfirm (the Cognito
+-- post-confirmation Lambda's own role). This IS that Lambda's register_user
+-- step: minting the six users + bare profiles the RLS attack tests build on.
+--
+-- Running successfully as glowpt_postconfirm is itself the proof that the
+-- dedicated role CAN create identities. rls_tests.sql then proves glowpt_app
+-- CANNOT (T15). T16 below proves glowpt_postconfirm also holds EXECUTE on the
+-- three attach RPCs it dispatches to.
+\set QUIET on
+set client_min_messages = notice;
+
+select register_user('11111111-1111-1111-1111-111111111111','mgra@a.com','Mgr A');
+select register_user('22222222-2222-2222-2222-222222222222','pata1@a.com','Pat A1');
+select register_user('33333333-3333-3333-3333-333333333333','pata2@a.com','Pat A2');
+select register_user('44444444-4444-4444-4444-444444444444','thera@a.com','Ther A');
+select register_user('55555555-5555-5555-5555-555555555555','mgrb@b.com','Mgr B');
+select register_user('66666666-6666-6666-6666-666666666666','patb1@b.com','Pat B1');
+
+\set QUIET off
+do $$
+declare ok boolean;
+begin
+  -- T16 GRANTS: glowpt_postconfirm can execute the three attach RPCs it will
+  -- dispatch to after register_user (join / onboard / staff paths).
+  ok := has_function_privilege('glowpt_postconfirm','public.join_clinic(text,text,text)','execute')
+    and has_function_privilege('glowpt_postconfirm','public.provision_clinic(text,text)','execute')
+    and has_function_privilege('glowpt_postconfirm','public.accept_staff_invite()','execute');
+  raise notice '% T16 postconfirm can execute the three attach RPCs', case when ok then 'PASS:' else 'FAIL:' end;
+end $$;

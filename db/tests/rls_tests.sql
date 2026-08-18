@@ -1,17 +1,13 @@
 -- GlowPT Phase 1.3 tests. Run as role glowpt_app (the app's login role).
 -- Seeds a realistic 2-clinic world through the real RPCs, then runs attacks.
 -- Expected-to-fail attacks are wrapped so a caught error = PASS.
+--
+-- PREREQUISITE: db/tests/seed_identities.sql has already run (as
+-- glowpt_postconfirm) to create the six users below. glowpt_app can no longer
+-- call register_user itself (that is exactly what T15 asserts).
 
 \set QUIET on
 set client_min_messages = notice;
-
--- =================== SEED IDENTITIES (post-confirmation Lambda stand-in) ===================
-select register_user('11111111-1111-1111-1111-111111111111','mgra@a.com','Mgr A');
-select register_user('22222222-2222-2222-2222-222222222222','pata1@a.com','Pat A1');
-select register_user('33333333-3333-3333-3333-333333333333','pata2@a.com','Pat A2');
-select register_user('44444444-4444-4444-4444-444444444444','thera@a.com','Ther A');
-select register_user('55555555-5555-5555-5555-555555555555','mgrb@b.com','Mgr B');
-select register_user('66666666-6666-6666-6666-666666666666','patb1@b.com','Pat B1');
 
 -- =================== BUILD CLINIC A (the real way, via RPCs) ===================
 begin; select set_config('app.user_id','11111111-1111-1111-1111-111111111111',true);
@@ -147,4 +143,13 @@ begin
     from pg_attribute
     where attrelid = 'public.checkins'::regclass and attname = 'user_id';
   raise notice '% T14 checkins.user_id is NOT NULL', case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T15 LEAST PRIVILEGE (Phase 2): glowpt_app must NOT be able to mint an
+  -- identity. Only glowpt_postconfirm holds EXECUTE on register_user now.
+  perform set_config('app.user_id', pat_a1::text, true);
+  denied := false;
+  begin
+    perform public.register_user(gen_random_uuid(), 'evil@x.com', 'Evil');
+  exception when insufficient_privilege then denied := true; end;
+  raise notice '% T15 glowpt_app cannot call register_user', case when denied then 'PASS:' else 'FAIL:' end;
 end $$;
