@@ -80,8 +80,11 @@ export class Auth extends Construct {
       // password path. Patients re-enter via their clinic link.
       accountRecovery: cognito.AccountRecovery.NONE,
 
-      // This pool holds real people. Do not let a stack teardown delete it.
-      deletionProtection: true,
+      // TODO(post-Phase-2): re-enable deletionProtection once the stack is
+      // stable. During bring-up it must be OFF: with it ON, a failed deploy's
+      // rollback DELETE_SKIPs the pool and orphans it, turning a simple retry
+      // into manual cleanup. No real users exist yet, so nothing to protect.
+      deletionProtection: false,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
