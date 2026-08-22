@@ -1,4 +1,7 @@
 [build]
   command = "npm run build"
   publish = "dist"
-  functions = "netlify/functions"
+  # No functions directory ON PURPOSE. PHI goes browser -> AWS API Gateway
+  # directly and never transits Netlify, so Netlify is not a HIPAA business
+  # associate. The moment a Netlify Function exists that changes, so this stays
+  # undeclared. (AWS migration Phase 5.)
