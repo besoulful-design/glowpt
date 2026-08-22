@@ -1,22 +1,19 @@
 import { useState } from 'react'
-import { supabase } from '../supabase'
+import * as cognito from '../lib/cognito'
 import { AuthShell, LogoMark, ui } from './AuthShell'
 import CodeVerify from './CodeVerify'
 
-// /login — returning patients and clinic staff sign in with a 6-digit email code.
+// /login — returning patients and clinic staff sign in with an email code.
 export default function Login() {
   const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
+  const [pending, setPending] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
   async function sendCode() {
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: window.location.origin },
-    })
-    if (error) { setError(error.message); return false }
-    return true
+    // Returning user: existence errors are prevented at the pool, so an unknown
+    // email still gets the code screen (no enumeration of who is a GlowPT patient).
+    return cognito.beginSignIn(email.trim())
   }
 
   async function handleSubmit(e) {
@@ -24,12 +21,16 @@ export default function Login() {
     setError('')
     if (!email.trim()) return setError('Please enter your email.')
     setBusy(true)
-    const ok = await sendCode()
-    setBusy(false)
-    if (ok) setSent(true)
+    try {
+      setPending(await sendCode())
+    } catch (err) {
+      setError(err?.message || 'Couldn’t send a code just now — try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
-  if (sent) return <CodeVerify email={email.trim()} onResend={sendCode} onBack={() => setSent(false)} />
+  if (pending) return <CodeVerify pending={pending} onResend={sendCode} onBack={() => setPending(null)} />
 
   return (
     <AuthShell>

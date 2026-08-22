@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { supabase } from '../supabase'
+import * as api from '../lib/api'
+import * as cognito from '../lib/cognito'
 import { savePendingOnboard } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
 import CodeVerify from './CodeVerify'
@@ -30,23 +31,20 @@ export default function Onboard() {
   const [showBaa, setShowBaa] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [sent, setSent] = useState(false)
+  const [pending, setPending] = useState(null)
 
   const effectiveSlug = slugEdited ? slug : slugify(clinicName)
 
   // Create the clinic under the entered email (a fresh manager account), verified
-  // by a 6-digit code — so onboarding never hijacks whoever is currently signed in.
+  // by an email code — so onboarding never hijacks whoever is currently signed in.
   async function sendCode() {
     savePendingOnboard(clinicName.trim(), effectiveSlug, fullName.trim())
-    const { error: otpErr } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        emailRedirectTo: window.location.origin + '/dashboard',
-        data: { full_name: fullName.trim(), onboard_clinic_name: clinicName.trim(), onboard_clinic_slug: effectiveSlug },
-      },
+    return cognito.beginSignUp(email.trim(), {
+      flow: 'onboard',
+      onboard_clinic_name: clinicName.trim(),
+      onboard_clinic_slug: effectiveSlug,
+      full_name: fullName.trim(),
     })
-    if (otpErr) { setError(otpErr.message); return false }
-    return true
   }
 
   async function handleSubmit(e) {
@@ -59,16 +57,28 @@ export default function Onboard() {
     if (!baaReviewed) return setError('Please confirm you’ve reviewed the BAA.')
     setBusy(true)
 
-    // Make sure the slug isn't already taken.
-    const { data: existing } = await supabase.from('clinics').select('id').eq('slug', effectiveSlug).maybeSingle()
-    if (existing) { setBusy(false); return setError('That clinic web name is taken — try another.') }
+    // Make sure the slug isn't already taken (getClinicBySlug 404 = available).
+    try {
+      await api.getClinicBySlug(effectiveSlug)
+      setBusy(false)
+      return setError('That clinic web name is taken — try another.')
+    } catch (err) {
+      if (err.status !== 404) {
+        setBusy(false)
+        return setError('Couldn’t check that name just now — try again.')
+      }
+    }
 
-    const ok = await sendCode()
-    setBusy(false)
-    if (ok) setSent(true)
+    try {
+      setPending(await sendCode())
+    } catch (err) {
+      setError(err?.message || 'Couldn’t send a code just now — try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
-  if (sent) return <CodeVerify email={email.trim()} onResend={sendCode} onBack={() => setSent(false)} />
+  if (pending) return <CodeVerify pending={pending} onResend={sendCode} onBack={() => setPending(null)} />
 
 
   return (

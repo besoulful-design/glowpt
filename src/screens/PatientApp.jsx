@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../supabase'
+import * as api from '../lib/api'
 import { useAuth } from '../auth'
 import { FEELINGS as feelingData } from '../lib/feelings'
 
@@ -170,21 +170,18 @@ export default function PatientApp() {
   const loadData = useCallback(async () => {
     if (!user) return
     const since = new Date(); since.setHours(0, 0, 0, 0); since.setDate(since.getDate() - 29)
-    const { data, error } = await supabase
-      .from('checkins')
-      .select('feeling, feeling_word, movements, other_movement, note, ai_response, created_at')
-      .eq('user_id', user.id)
-      .gte('created_at', since.toISOString())
-      .order('created_at', { ascending: true })
-    if (error) { console.log('Load error:', error.message); return }
-    const rows = data || []
-    const days = build30Days(rows)
-    setWeek(buildWeek(rows))
-    setHistory(days)
-    setStreak(streakFromDays(days))
-    const { count } = await supabase
-      .from('checkins').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
-    setTotalCheckins(count || 0)
+    try {
+      // One API call returns the 30-day window (ordered) plus the all-time total.
+      const { checkins, total } = await api.getMyCheckins(since.toISOString())
+      const rows = checkins || []
+      const days = build30Days(rows)
+      setWeek(buildWeek(rows))
+      setHistory(days)
+      setStreak(streakFromDays(days))
+      setTotalCheckins(total || 0)
+    } catch (err) {
+      console.log('Load error:', err.message)
+    }
   }, [user])
 
   useEffect(() => { loadData() }, [loadData])
@@ -217,18 +214,18 @@ Their check-in today:
 
 Respond directly to ${firstName} in second person. Reference what they actually shared. End with one gentle encouragement.`
 
-      // Calls the Supabase Edge Function (HIPAA-ready). Falls back gracefully on any error.
-      const { data, error: fnError } = await supabase.functions.invoke('ai-response', {
-        body: { prompt },
-      })
-      if (!fnError && data?.response) response = data.response
+      // The reflection now comes from POST /ai-response (behind the Cognito
+      // authorizer). Falls back gracefully on any error.
+      const r = await api.aiResponse(prompt)
+      if (r?.response) response = r.response
     } catch (err) {
-      console.log('AI error:', err)
+      console.log('AI error:', err.message)
     }
 
+    // The server derives user_id + clinic_id from the verified token and enforces
+    // one check-in per UTC day (upsert), so the payload is just the check-in data
+    // and the same-day re-entry logic no longer lives in the client.
     const payload = {
-      user_id: user.id,
-      clinic_id: profile?.clinic_id ?? null,
       feeling: selectedFeeling,
       feeling_word: selectedFeeling ? feelingData[selectedFeeling].word : '',
       movements,
@@ -236,31 +233,10 @@ Respond directly to ${firstName} in second person. Reference what they actually 
       note,
       ai_response: response,
     }
-
-    // One check-in per calendar day: if they already checked in today, UPDATE that
-    // row instead of adding a duplicate. We ask for the updated row back (.select());
-    // if the update touches nothing (e.g. the checkins UPDATE RLS policy isn't in
-    // place yet), we fall back to an insert so a save is never silently lost.
-    const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0)
-    const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1)
-    const { data: existingRows } = await supabase
-      .from('checkins').select('id')
-      .eq('user_id', user.id)
-      .gte('created_at', dayStart.toISOString())
-      .lt('created_at', dayEnd.toISOString())
-      .order('created_at', { ascending: true }).limit(1)
-    const existingId = existingRows?.[0]?.id
-
-    let saved = false
-    if (existingId) {
-      const { data: upd, error: updErr } = await supabase
-        .from('checkins').update(payload).eq('id', existingId).select('id')
-      if (updErr) console.log('Update error:', updErr.message)
-      saved = !!(upd && upd.length)
-    }
-    if (!saved) {
-      const { error: insErr } = await supabase.from('checkins').insert(payload)
-      if (insErr) console.log('Save error:', insErr.message)
+    try {
+      await api.saveCheckin(payload)
+    } catch (err) {
+      console.log('Save error:', err.message)
     }
 
     setAiResponse(response)

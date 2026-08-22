@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { supabase } from '../supabase'
+import { useEffect, useState, useCallback } from 'react'
+import * as api from '../lib/api'
 import { useAuth } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
 import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist, assignTherapist, dischargePatient, restorePatient, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
@@ -132,45 +132,43 @@ export default function Dashboard() {
   const [tName, setTName] = useState('')
   const [tEmail, setTEmail] = useState('')
   const [notice, setNotice] = useState('')
-  const logged = useRef(false)
 
   const isManager = profile?.role === 'manager'
-  // Prefer the profile name; fall back to the name saved on the login account
-  // (some manager profiles were created before the name landed on the profile row).
-  const staffName = greetingName(profile?.full_name || user?.user_metadata?.full_name)
+  const staffName = greetingName(profile?.full_name)
 
   // Load the roster, splitting active patients from discharged (soft-deleted) ones.
-  // Reused after a discharge/restore so the lists refresh without a full reload.
+  // The roster endpoint writes the HIPAA view_roster audit row server-side, in the
+  // same transaction as the read. Reused after a discharge/restore to refresh.
   const loadRoster = useCallback(async () => {
-    const { patients, checkins } = await fetchClinicData(profile.clinic_id)
+    const { patients, checkins } = await fetchClinicData()
     const active = patients.filter(p => !p.discharged_at)
     setRoster(buildRoster(active, checkins))
     setDischarged(patients.filter(p => p.discharged_at).map(p => ({ id: p.id, name: p.full_name || 'Patient' })))
-  }, [profile])
+  }, [])
 
   useEffect(() => {
     if (!profile?.clinic_id) { setLoading(false); return }
     let active = true
     ;(async () => {
-      const { data: c } = await supabase.from('clinics').select('id, name, slug').eq('id', profile.clinic_id).single()
-      if (!active) return
-      setClinic(c)
-      await loadRoster()
-      if (!active) return
-      if (isManager) {
-        const [ther, inv] = await Promise.all([fetchTherapists(profile.clinic_id), fetchPendingInvites(profile.clinic_id)])
+      try {
+        const c = await api.getClinic()
         if (!active) return
-        setTherapists(ther)
-        setInvites(inv)
+        setClinic(c)
+        await loadRoster()
+        if (!active) return
+        if (isManager) {
+          const [ther, inv] = await Promise.all([fetchTherapists(), fetchPendingInvites()])
+          if (!active) return
+          setTherapists(ther)
+          setInvites(inv)
+        }
+      } catch (err) {
+        console.log('Dashboard load error:', err.message)
       }
-      setLoading(false)
-      if (!logged.current) {
-        logged.current = true
-        supabase.from('access_log').insert({ actor_id: user.id, action: 'view_roster', clinic_id: profile.clinic_id })
-      }
+      if (active) setLoading(false)
     })()
     return () => { active = false }
-  }, [profile, user, isManager, loadRoster])
+  }, [profile, isManager, loadRoster])
 
   // Generate a printable QR code of the clinic's patient invite link.
   useEffect(() => {
@@ -192,23 +190,32 @@ export default function Dashboard() {
   async function handleAssign(patientId, therapistId) {
     const prev = roster
     setRoster(rs => rs.map(r => (r.id === patientId ? { ...r, therapistId } : r))) // optimistic
-    const { error } = await assignTherapist(patientId, therapistId)
-    if (error) { setRoster(prev); setNotice(`Couldn’t update assignment: ${error.message}`) }
+    try {
+      await assignTherapist(patientId, therapistId)
+    } catch (err) {
+      setRoster(prev); setNotice(`Couldn’t update assignment: ${err.message}`)
+    }
   }
 
   async function handleDischarge(patientId, name) {
     if (!window.confirm(`Discharge ${name}? They’ll be hidden from your roster, but their check-ins are kept and you can restore them anytime.`)) return
     setNotice('')
-    const { error } = await dischargePatient(patientId)
-    if (error) return setNotice(`Couldn’t discharge ${name}: ${error.message}`)
-    await loadRoster()
+    try {
+      await dischargePatient(patientId)
+      await loadRoster()
+    } catch (err) {
+      setNotice(`Couldn’t discharge ${name}: ${err.message}`)
+    }
   }
 
   async function handleRestore(patientId) {
     setNotice('')
-    const { error } = await restorePatient(patientId)
-    if (error) return setNotice(`Couldn’t restore: ${error.message}`)
-    await loadRoster()
+    try {
+      await restorePatient(patientId)
+      await loadRoster()
+    } catch (err) {
+      setNotice(`Couldn’t restore: ${err.message}`)
+    }
   }
 
   async function handleInvite(e) {
@@ -217,11 +224,14 @@ export default function Dashboard() {
     const name = tName.trim(), email = tEmail.trim()
     if (!name) return setNotice('Enter the therapist’s name.')
     if (!email) return setNotice('Enter the therapist’s email.')
-    const { error } = await inviteTherapist(email, name)
-    if (error) return setNotice(`Couldn’t send invite: ${error.message}`)
+    try {
+      await inviteTherapist(email, name)
+    } catch (err) {
+      return setNotice(`Couldn’t send invite: ${err.message}`)
+    }
     setTName(''); setTEmail('')
     setNotice(`Invited ${name}. They’ll appear as a therapist once they sign in at the login page with ${email}.`)
-    setInvites(await fetchPendingInvites(profile.clinic_id))
+    setInvites(await fetchPendingInvites())
   }
 
   const Bar = (

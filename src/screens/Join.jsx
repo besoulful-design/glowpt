@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
-import { supabase } from '../supabase'
+import * as api from '../lib/api'
+import * as cognito from '../lib/cognito'
 import { savePendingJoin, useAuth } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
 import CodeVerify from './CodeVerify'
 
 // /join/:slug — a patient's first entry, from their clinic's invite link.
-// Resolves the clinic by slug, collects name + email, sends a magic link.
+// Resolves the clinic by slug, collects name + email, sends a sign-in code.
 export default function Join() {
   const { slug } = useParams()
   const { session, loading: authLoading } = useAuth()
@@ -15,30 +16,26 @@ export default function Join() {
   const [email, setEmail] = useState('')
   const [consented, setConsented] = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
-  const [sent, setSent] = useState(false)
+  const [pending, setPending] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
   const CONSENT_VERSION = 'v1'
 
   useEffect(() => {
-    supabase.from('clinics').select('id, name, slug').eq('slug', slug).single()
-      .then(({ data }) => setClinic(data ?? null))
+    api.getClinicBySlug(slug).then(setClinic).catch(() => setClinic(null))
   }, [slug])
 
   async function sendCode() {
+    // localStorage backup drives the frontend re-attach safety net; the primary
+    // attach is the post-confirmation Lambda reading this same flow metadata.
     savePendingJoin(slug, fullName.trim(), CONSENT_VERSION)
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        emailRedirectTo: window.location.origin,
-        // Stored on the user account so name + clinic survive the code being
-        // entered / link opened anywhere.
-        data: { full_name: fullName.trim(), clinic_slug: slug, consent_version: CONSENT_VERSION },
-      },
+    return cognito.beginSignUp(email.trim(), {
+      flow: 'join',
+      clinic_slug: slug,
+      full_name: fullName.trim(),
+      consent_version: CONSENT_VERSION,
     })
-    if (error) { setError(error.message); return false }
-    return true
   }
 
   async function handleSubmit(e) {
@@ -48,9 +45,13 @@ export default function Join() {
     if (!email.trim()) return setError('Please enter your email.')
     if (!consented) return setError('Please agree to the privacy notice to continue.')
     setBusy(true)
-    const ok = await sendCode()
-    setBusy(false)
-    if (ok) setSent(true)
+    try {
+      setPending(await sendCode())
+    } catch (err) {
+      setError(err?.message || 'Couldn’t send a code just now — try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   if (authLoading || clinic === undefined) {
@@ -72,7 +73,7 @@ export default function Join() {
     )
   }
 
-  if (sent) return <CodeVerify email={email.trim()} onResend={sendCode} onBack={() => setSent(false)} />
+  if (pending) return <CodeVerify pending={pending} onResend={sendCode} onBack={() => setPending(null)} />
 
 
   return (

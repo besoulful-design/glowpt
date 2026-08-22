@@ -56,6 +56,10 @@ export class Api extends Construct {
       'https://glowpt.app',
       'https://www.glowpt.app',
       'https://glowpt-app.netlify.app',
+      // Local dev (Vite). Low risk: protected routes still require a valid token,
+      // and the one public route only exposes a clinic slug lookup.
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
     ];
 
     // The Lambda's own security group; it needs to reach the proxy on 5432.
