@@ -28,6 +28,16 @@ export class Database extends Construct {
    * proxy with an IAM token, and the proxy uses this secret to reach the DB.
    */
   public readonly postconfirmSecret: secretsmanager.Secret;
+  /**
+   * Credentials for the glowpt_app DB role, registered with the proxy. Same
+   * out-of-band pattern as postconfirmSecret: CDK generates the password, a
+   * deploy-time bastion step sets the role's password to match. The API Lambda
+   * never reads it; it IAM-auths to the proxy and the proxy uses this secret to
+   * reach the DB as glowpt_app. Right now glowpt_app has a random throwaway
+   * password on RDS (Phase 2 testing) so it cannot log in; this is where its
+   * real credential gets set (migration-plan Phase 3).
+   */
+  public readonly appSecret: secretsmanager.Secret;
 
   constructor(scope: Construct, id: string, props: DatabaseProps) {
     super(scope, id);
@@ -92,6 +102,18 @@ export class Database extends Construct {
       },
     });
 
+    // The glowpt_app role's credentials, same shape as the postconfirm secret.
+    this.appSecret = new secretsmanager.Secret(this, 'AppSecret', {
+      secretName: 'glowpt/db/app',
+      description: 'glowpt_app DB role credentials (used by the RDS Proxy)',
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({ username: 'glowpt_app' }),
+        generateStringKey: 'password',
+        excludePunctuation: true,
+        passwordLength: 32,
+      },
+    });
+
     // RDS Proxy: required, not an optimization (Rule 9). Lambda plus Postgres
     // exhausts raw connections without it. TLS from the client to the proxy is
     // mandatory here. IAM auth lets the post-confirmation Lambda connect with a
@@ -100,7 +122,7 @@ export class Database extends Construct {
     // connecting DB username.
     this.proxy = new rds.DatabaseProxy(this, 'Proxy', {
       proxyTarget: rds.ProxyTarget.fromInstance(this.instance),
-      secrets: [this.instance.secret!, this.postconfirmSecret],
+      secrets: [this.instance.secret!, this.postconfirmSecret, this.appSecret],
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
       securityGroups: [props.proxySecurityGroup],

@@ -7,6 +7,7 @@ import { Audit } from './audit';
 import { Email } from './email';
 import { Auth } from './auth';
 import { PostConfirmation } from './post-confirm';
+import { Api } from './api';
 import { Bastion } from './bastion';
 
 /**
@@ -46,6 +47,17 @@ export class InfraStack extends cdk.Stack {
       proxy: database.proxy,
       proxySecurityGroup: network.proxySecurityGroup,
       userPool: auth.userPool,
+    });
+
+    // Phase 3: the data API. HTTP API Gateway with a Cognito JWT authorizer in
+    // front of one Lambda that runs every app read/write as glowpt_app, stamping
+    // the verified sub into each transaction so RLS is the boundary.
+    new Api(this, 'Api', {
+      vpc: network.vpc,
+      proxy: database.proxy,
+      proxySecurityGroup: network.proxySecurityGroup,
+      userPool: auth.userPool,
+      userPoolClient: auth.userPoolClient,
     });
 
     // SSM jump-host for one-off DB admin, and the firewall openings that let it
