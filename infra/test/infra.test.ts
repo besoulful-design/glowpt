@@ -49,10 +49,42 @@ test('data API: HTTP API with a Cognito JWT authorizer, one public route, scoped
   expect(byAuth.NONE).toEqual(['GET /clinics/by-slug/{slug}']);
   expect(byAuth.JWT).toContain('GET /me');
   expect(byAuth.JWT).toContain('GET /clinic/roster');
-  expect(byAuth.JWT.length).toBe(16);
+  // 16 data routes (ai-response adds a 17th JWT route, asserted in the Phase 4 test).
+  expect(byAuth.JWT.length).toBeGreaterThanOrEqual(16);
 
   // The glowpt_app role's secret exists and is one of the proxy's three auth entries.
   template.hasResourceProperties('AWS::SecretsManager::Secret', { Name: 'glowpt/db/app' });
   const proxies = template.findResources('AWS::RDS::DBProxy');
   expect((Object.values(proxies)[0] as any).Properties.Auth.length).toBe(3);
+});
+
+// Phase 4: ai-response behind the same authorizer, but OUTSIDE the VPC.
+test('ai-response: POST /ai-response is JWT-protected and its Lambda is not in the VPC', () => {
+  const app = new cdk.App();
+  const stack = new InfraStack(app, 'TestStack', {
+    env: { account: '111111111111', region: 'us-east-1' },
+  });
+  const template = Template.fromStack(stack);
+
+  // The route exists and requires the JWT authorizer (the old function's fix).
+  const routes = template.findResources('AWS::ApiGatewayV2::Route');
+  const aiRoute = Object.values(routes).find(
+    (r: any) => r.Properties.RouteKey === 'POST /ai-response',
+  ) as any;
+  expect(aiRoute).toBeDefined();
+  expect(aiRoute.Properties.AuthorizationType).toBe('JWT');
+
+  // The ai-response Lambda must NOT be in the VPC (it needs the internet for
+  // Anthropic and touches no DB). A VpcConfig would mean no egress without a NAT.
+  const fns = template.findResources('AWS::Lambda::Function');
+  const aiFn = Object.values(fns).find(
+    (f: any) => f.Properties.FunctionName === 'glowpt-ai-response',
+  ) as any;
+  expect(aiFn).toBeDefined();
+  expect(aiFn.Properties.VpcConfig).toBeUndefined();
+
+  // The Anthropic key lives in Secrets Manager, not an env var or the template.
+  template.hasResourceProperties('AWS::SecretsManager::Secret', {
+    Name: 'glowpt/anthropic/api-key',
+  });
 });

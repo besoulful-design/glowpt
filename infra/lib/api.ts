@@ -44,6 +44,8 @@ export interface ApiProps {
 export class Api extends Construct {
   public readonly fn: lambdaNode.NodejsFunction;
   public readonly httpApi: apigwv2.HttpApi;
+  /** The Cognito JWT authorizer, exposed so sibling routes (ai-response) reuse it. */
+  public readonly authorizer: HttpUserPoolAuthorizer;
 
   constructor(scope: Construct, id: string, props: ApiProps) {
     super(scope, id);
@@ -111,6 +113,7 @@ export class Api extends Construct {
     const authorizer = new HttpUserPoolAuthorizer('CognitoAuthorizer', props.userPool, {
       userPoolClients: [props.userPoolClient],
     });
+    this.authorizer = authorizer;
 
     this.httpApi = new apigwv2.HttpApi(this, 'HttpApi', {
       apiName: 'glowpt-api',

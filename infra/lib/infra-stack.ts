@@ -8,6 +8,7 @@ import { Email } from './email';
 import { Auth } from './auth';
 import { PostConfirmation } from './post-confirm';
 import { Api } from './api';
+import { AiResponse } from './ai-response';
 import { Bastion } from './bastion';
 
 /**
@@ -52,12 +53,20 @@ export class InfraStack extends cdk.Stack {
     // Phase 3: the data API. HTTP API Gateway with a Cognito JWT authorizer in
     // front of one Lambda that runs every app read/write as glowpt_app, stamping
     // the verified sub into each transaction so RLS is the boundary.
-    new Api(this, 'Api', {
+    const api = new Api(this, 'Api', {
       vpc: network.vpc,
       proxy: database.proxy,
       proxySecurityGroup: network.proxySecurityGroup,
       userPool: auth.userPool,
       userPoolClient: auth.userPoolClient,
+    });
+
+    // Phase 4: the ai-response function. A separate, non-VPC Lambda (it needs the
+    // internet for Anthropic and no database), attached to the shared API behind
+    // the same Cognito authorizer at POST /ai-response.
+    new AiResponse(this, 'AiResponse', {
+      httpApi: api.httpApi,
+      authorizer: api.authorizer,
     });
 
     // SSM jump-host for one-off DB admin, and the firewall openings that let it
