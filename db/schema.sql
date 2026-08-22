@@ -84,6 +84,9 @@ begin
   if not exists (select from pg_roles where rolname = 'glowpt_postconfirm') then
     create role glowpt_postconfirm login;  -- password set out of band
   end if;
+  if not exists (select from pg_roles where rolname = 'glowpt_weekly') then
+    create role glowpt_weekly login;       -- password set out of band
+  end if;
 end $$;
 
 -- The role running this script must be a member of these roles to reassign
@@ -92,7 +95,7 @@ grant glowpt_owner, glowpt_auth, glowpt_app to current_user;
 
 -- Leave Supabase's wide-open default posture behind (Rule 2 spirit).
 revoke all on schema public from public;
-grant usage on schema public to glowpt_app, glowpt_auth, glowpt_owner, glowpt_postconfirm;
+grant usage on schema public to glowpt_app, glowpt_auth, glowpt_owner, glowpt_postconfirm, glowpt_weekly;
 
 
 -- ============================ TABLES ============================
@@ -402,6 +405,79 @@ begin
   update public.profiles set discharged_at = null where id = p_patient;
 end $$;
 
+-- weekly_summary_rows: the cross-clinic read for the weekly-summary Lambda (SES +
+-- EventBridge, fires Mondays). Unlike every other read, this is a trusted batch
+-- job that legitimately spans ALL clinics; glowpt_app is RLS-scoped to one user
+-- and cannot serve it. So it runs as glowpt_auth (BYPASSRLS) and is callable ONLY
+-- by the dedicated glowpt_weekly login role (grant below; NOT granted to
+-- glowpt_app). Returns one row per email RECIPIENT: role='patient' rows drive the
+-- personal nudge (own first name + own 7-day count), role in
+-- ('manager','therapist') rows drive the clinic aggregate summary. The per-clinic
+-- scoping and aggregates are all computed in SQL (GROUP BY), never a JS array
+-- filter -- that filter was the old function's cross-tenant-leak risk. Discharged
+-- people and clinic-less profiles are excluded; the window is check-ins in the
+-- last 7 days counted as distinct UTC calendar days per patient.
+create or replace function public.weekly_summary_rows()
+  returns table (
+    clinic_id              uuid,
+    clinic_name            text,
+    recipient_id           uuid,
+    email                  citext,
+    full_name              text,
+    role                   text,
+    checkin_days           integer,
+    clinic_total_patients  integer,
+    clinic_active_patients integer
+  )
+  language sql stable security definer
+  set search_path = public
+  set row_security = off
+as $$
+  with recent as (
+    select ch.user_id,
+           -- distinct UTC calendar days; same rule as public.utc_date(), inlined
+           -- to keep this function free of any create-order / grant dependency.
+           count(distinct (ch.created_at at time zone 'UTC')::date)::int as days
+    from public.checkins ch
+    where ch.created_at >= now() - interval '7 days'
+    group by ch.user_id
+  ),
+  patients as (
+    select p.clinic_id,
+           p.id                as recipient_id,
+           u.email,
+           p.full_name,
+           coalesce(r.days, 0) as checkin_days
+    from public.profiles p
+    join public.users u on u.id = p.id
+    left join recent r  on r.user_id = p.id
+    where p.role = 'patient'
+      and p.discharged_at is null
+      and p.clinic_id is not null
+  ),
+  agg as (
+    select clinic_id,
+           count(*)::int                                 as total,
+           count(*) filter (where checkin_days > 0)::int as active
+    from patients
+    group by clinic_id
+  )
+  select c.id, c.name, pt.recipient_id, pt.email, pt.full_name,
+         'patient'::text, pt.checkin_days, a.total, a.active
+  from patients pt
+  join public.clinics c on c.id = pt.clinic_id
+  join agg a            on a.clinic_id = pt.clinic_id
+  union all
+  select c.id, c.name, sp.id, u.email, sp.full_name,
+         sp.role, 0, coalesce(a.total, 0), coalesce(a.active, 0)
+  from public.profiles sp
+  join public.users u   on u.id = sp.id
+  join public.clinics c on c.id = sp.clinic_id
+  left join agg a       on a.clinic_id = sp.clinic_id
+  where sp.role in ('manager','therapist')
+    and sp.discharged_at is null
+$$;
+
 
 -- ============================ ROW LEVEL SECURITY ============================
 -- Rule 3: enable AND force on every table. FORCE makes even the table owner
@@ -524,6 +600,7 @@ grant select, insert, update on public.clinics       to glowpt_auth;
 grant select, insert, update on public.profiles      to glowpt_auth;
 grant select, insert, update on public.consents      to glowpt_auth;
 grant select, insert, update on public.staff_invites to glowpt_auth;
+grant select                 on public.checkins      to glowpt_auth;  -- read-only: weekly_summary_rows counts them
 
 -- Functions: revoke the PUBLIC default, then grant EXECUTE explicitly.
 -- NOTE: register_user is deliberately ABSENT from glowpt_app's list. Identity
@@ -560,6 +637,13 @@ grant execute on function
   public.accept_staff_invite()
 to glowpt_postconfirm;
 
+-- glowpt_weekly: the weekly-summary Lambda's role. It has NO table grants and can
+-- call exactly ONE function, the cross-clinic read below. Deliberately NOT granted
+-- to glowpt_app: that would let any patient read every clinic's data. (The blanket
+-- "revoke execute ... from public" above already stripped the default PUBLIC grant
+-- off weekly_summary_rows, so this is the only path to it.)
+grant execute on function public.weekly_summary_rows() to glowpt_weekly;
+
 -- Phase 3 note (self-heal edge, parked deliberately): the frontend safety-net
 -- re-attach runs as glowpt_app, which can call join_clinic / accept_staff_invite
 -- but NOT register_user. Those RPCs insert into profiles, whose id FK-references
@@ -595,6 +679,7 @@ alter function public.assign_therapist(uuid, uuid)            owner to glowpt_au
 alter function public.discharge_patient(uuid)                 owner to glowpt_auth;
 alter function public.restore_patient(uuid)                   owner to glowpt_auth;
 alter function public.register_user(uuid, citext, text)       owner to glowpt_auth;
+alter function public.weekly_summary_rows()                   owner to glowpt_auth;
 
 
 -- ============================ INTEGRITY TIGHTENINGS (approved by David 2026-08-07) ============================

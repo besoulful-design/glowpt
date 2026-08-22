@@ -9,6 +9,7 @@ import { Auth } from './auth';
 import { PostConfirmation } from './post-confirm';
 import { Api } from './api';
 import { AiResponse } from './ai-response';
+import { WeeklySummary } from './weekly-summary';
 import { Bastion } from './bastion';
 
 /**
@@ -69,6 +70,16 @@ export class InfraStack extends cdk.Stack {
       authorizer: api.authorizer,
     });
 
+    // Phase 4: the weekly-summary function. A VPC Lambda (it needs the private
+    // database) that reaches SES through an interface VPC endpoint and fires from
+    // an EventBridge rule every Monday at 8am ET. PHI-minimised nudge emails.
+    new WeeklySummary(this, 'WeeklySummary', {
+      vpc: network.vpc,
+      proxy: database.proxy,
+      proxySecurityGroup: network.proxySecurityGroup,
+      configurationSetName: email.configurationSet.configurationSetName,
+    });
+
     // SSM jump-host for one-off DB admin, and the firewall openings that let it
     // reach the database and the proxy on Postgres port 5432.
     const bastion = new Bastion(this, 'Bastion', { vpc: network.vpc });
@@ -101,6 +112,10 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'PostconfirmSecretArn', {
       value: database.postconfirmSecret.secretArn,
       description: 'Secrets Manager ARN for the glowpt_postconfirm role (proxy uses it)',
+    });
+    new cdk.CfnOutput(this, 'WeeklySecretArn', {
+      value: database.weeklySecret.secretArn,
+      description: 'Secrets Manager ARN for the glowpt_weekly role (proxy uses it)',
     });
     new cdk.CfnOutput(this, 'BastionInstanceId', {
       value: bastion.host.instanceId,
