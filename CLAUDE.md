@@ -1,5 +1,5 @@
 # GlowPT — Project Guide (for Claude Code)
-*Living doc. Loaded automatically every session when working in this folder. Updated 2026-08-23, 3rd session (**Bedrock decided + built** on branch `bedrock-ai-response`, blocked on a new-account Bedrock quota — see **⏸️ PICK UP HERE** below. The **Anthropic BAA is OFF the critical path**; the attorney-reviewed **clinic BAA is now the only gate** before real patients).*
+*Living doc. Loaded automatically every session when working in this folder. Updated 2026-08-23, 4th session (**Bedrock decided + built** on branch `bedrock-ai-response`, blocked on an **AWS account verification hold** — diagnosed, awaiting AWS; see **⏸️ PICK UP HERE** below. The **Anthropic BAA is OFF the critical path**; the attorney-reviewed **clinic BAA is now the only gate** before real patients).*
 
 ## What it is
 A daily wellness check-in app for physical therapy patients. Patient does a 30-second check-in (feeling 1–5, movement, a note) and gets a warm, AI-written reflection. Their clinic gets dashboards + a weekly summary. **Clinics subscribe; patients use it free** as a value-add.
@@ -96,7 +96,7 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 
 > ## ⏸️ PICK UP HERE (2026-08-23, end of session) — Bedrock switch is BUILT and BLOCKED ON ONE AWS QUOTA
 >
-> **One-line state:** the Bedrock swap is written, verified locally, and **not merged**. It is blocked only by a Bedrock quota on a brand-new account. Production is untouched and healthy — glowpt.app still calls api.anthropic.com and nothing patient-facing has changed.
+> **One-line state:** the Bedrock swap is written, verified locally, and **not merged**. It is blocked by an **AWS account verification hold on `glowpt-prod`** (diagnosed 2026-08-23 — see the blocker block below; it is NOT a quota and NOT anything we can fix in code). Production is untouched and healthy — glowpt.app still calls api.anthropic.com and nothing patient-facing has changed.
 >
 > **▶ THE FIRST THING TO DO NEXT SESSION — just retry the invoke:**
 > ```
@@ -106,15 +106,19 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 >   --inference-config '{"maxTokens":20}'
 > ```
 > - **If it returns text → unblocked.** Go straight to "REMAINING STEPS" below.
-> - **If it says `ThrottlingException: Too many tokens per day` → still blocked.** Same as when we stopped. Escalate (options below); do NOT re-run the use-case form, and do NOT re-derive any of this.
+> - **If it says `ThrottlingException: Too many tokens per day` → still blocked by the verification hold.** Read the blocker block below and stop there — the cause is diagnosed. Do NOT re-run the use-case form, do NOT file Service Quotas requests, and do NOT re-investigate the 0.0 quotas. The only open action is David's email to `aws-verification@amazon.com`; check whether he has sent it and whether AWS replied.
 >
 > **What is already DONE (do not repeat):**
 > - **The Anthropic use-case form is SUBMITTED and REGISTERED.** `aws bedrock get-use-case-for-model-access --profile glowpt-prod --region us-east-1` returns the saved form (double-base64; decode twice to read it). Company `FranklinAI Solutions LLC`, website `https://glowpt.app/`, industry `HealthCare`, external users, real use-case description. **This gate is CLEARED** — proven by the error message changing from "use case details have not been submitted" to a throttling error.
 > - Spike committed on branch **`bedrock-ai-response`** (`5674e76`). tsc clean, `cdk synth` clean, frontend build clean, IAM verified in the synthesized template. **NOT merged, NOT deployed.**
 >
-> **The blocker, precisely:** every Bedrock inference quota in `glowpt-prod` reads **0.0** — not only Haiku, but every Anthropic model AND Amazon's own Nova models (requests/min, tokens/min, tokens/day). A 22-minute poll (22 attempts, 60s apart) never succeeded.
-> - **Working hypothesis, NOT verified:** those zeros are not literal. "Model invocation max tokens per day" is marked **non-adjustable at 0**, which if enforced would make Bedrock unusable for every AWS customer — so Service Quotas most likely just has not populated real values for an account that enabled Bedrock minutes earlier. Read it as a **new-account ramp** that clears on its own. Could not confirm against AWS published defaults: `list-aws-default-service-quotas` started returning `TooManyRequestsException`.
-> - **If still blocked:** (a) wait longer — cheapest, most likely correct; (b) file Service Quotas increase requests on the four **adjustable** Haiku quotas (cross-region + global cross-region, requests/min and tokens/min) — free and self-serve, but pointless if the zeros are a display artifact; (c) an AWS Support case for a definitive answer — same path as the SES production-access request, which took a few days.
+> **✅ THE BLOCKER IS DIAGNOSED (2026-08-23, 4th session). It is an AWS ACCOUNT VERIFICATION HOLD — not a quota, not a ramp, and nothing to do with Anthropic or model access. The previous hypothesis below was WRONG; do not re-derive it.**
+> - **The tell, found by invoking in a region we had never tried.** us-east-1 and us-west-2 both return the vague `ThrottlingException: Too many tokens per day`. **us-east-2 returns a completely different, explicit error:** `AccessDeniedException: Your account is currently being verified. Verification normally takes less than 2 hours. … If you are still receiving this message after more than 2 hours, please let us know by writing to aws-verification@amazon.com.` **When a call fails opaquely, try another region before theorising — the clear message may only exist in the region you have not touched.**
+> - **It is account-wide, not model- or provider-specific.** Invoking **Amazon's own `us.amazon.nova-micro-v1:0` fails identically.** So the Anthropic use-case form really is cleared (that gate is done), and the Bedrock branch's code is not implicated at all.
+> - **❌ DISPROVEN: "the 0.0 quotas are a display artifact / unpopulated values."** Checked against AWS's published defaults with `get-aws-default-service-quota` (use the SINGLE-quota call — `list-aws-default-service-quotas` rate-limits to `TooManyRequestsException`, which is what blocked this check last session): **`L-6120CF2D` "Model invocation max tokens per day" default = `3,600,000,000`, our applied value = `0`.** Service Quotas knows the defaults perfectly well; it is applying a real zero. Corroborating: the *batch* Haiku quotas on this same account DO carry real non-zero values (100000 records, 5GB job size), so the data is populated — only *inference* is zeroed.
+> - **❌ DEAD END: filing a Service Quotas increase.** The quota that actually errors, `L-6120CF2D`, is **non-adjustable**, so it cannot be requested. `list-requested-service-quota-change-history` confirms **0 requests** have ever been filed on Bedrock for this account — nothing is pending, and nothing can be.
+> - **▶ THE ONLY ACTION IS DAVID'S, AND IT IS EMAIL, NOT A SUPPORT CASE:** write to **`aws-verification@amazon.com`** — the address in AWS's own message — since the stated 2-hour window has long passed. A draft was prepared 2026-08-23 (account IDs, both error messages, the quota evidence, and the Nova result, which is the proof it is not model access). **When David sends it, record the date + any case id here.** Expect days, like the SES production-access request. Retrying the invoke costs nothing and remains the first thing to try each session.
+> - **Nothing else is blocked by this.** Production is untouched and healthy — glowpt.app still calls api.anthropic.com. The `bedrock-ai-response` branch stays unmerged and unchanged; it needs no rework.
 >
 > **▶ REMAINING STEPS once the invoke succeeds (in order):**
 > 1. `cd infra && npx cdk diff GlowptFoundation --profile glowpt-prod` on the branch; confirm it touches only the ai-response Lambda + its IAM. **STOP if anything else shows replacement.**
