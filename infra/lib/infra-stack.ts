@@ -62,9 +62,11 @@ export class InfraStack extends cdk.Stack {
       userPoolClient: auth.userPoolClient,
     });
 
-    // Phase 4: the ai-response function. A separate, non-VPC Lambda (it needs the
-    // internet for Anthropic and no database), attached to the shared API behind
-    // the same Cognito authorizer at POST /ai-response.
+    // The ai-response function. A separate, non-VPC Lambda (no database), attached
+    // to the shared API behind the same Cognito authorizer at POST /ai-response.
+    // Runs Claude through Bedrock rather than Anthropic's own API, so the PHI in
+    // the prompt is covered by the AWS BAA we already hold instead of needing a
+    // second, separately negotiated Anthropic BAA.
     new AiResponse(this, 'AiResponse', {
       httpApi: api.httpApi,
       authorizer: api.authorizer,

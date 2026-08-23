@@ -6,8 +6,12 @@
 // person actually agreed to. If you materially change PATIENT_PRIVACY_NOTICE
 // below, you MUST bump PRIVACY_NOTICE_VERSION in the same commit, or the
 // consent rows will claim agreement to words the patient never saw.
+//
+// v2 -> v3 (2026-08-23): the AI reflection moved from Anthropic's own API to
+// Amazon Bedrock, so the notice no longer names Anthropic as a recipient. That
+// is a material change to who receives PHI, hence a new version.
 
-export const PRIVACY_NOTICE_VERSION = 'v2'
+export const PRIVACY_NOTICE_VERSION = 'v3'
 
 // Patient-facing privacy notice, shown at /join before the consent checkbox.
 // Written to be true of the app as it actually behaves today:
@@ -30,7 +34,7 @@ export function patientPrivacyNotice(clinicName) {
     },
     {
       heading: 'How the daily reflection is written',
-      body: `The short message you get back after each check-in is written by an AI assistant. To write it, we send that one check-in — your first name, your feeling score, your movement, and your note — to our AI provider, Anthropic. Your email address, your last name, and your history are not sent. Anthropic works for us under a written agreement and does not use what you write to train its systems.`,
+      body: `The short message you get back after each check-in is written by an AI model. To write it, we send that one check-in — your first name, your feeling score, your movement, and your note — to Amazon Bedrock, the AI service running inside our own protected Amazon Web Services account. Your email address, your last name, and your history are not sent. Your words never leave that protected environment, are not sent to an outside AI company, and are not used to train anyone's models.`,
     },
     {
       heading: 'The weekly email',
@@ -95,7 +99,7 @@ export const BAA_SUMMARY = [
   },
   {
     heading: 'Subcontractors',
-    body: 'Any vendor that handles patient information on our behalf is bound by the same obligations in writing. Today that means Amazon Web Services for hosting, database, and email, and Anthropic for the AI that writes the daily reflection.',
+    body: 'Any vendor that handles patient information on our behalf is bound by the same obligations in writing. Today that is Amazon Web Services alone — hosting, database, email, and the Bedrock service that runs the AI reflection — all under one executed AWS business associate addendum.',
   },
   {
     heading: 'If something goes wrong',

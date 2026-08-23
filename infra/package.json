@@ -8,6 +8,7 @@
     "cdk": "cdk"
   },
   "devDependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1116.0",
     "@swc/core": "^1.15.0",
     "@swc/jest": "^0.2.39",
     "@types/aws-lambda": "^8.10.162",
