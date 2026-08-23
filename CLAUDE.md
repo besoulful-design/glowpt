@@ -94,6 +94,43 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 
 **Who does what:** **claude.ai = architect** (wrote the planning docs, lives in the web chat, no repo access). **Claude Code (me) = builder** (executes here). **Planning is done; from here it's David + Claude Code.** Only re-engage claude.ai if David wants a second architect opinion on a big call.
 
+> ## ⏸️ PICK UP HERE (2026-08-23, end of session) — Bedrock switch is BUILT and BLOCKED ON ONE AWS QUOTA
+>
+> **One-line state:** the Bedrock swap is written, verified locally, and **not merged**. It is blocked only by a Bedrock quota on a brand-new account. Production is untouched and healthy — glowpt.app still calls api.anthropic.com and nothing patient-facing has changed.
+>
+> **▶ THE FIRST THING TO DO NEXT SESSION — just retry the invoke:**
+> ```
+> aws bedrock-runtime converse --profile glowpt-prod --region us-east-1 \
+>   --model-id "us.anthropic.claude-haiku-4-5-20251001-v1:0" \
+>   --messages '[{"role":"user","content":[{"text":"Reply with exactly: BEDROCK OK"}]}]' \
+>   --inference-config '{"maxTokens":20}'
+> ```
+> - **If it returns text → unblocked.** Go straight to "REMAINING STEPS" below.
+> - **If it says `ThrottlingException: Too many tokens per day` → still blocked.** Same as when we stopped. Escalate (options below); do NOT re-run the use-case form, and do NOT re-derive any of this.
+>
+> **What is already DONE (do not repeat):**
+> - **The Anthropic use-case form is SUBMITTED and REGISTERED.** `aws bedrock get-use-case-for-model-access --profile glowpt-prod --region us-east-1` returns the saved form (double-base64; decode twice to read it). Company `FranklinAI Solutions LLC`, website `https://glowpt.app/`, industry `HealthCare`, external users, real use-case description. **This gate is CLEARED** — proven by the error message changing from "use case details have not been submitted" to a throttling error.
+> - Spike committed on branch **`bedrock-ai-response`** (`5674e76`). tsc clean, `cdk synth` clean, frontend build clean, IAM verified in the synthesized template. **NOT merged, NOT deployed.**
+>
+> **The blocker, precisely:** every Bedrock inference quota in `glowpt-prod` reads **0.0** — not only Haiku, but every Anthropic model AND Amazon's own Nova models (requests/min, tokens/min, tokens/day). A 22-minute poll (22 attempts, 60s apart) never succeeded.
+> - **Working hypothesis, NOT verified:** those zeros are not literal. "Model invocation max tokens per day" is marked **non-adjustable at 0**, which if enforced would make Bedrock unusable for every AWS customer — so Service Quotas most likely just has not populated real values for an account that enabled Bedrock minutes earlier. Read it as a **new-account ramp** that clears on its own. Could not confirm against AWS published defaults: `list-aws-default-service-quotas` started returning `TooManyRequestsException`.
+> - **If still blocked:** (a) wait longer — cheapest, most likely correct; (b) file Service Quotas increase requests on the four **adjustable** Haiku quotas (cross-region + global cross-region, requests/min and tokens/min) — free and self-serve, but pointless if the zeros are a display artifact; (c) an AWS Support case for a definitive answer — same path as the SES production-access request, which took a few days.
+>
+> **▶ REMAINING STEPS once the invoke succeeds (in order):**
+> 1. `cd infra && npx cdk diff GlowptFoundation --profile glowpt-prod` on the branch; confirm it touches only the ai-response Lambda + its IAM. **STOP if anything else shows replacement.**
+> 2. Deploy the branch.
+> 3. **Prove it properly.** Sign in and hit `POST /ai-response` live, and **read the returned text.** The handler is deliberately fail-soft: a broken model call still returns HTTP 200 with the fallback line *"You showed up today — and that's everything."* **Seeing a 200 proves nothing.** Only a real, check-in-specific reflection counts. (House rule: shipped means observed working.)
+> 4. Merge to `main`. **The Lambda switch and the v3 privacy copy MUST land together** — the moment production calls Bedrock, a live notice still naming Anthropic is inaccurate. They are already coupled on the branch; do not split them.
+> 5. Update this doc, commit, push.
+>
+> **Rollback if Bedrock disappoints:** revert the branch. The `glowpt/anthropic/api-key` secret is retained on purpose and still holds the live key; the old handler is one file. Also revert `CONSENT_VERSION` to v2 so the notice matches reality again.
+>
+> **Still the real gate for REAL patients:** the **attorney-reviewed clinic BAA** (item 2 below). Bedrock removes the *Anthropic* BAA from the critical path; it does not remove this one. Demo-data-only until it is signed.
+>
+> **Housekeeping state at session end:** bastion `i-04b7a6d483e8b682a` **stopped**, SSM tunnel closed, dev server stopped — nothing billing. The AWS permission allowlist now lives in the repo at `.claude/settings.local.json` (committed `dc997ca`), so a session started **in `~/Downloads/glowpt`** can run `cdk deploy` and `aws ssm start-session` without the parent folder's settings.
+>
+---
+>
 > ### ▶ NEXT SESSION STARTS HERE (updated 2026-08-23 — Bedrock decided; the Anthropic BAA is OFF the critical path)
 > **All 6 phases done + proven. glowpt.app cut over to AWS 2026-08-22** (Cognito auth + API Gateway/Lambda + RLS + SES; supabase-js removed; verified live). Supabase stays as the rollback ($25/mo — don't tear down yet). **✅✅✅ WEEKLY-SUMMARY DONE + RIVERSIDE DEMO REBUILT 2026-08-22.** glowpt.app is fully on AWS; weekly emails proven in David's inbox (Monday 8am EventBridge rule LIVE + ENABLED); Riverside PT sales demo rebuilt via `scripts/aws-seed-demo.mjs` and **manager sign-in verified by David** (note: Cognito sign-IN OTP is 8-digit, sign-UP confirm is 6-digit — both correct). Details in the "▶ PICK UP HERE" block below.
 >
