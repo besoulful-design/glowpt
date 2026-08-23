@@ -1,5 +1,5 @@
 # GlowPT — Project Guide (for Claude Code)
-*Living doc. Loaded automatically every session when working in this folder. Updated 2026-08-23, 2nd session (last stray DB row deleted — **zero orphans**; the bastion-tunnel dead end diagnosed and fixed permanently; only the Anthropic BAA + a reviewed clinic BAA remain before real patients).*
+*Living doc. Loaded automatically every session when working in this folder. Updated 2026-08-23, 3rd session (**Bedrock decided + built** on branch `bedrock-ai-response`, blocked on a new-account Bedrock quota — see **⏸️ PICK UP HERE** below. The **Anthropic BAA is OFF the critical path**; the attorney-reviewed **clinic BAA is now the only gate** before real patients).*
 
 ## What it is
 A daily wellness check-in app for physical therapy patients. Patient does a 30-second check-in (feeling 1–5, movement, a note) and gets a warm, AI-written reflection. Their clinic gets dashboards + a weekly summary. **Clinics subscribe; patients use it free** as a value-add.
