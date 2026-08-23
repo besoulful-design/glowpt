@@ -80,11 +80,15 @@ export class Auth extends Construct {
       // password path. Patients re-enter via their clinic link.
       accountRecovery: cognito.AccountRecovery.NONE,
 
-      // TODO(post-Phase-2): re-enable deletionProtection once the stack is
-      // stable. During bring-up it must be OFF: with it ON, a failed deploy's
-      // rollback DELETE_SKIPs the pool and orphans it, turning a simple retry
-      // into manual cleanup. No real users exist yet, so nothing to protect.
-      deletionProtection: false,
+      // ON since 2026-08-23. It was deliberately OFF through bring-up, because
+      // with it ON a failed deploy's rollback DELETE_SKIPs the pool and orphans
+      // it, turning a simple retry into manual cleanup (which is exactly what
+      // happened once, on Phase 2's first deploy). The stack has been stable
+      // since 2026-08-18 and the pool now holds the Riverside demo accounts, so
+      // the trade flips: protect the pool. If a future change ever needs to
+      // REPLACE the pool, CloudFormation will refuse until this is set back to
+      // false in its own deploy first.
+      deletionProtection: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
