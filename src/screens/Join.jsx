@@ -4,6 +4,7 @@ import * as api from '../lib/api'
 import * as cognito from '../lib/cognito'
 import { savePendingJoin, useAuth } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
+import { patientPrivacyNotice, PRIVACY_NOTICE_VERSION } from '../lib/legal'
 import CodeVerify from './CodeVerify'
 
 // /join/:slug — a patient's first entry, from their clinic's invite link.
@@ -20,7 +21,9 @@ export default function Join() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const CONSENT_VERSION = 'v1'
+  // Tied to the notice text itself, so a consent row always names the words
+  // the patient actually read. Bumped in lib/legal.js, never here.
+  const CONSENT_VERSION = PRIVACY_NOTICE_VERSION
 
   useEffect(() => {
     api.getClinicBySlug(slug).then(setClinic).catch(() => setClinic(null))
@@ -110,9 +113,12 @@ export default function Join() {
             style={{ background: '#1a2840', border: '1px solid rgba(200,134,29,0.25)', borderRadius: 8, padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' }}>
             <div style={{ ...ui.eyebrow, marginBottom: 14 }}>Privacy Notice</div>
             <div style={{ fontSize: 14, lineHeight: 1.65, color: 'rgba(245,239,228,0.8)' }}>
-              <p style={{ marginTop: 0 }}>Your daily check-ins — how you’re feeling, what movement you did, and any notes — are stored securely and shared only with your care team at {clinic.name} to support your recovery.</p>
-              <p>We never sell your information or use it for advertising. You can ask {clinic.name} to delete your data at any time.</p>
-              <p style={{ color: 'rgba(245,239,228,0.45)', fontStyle: 'italic', fontSize: 13 }}>[Placeholder summary — replace with your full HIPAA privacy notice before onboarding real patients.]</p>
+              {patientPrivacyNotice(clinic.name).map(section => (
+                <div key={section.heading} style={{ marginBottom: 16 }}>
+                  <div style={{ fontWeight: 600, color: 'rgba(245,239,228,0.95)', marginBottom: 4 }}>{section.heading}</div>
+                  <p style={{ margin: 0 }}>{section.body}</p>
+                </div>
+              ))}
             </div>
             <button onClick={() => setShowPrivacy(false)} style={{ ...ui.btn, marginTop: 18 }}>Close</button>
           </div>

@@ -3,22 +3,13 @@ import * as api from '../lib/api'
 import * as cognito from '../lib/cognito'
 import { savePendingOnboard } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
+import { BAA_IS_EXECUTED, BAA_SUMMARY, BAA_SUMMARY_INTRO } from '../lib/legal'
 import CodeVerify from './CodeVerify'
 
 function slugify(s) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 }
 
-// Placeholder BAA text — David swaps in the real agreement before go-live.
-const BAA_TEXT = `BUSINESS ASSOCIATE AGREEMENT (SUMMARY — PLACEHOLDER)
-
-This is placeholder text. Replace with the real Business Associate Agreement
-between FranklinAI (David Peterson) and the clinic before onboarding real patients.
-
-In plain terms, the full BAA will cover: how patient information is protected,
-how it may be used and shared, breach notification, and each party's
-responsibilities under HIPAA. You will formally sign this when your clinic goes
-live with real patients.`
 
 // /onboard — a clinic creates its account, reviews the BAA, and gets its patient link.
 export default function Onboard() {
@@ -105,7 +96,7 @@ export default function Onboard() {
         <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.6)', cursor: 'pointer', marginTop: 2 }}>
           <input type="checkbox" checked={baaReviewed} onChange={e => setBaaReviewed(e.target.checked)}
             style={{ marginTop: 3, accentColor: '#c8861d', width: 16, height: 16, flexShrink: 0 }} />
-          <span>I’ve reviewed the{' '}
+          <span>{BAA_IS_EXECUTED ? 'I agree to the' : 'I’ve reviewed the'}{' '}
             <button type="button" onClick={() => setShowBaa(true)}
               style={{ background: 'none', border: 'none', color: '#c8861d', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}>
               Business Associate Agreement
@@ -116,7 +107,9 @@ export default function Onboard() {
         {error && <div style={ui.error}>{error}</div>}
         <button style={ui.btn} disabled={busy}>{busy ? 'Setting up…' : 'Create my clinic →'}</button>
       </form>
-      <div style={ui.fine}>You’ll formally sign the BAA when you go live with real patients.</div>
+      {!BAA_IS_EXECUTED && (
+        <div style={ui.fine}>This is a summary. You’ll review and sign the full agreement before any real patient information enters GlowPT.</div>
+      )}
 
       {showBaa && (
         <div onClick={() => setShowBaa(false)}
@@ -124,7 +117,17 @@ export default function Onboard() {
           <div onClick={e => e.stopPropagation()}
             style={{ background: '#1a2840', border: '1px solid rgba(200,134,29,0.25)', borderRadius: 8, padding: 28, maxWidth: 520, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' }}>
             <div style={{ ...ui.eyebrow, marginBottom: 14 }}>Business Associate Agreement</div>
-            <pre style={{ whiteSpace: 'pre-wrap', fontFamily: "'DM Sans', sans-serif", fontSize: 13, lineHeight: 1.6, color: 'rgba(245,239,228,0.75)', margin: 0 }}>{BAA_TEXT}</pre>
+            <div style={{ fontSize: 13.5, lineHeight: 1.65, color: 'rgba(245,239,228,0.78)' }}>
+              {!BAA_IS_EXECUTED && (
+                <p style={{ marginTop: 0, marginBottom: 18, fontStyle: 'italic', color: 'rgba(245,239,228,0.55)' }}>{BAA_SUMMARY_INTRO}</p>
+              )}
+              {BAA_SUMMARY.map(section => (
+                <div key={section.heading} style={{ marginBottom: 16 }}>
+                  <div style={{ fontWeight: 600, color: 'rgba(245,239,228,0.95)', marginBottom: 4 }}>{section.heading}</div>
+                  <p style={{ margin: 0 }}>{section.body}</p>
+                </div>
+              ))}
+            </div>
             <button onClick={() => setShowBaa(false)} style={{ ...ui.btn, marginTop: 20 }}>Close</button>
           </div>
         </div>
