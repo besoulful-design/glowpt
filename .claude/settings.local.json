@@ -1,0 +1,1 @@
+{"permissions":{"allow":["Bash(npx cdk deploy:*)","Bash(cdk deploy:*)","Bash(aws ec2 start-instances:*)","Bash(aws ec2 stop-instances:*)","Bash(aws ssm start-session:*)"]}}
