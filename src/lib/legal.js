@@ -76,7 +76,7 @@ export function patientPrivacyNotice(clinicName) {
 
 export const BAA_IS_EXECUTED = false
 
-export const BAA_VERSION = 'summary-v2'
+export const BAA_VERSION = 'summary-v3'
 
 // Structured the same way as the patient notice so both modals render headings
 // and body text identically, and so neither depends on hand-wrapped line breaks
