@@ -22,6 +22,56 @@
 
 ---
 
+## QUESTIONS FOR COUNSEL
+
+Context that changes the usual answers: **GlowPT is a low-price, high-volume
+SaaS product.** The subscription is roughly **$300 per month** and the buyers
+are small independent physical therapy clinics. This agreement is intended to
+be a **standard form that the clinic signs as presented.** It is not expected to
+be negotiated, and no clinic at this price point is expected to have counsel
+redline it. Please answer with that in mind rather than assuming a negotiated
+enterprise contract.
+
+**1. Where do the risk terms belong, given there is no negotiation phase?**
+Because nothing here gets redlined, whatever this document says is final. There
+is no later round in which a limitation of liability could be introduced.
+Should the **limitation of liability** and **indemnification** sit in this BAA,
+in a separate subscription agreement, or in both? What cap is defensible for a
+single-member LLC at this price point, and should breach-related liability be
+carved out of it or inside it?
+
+**2. Is a separate subscription agreement required, and what must it contain?**
+There is currently **no subscription agreement or terms of service at all** for
+GlowPT. Only this BAA exists. Please advise what the companion commercial
+agreement needs to cover (price, billing, term, cancellation, service levels,
+IP, warranty disclaimers, liability) and confirm how the two documents should
+reference each other. Section 6.3 of this draft currently states that this
+Agreement controls over the service agreement with respect to PHI.
+
+**3. Can this be accepted online, or does it need a signature?**
+The product onboards clinics through a web form. Today the clinic checks a box
+to confirm it has reviewed a plain-language summary. Is **click-through
+acceptance** sufficient to form a binding BAA, or is a wet or electronic
+signature required? If click-through is acceptable, what must the interface
+capture and retain as evidence (identity of the person accepting, their
+authority to bind the clinic, timestamp, the exact version of the text shown)?
+The application already versions its legal text and records a consent version
+per user.
+
+**4. Insurance.** Is cyber liability and/or technology errors and omissions
+coverage required or strongly advised before handling real patient data? At
+what limit, for a company of this size? Should an insurance covenant appear in
+this agreement, or be left out until a clinic asks?
+
+**5. Who signs for Business Associate?** FranklinAI Solutions LLC is a
+single-member LLC. Please confirm the correct title for the signature block.
+
+**6. Anything in this draft that should not be here.** This draft was prepared
+without legal training. Please flag any provision that is unenforceable,
+inadvisable, or that promises something a small vendor should not promise.
+
+---
+
 This Business Associate Agreement (this "**Agreement**") is entered into as of
 `[EFFECTIVE DATE]` (the "**Effective Date**") by and between:
 
