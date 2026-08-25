@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import * as api from '../lib/api'
 import { useAuth } from '../auth'
 import { FEELINGS as feelingData } from '../lib/feelings'
+import { LogoMark } from './AuthShell'
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] // Mon → Sun
 
@@ -115,29 +116,6 @@ function weeklyAverages(days) {
     return { label: b.label, avg, rounded: avg ? Math.max(1, Math.min(5, Math.round(avg))) : null }
   })
 }
-
-const LogoMark = ({ size = 220 }) => (
-  <svg width={size} height={Math.round(size * 0.58)} viewBox="0 0 130 75" fill="none">
-    <defs>
-      <radialGradient id="haze" cx="50%" cy="100%" r="70%">
-        <stop offset="0%" stopColor="#e0a035" stopOpacity="0.28" />
-        <stop offset="100%" stopColor="#e0a035" stopOpacity="0" />
-      </radialGradient>
-      <linearGradient id="arc3" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#c8861d" stopOpacity="0.15" />
-        <stop offset="50%" stopColor="#e0a035" />
-        <stop offset="100%" stopColor="#c8861d" stopOpacity="0.15" />
-      </linearGradient>
-    </defs>
-    <ellipse cx="65" cy="72" rx="58" ry="20" fill="url(#haze)" />
-    <path d="M 18 72 A 47 47 0 0 1 112 72" fill="none" stroke="#c8861d" strokeWidth="1" strokeOpacity="0.2" strokeLinecap="round" />
-    <path d="M 30 72 A 35 35 0 0 1 100 72" fill="none" stroke="#c8861d" strokeWidth="1.8" strokeOpacity="0.45" strokeLinecap="round" />
-    <path d="M 44 72 A 21 21 0 0 1 86 72" fill="none" stroke="url(#arc3)" strokeWidth="3" strokeLinecap="round" />
-    <circle cx="65" cy="72" r="5" fill="#e0a035" />
-    <circle cx="65" cy="72" r="10" fill="#e0a035" opacity="0.15" />
-    <circle cx="65" cy="72" r="16" fill="#e0a035" opacity="0.07" />
-  </svg>
-)
 
 export default function PatientApp() {
   const { user, profile, signOut } = useAuth()
@@ -376,7 +354,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     <div style={styles.app}>
       <style>{fontStyle}</style>
       <div style={styles.loadingWrap}>
-        <LogoMark size={160} />
+        <LogoMark size={160} marginBottom={0} />
         <div style={styles.loadingText}>Reflecting on your day…</div>
         <div style={styles.loadingDots}>{[0, 1, 2].map(i => <div key={i} style={styles.loadingDot(i)} />)}</div>
       </div>
@@ -392,7 +370,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
           <div style={styles.welcomeWrap}>
             <button style={styles.signOut} onClick={signOut}>Sign out</button>
             <div style={styles.welcomeTop}>
-              <div style={styles.logoFloat}><LogoMark size={330} /></div>
+              <div style={styles.logoFloat}><LogoMark size={330} marginBottom={0} /></div>
               <div style={styles.wordmark}>
                 <span style={styles.logoGlow}>Glow</span>
                 <span style={styles.logoPT}>PT</span>
@@ -570,7 +548,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
             <div style={styles.responseTop}>
               <div style={styles.responseMark}>
                 <div style={{ position: 'absolute', inset: '-12px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(224,160,53,0.2) 0%,transparent 70%)', animation: 'pulse 2.5s ease-in-out infinite' }} />
-                <LogoMark size={180} />
+                <LogoMark size={180} marginBottom={0} />
               </div>
               {aiResponse && <div style={styles.responseEyebrow}>Today's reflection</div>}
               {aiResponse && <div style={styles.responseMessage}>{aiResponse}</div>}
