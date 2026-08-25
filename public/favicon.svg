@@ -1,8 +1,69 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <path d="M 6 68 A 44 44 0 0 1 94 68" fill="none" stroke="#c8861d" stroke-width="2.5" stroke-opacity="0.3" stroke-linecap="round"/>
-  <path d="M 18 68 A 32 32 0 0 1 82 68" fill="none" stroke="#c8861d" stroke-width="4" stroke-opacity="0.6" stroke-linecap="round"/>
-  <path d="M 30 68 A 20 20 0 0 1 70 68" fill="none" stroke="#e0a035" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="50" cy="68" r="14" fill="#e0a035" opacity="0.15"/>
-  <circle cx="50" cy="68" r="9" fill="#e0a035" opacity="0.25"/>
-  <circle cx="50" cy="68" r="7" fill="#e0a035"/>
+<!-- GlowPT sunrise. Van Gogh-inspired: tapered ray strokes, gold sky,
+     orange horizon, broken blue-and-gold water.
+     This file is the source of truth; apple-touch-icon.png is rendered from it. -->
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+  <linearGradient id="jsky" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#FBC02D"/>
+  <stop offset="1" stop-color="#E88C10"/>
+  </linearGradient>
+  </defs>
+  <rect width="100" height="100" fill="url(#jsky)"/>
+  <path d="M70 43Q95.2 41.9 120.5 40.5Q95.3 38.8 70 37.3Z" fill="#FFC523"/>
+  <path d="M68.8 47.5Q84.2 49.6 99.6 51.4Q84.9 46.3 70.2 41.5Z" fill="#FBC02D"/>
+  <path d="M65.9 53Q84.4 59.6 103.2 65.9Q86.7 55 70 44.6Z" fill="#F5A81A"/>
+  <path d="M62.6 55.8Q75.2 65.8 88.1 75.5Q77.4 63.4 66.6 51.5Z" fill="#FFC523"/>
+  <path d="M58.2 58.6Q67 68.7 76.2 78.6Q70.4 66.4 64.3 54.4Z" fill="#FBC02D"/>
+  <path d="M55.1 59.5Q67.2 85.8 79.5 112Q69.9 84.7 60.1 57.5Z" fill="#F5A81A"/>
+  <path d="M47.8 60.3Q52 85.3 56.7 110.2Q56.6 84.8 56 59.5Z" fill="#FFC523"/>
+  <path d="M44.8 59.6Q44.2 83.3 43.9 107Q47.9 83.6 51.6 60.2Z" fill="#FBC02D"/>
+  <path d="M38.6 57Q29.9 83.6 21.7 110.4Q34.3 85.3 46.5 60.2Z" fill="#F5A81A"/>
+  <path d="M35.7 54.3Q23 73.6 10.7 93.1Q25.7 75.6 40.5 57.9Z" fill="#FFC523"/>
+  <path d="M33.5 51.5Q25 60.4 16.8 69.6Q26.8 62.4 36.7 55.1Z" fill="#FBC02D"/>
+  <path d="M30.7 46.2Q17.6 54.6 4.7 63.4Q19.3 57.9 33.8 52.1Z" fill="#F5A81A"/>
+  <path d="M29.6 41.4Q12.2 48 -5.2 55Q13.3 52.2 31.7 49.1Z" fill="#FFC523"/>
+  <path d="M30.1 35.3Q17.1 36.9 4 39Q17 41.6 29.9 43.8Z" fill="#FBC02D"/>
+  <path d="M31 33.2Q6 28.7 -19.1 24.5Q5.4 31.4 29.9 38Z" fill="#F5A81A"/>
+  <path d="M34.2 26.9Q7 15.3 -20.5 4.2Q4.7 19.8 30.1 35Z" fill="#FFC523"/>
+  <path d="M37.5 23.7Q21.6 13.4 5.4 3.5Q18.3 17.4 31.5 31Z" fill="#FBC02D"/>
+  <path d="M43 20.7Q27 0.5 10.7 -19.5Q22.7 3.3 35 25.9Z" fill="#F5A81A"/>
+  <path d="M47.1 19.8Q39.1 3.4 30.7 -12.9Q34.7 5 39.1 22.7Z" fill="#FFC523"/>
+  <path d="M52.5 19.6Q47.6 -5.6 42.3 -30.7Q42.5 -5 43.2 20.6Z" fill="#FBC02D"/>
+  <path d="M56.2 20.5Q56.9 -4.3 57.1 -29.1Q52.3 -4.8 47.8 19.7Z" fill="#F5A81A"/>
+  <path d="M61 22.8Q67.3 2.1 73.2 -18.8Q63.3 0.5 53.7 20Z" fill="#FFC523"/>
+  <path d="M64.4 25.8Q73 11.7 81.4 -2.6Q70.2 9.6 59.3 22Z" fill="#FBC02D"/>
+  <path d="M67 29.2Q76.7 19.7 86.2 10.1Q74.9 17.6 63.8 25.3Z" fill="#F5A81A"/>
+  <path d="M69.4 34Q80.4 26.5 91.2 18.8Q78.6 23.1 66.2 27.7Z" fill="#FFC523"/>
+  <path d="M70.4 39.1Q96.8 30.7 123.1 21.9Q95.7 26.4 68.4 31.3Z" fill="#FBC02D"/>
+  <circle cx="50" cy="40" r="22" fill="#F5B60C"/>
+  <circle cx="50" cy="40" r="19" fill="#FDD10B"/>
+  <circle cx="47" cy="36" r="10" fill="#FFE85C"/>
+  <path d="M0 68 L100 68 L100 79 L0 79 Z" fill="#DD7A14"/>
+  <path d="M10 73.4 q4.3 -0.9 8.5 0" stroke="#FBC02D" stroke-width="3.7" stroke-linecap="round" fill="none"/>
+  <path d="M13.9 71.6 q3.2 -0.1 6.5 0" stroke="#E9910F" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+  <path d="M63 69.2 q4.4 1.9 8.9 0" stroke="#FBC02D" stroke-width="3.8" stroke-linecap="round" fill="none"/>
+  <path d="M68 73.8 q3.8 -0.4 7.5 0" stroke="#E9910F" stroke-width="2.7" stroke-linecap="round" fill="none"/>
+  <path d="M49.2 75.8 q4.8 2 9.6 0" stroke="#FBC02D" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <path d="M12.3 74.3 q5.1 -0.4 10.1 0" stroke="#E9910F" stroke-width="3.6" stroke-linecap="round" fill="none"/>
+  <path d="M8.4 71.8 q5.1 -0.6 10.2 0" stroke="#FBC02D" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <path d="M79.7 73.6 q4.3 1.7 8.5 0" stroke="#E9910F" stroke-width="2.9" stroke-linecap="round" fill="none"/>
+  <path d="M19.7 74.1 q3.4 1.5 6.8 0" stroke="#FBC02D" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+  <path d="M10.1 74.1 q3.6 1.6 7.2 0" stroke="#E9910F" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+  <rect y="79" width="100" height="21" fill="#5C74BE"/>
+  <path d="M22 92.4 q6.5 -2 12.9 0" stroke="#93A8DE" stroke-width="4.2" stroke-linecap="round" fill="none"/>
+  <path d="M15.7 87.4 q5.8 -0.9 11.7 0" stroke="#D9A62E" stroke-width="2.9" stroke-linecap="round" fill="none"/>
+  <path d="M51.6 85.1 q6.3 0.8 12.6 0" stroke="#3F5399" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <path d="M93.7 83.4 q4 -1.6 7.9 0" stroke="#93A8DE" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <path d="M42 95 q5.4 -1.1 10.9 0" stroke="#D9A62E" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+  <path d="M62.1 87.9 q3.6 -1.4 7.3 0" stroke="#3F5399" stroke-width="3.8" stroke-linecap="round" fill="none"/>
+  <path d="M52.2 88.8 q6.4 0.5 12.7 0" stroke="#93A8DE" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <path d="M59.6 92.3 q5.5 -1 11 0" stroke="#D9A62E" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+  <path d="M30.1 95.1 q4.4 1.6 8.8 0" stroke="#3F5399" stroke-width="3.8" stroke-linecap="round" fill="none"/>
+  <path d="M93.7 93.1 q5.8 -0.5 11.7 0" stroke="#93A8DE" stroke-width="4.1" stroke-linecap="round" fill="none"/>
+  <path d="M65.5 95.3 q5.2 -1.9 10.5 0" stroke="#D9A62E" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+  <path d="M88.3 82.7 q5.9 0.1 11.8 0" stroke="#3F5399" stroke-width="4.1" stroke-linecap="round" fill="none"/>
+  <path d="M95.4 93.2 q6.2 2.1 12.3 0" stroke="#93A8DE" stroke-width="4.3" stroke-linecap="round" fill="none"/>
+  <path d="M50.4 94.8 q4.1 0.9 8.3 0" stroke="#D9A62E" stroke-width="2.3" stroke-linecap="round" fill="none"/>
+  <path d="M25.5 83 q4.6 -1.7 9.2 0" stroke="#3F5399" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+  <path d="M15.6 90.5 q5.3 0.5 10.6 0" stroke="#93A8DE" stroke-width="4.1" stroke-linecap="round" fill="none"/>
 </svg>
