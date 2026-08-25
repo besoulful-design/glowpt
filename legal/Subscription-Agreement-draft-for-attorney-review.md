@@ -21,7 +21,7 @@
 ## CONTEXT FOR COUNSEL
 
 **GlowPT is a low-price, high-volume SaaS product.** The subscription is
-approximately **$300 per month** and buyers are small independent physical
+**$350 per month** and buyers are small independent physical
 therapy clinics. This is a **standard form accepted as presented**, most likely
 by clicking through during online sign-up. It is not expected to be negotiated,
 and no clinic at this price is expected to have counsel review it.
@@ -133,7 +133,7 @@ you.
 **3.4 Availability.** We aim to keep the Service available but do not commit to
 a specific uptime percentage.
 
-> **[REVIEW]** Section 3.4 offers no service level commitment. At $300 per
+> **[REVIEW]** Section 3.4 offers no service level commitment. At $350 per
 > month with no dedicated infrastructure per clinic, a contractual uptime
 > guarantee with credits may not be advisable. Please advise whether to leave
 > this as is, or to offer a modest commitment for competitive reasons.
@@ -188,14 +188,15 @@ attempt to gain unauthorized access to another clinic's data.
 
 ## 5. FEES AND PAYMENT
 
-**5.1 Fees.** You will pay the subscription fee of `[$ AMOUNT]` per month, or
-the amount stated at sign-up.
+**5.1 Fees.** You will pay the subscription fee of **$350 per month**, or the
+amount stated at sign-up.
 
-> **[REVIEW]** Pricing is not yet settled. Planning has used a range of $250 to
-> $350 per month, and the public marketing site currently displays $350. This
-> must be reconciled before anything is presented to a clinic, and the document
-> should reference the price shown at sign-up rather than hard-coding a figure,
-> so that price changes do not require re-execution.
+> **[REVIEW]** The price is settled at **$350 per month**, which matches the
+> published price on glowpt.app. The clause states the figure and also refers to
+> the amount stated at sign-up, so that a future price change, or a discounted
+> or introductory rate for an individual clinic, does not require the agreement
+> to be re-executed. Please confirm that dual reference is drafted correctly and
+> that the sign-up amount governs where the two differ.
 
 **5.2 Billing.** Fees are billed monthly in advance by the payment method you
 provide, and are non-refundable except as expressly stated.
@@ -363,8 +364,8 @@ IMMEDIATELY PRECEDING THE EVENT GIVING RISE TO THE CLAIM.
 > to add one later.
 >
 > Specific questions:
-> - **What multiple is defensible?** Twelve months of fees at $300 per month is
->   $3,600. That is a very small cap against a HIPAA breach affecting hundreds of
+> - **What multiple is defensible?** Twelve months of fees at $350 per month is
+>   $4,200. That is a very small cap against a HIPAA breach affecting hundreds of
 >   patients. A cap that is unreasonably low may be struck down entirely, leaving
 >   no cap at all, which would be worse than a realistic one.
 > - **Should PHI breach liability sit inside or outside the cap?** This is the

@@ -31,7 +31,7 @@
 ## QUESTIONS FOR COUNSEL
 
 Context that changes the usual answers: **GlowPT is a low-price, high-volume
-SaaS product.** The subscription is roughly **$300 per month** and the buyers
+SaaS product.** The subscription is **$350 per month** and the buyers
 are small independent physical therapy clinics. This agreement is intended to
 be a **standard form that the clinic signs as presented.** It is not expected to
 be negotiated, and no clinic at this price point is expected to have counsel
@@ -57,7 +57,7 @@ effective given click-through acceptance, and that nothing falls between them.
 
 **2a. Does the liability cap in the Subscription Agreement reach claims under
 this BAA?** This is the most consequential open question across both documents.
-A cap tied to twelve months of fees is roughly $3,600, which is very small
+A cap tied to twelve months of fees is $4,200, which is very small
 against a breach affecting hundreds of patients. Please advise whether PHI
 liability should sit inside that cap, outside it, or under a separate higher cap
 matched to an insurance limit.
