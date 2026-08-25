@@ -354,7 +354,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     <div style={styles.app}>
       <style>{fontStyle}</style>
       <div style={styles.loadingWrap}>
-        <LogoMark size={160} marginBottom={0} />
+        <LogoMark size={120} marginBottom={0} />
         <div style={styles.loadingText}>Reflecting on your day…</div>
         <div style={styles.loadingDots}>{[0, 1, 2].map(i => <div key={i} style={styles.loadingDot(i)} />)}</div>
       </div>
@@ -370,7 +370,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
           <div style={styles.welcomeWrap}>
             <button style={styles.signOut} onClick={signOut}>Sign out</button>
             <div style={styles.welcomeTop}>
-              <div style={styles.logoFloat}><LogoMark size={330} marginBottom={0} /></div>
+              <div style={styles.logoFloat}><LogoMark size={208} marginBottom={0} /></div>
               <div style={styles.wordmark}>
                 <span style={styles.logoGlow}>Glow</span>
                 <span style={styles.logoPT}>PT</span>
@@ -548,7 +548,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
             <div style={styles.responseTop}>
               <div style={styles.responseMark}>
                 <div style={{ position: 'absolute', inset: '-12px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(224,160,53,0.2) 0%,transparent 70%)', animation: 'pulse 2.5s ease-in-out infinite' }} />
-                <LogoMark size={180} marginBottom={0} />
+                <LogoMark size={132} marginBottom={0} />
               </div>
               {aiResponse && <div style={styles.responseEyebrow}>Today's reflection</div>}
               {aiResponse && <div style={styles.responseMessage}>{aiResponse}</div>}

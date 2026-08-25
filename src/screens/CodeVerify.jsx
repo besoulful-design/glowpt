@@ -58,7 +58,7 @@ export default function CodeVerify({ pending, onResend, onBack }) {
 
   return (
     <AuthShell>
-      <LogoMark size={160} />
+      <LogoMark size={120} />
       <div style={ui.title}>Enter your code</div>
       <div style={ui.muted}>
         We emailed a code to <strong style={{ color: '#f5efe4' }}>{pending.email}</strong>. Enter it to sign in.

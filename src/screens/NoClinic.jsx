@@ -9,7 +9,7 @@ export default function NoClinic() {
   const { user, signOut } = useAuth()
   return (
     <AuthShell>
-      <LogoMark size={200} />
+      <LogoMark size={140} />
       <div style={ui.title}>You’re not connected to a clinic yet</div>
       <div style={ui.muted}>
         Your account is ready{user?.email ? ` for ${user.email}` : ''}, but it isn’t linked to a clinic —

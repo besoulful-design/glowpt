@@ -69,7 +69,7 @@ export default function Join() {
   if (clinic === null) {
     return (
       <AuthShell>
-        <LogoMark size={160} />
+        <LogoMark size={116} />
         <div style={ui.title}>Link not found</div>
         <div style={ui.muted}>This clinic invite link isn’t valid. Please check with your clinic for the correct link.</div>
       </AuthShell>
@@ -81,7 +81,7 @@ export default function Join() {
 
   return (
     <AuthShell>
-      <LogoMark size={200} />
+      <LogoMark size={140} />
       <div style={ui.eyebrow}>{clinic.name}</div>
       <div style={ui.title}>Welcome to GlowPT</div>
       <div style={ui.muted}>Your daily check-in, from {clinic.name}. One good day at a time.</div>

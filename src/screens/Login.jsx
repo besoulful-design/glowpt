@@ -34,7 +34,7 @@ export default function Login() {
 
   return (
     <AuthShell>
-      <LogoMark size={200} />
+      <LogoMark size={140} />
       <div style={ui.title}>Sign in to GlowPT</div>
       <div style={ui.muted}>Enter your email and we’ll send you a sign-in code.</div>
       <form onSubmit={handleSubmit} style={ui.form}>

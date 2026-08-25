@@ -10,7 +10,7 @@ import NoClinic from './screens/NoClinic'
 import Dashboard from './screens/Dashboard'
 
 function Splash() {
-  return <AuthShell><LogoMark size={200} /><div style={ui.muted}>Loading…</div></AuthShell>
+  return <AuthShell><LogoMark size={132} /><div style={ui.muted}>Loading…</div></AuthShell>
 }
 
 // Decides what a visitor sees at "/": the public landing page when logged out,

@@ -74,7 +74,7 @@ export default function Onboard() {
 
   return (
     <AuthShell>
-      <LogoMark size={170} />
+      <LogoMark size={128} />
       <div style={ui.eyebrow}>For clinics</div>
       <div style={ui.title}>Bring GlowPT to your clinic</div>
       <div style={ui.muted}>Set up your clinic in a minute. You’ll get a private link to share with your patients.</div>
