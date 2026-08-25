@@ -7,6 +7,12 @@
 > by David Peterson with AI assistance as a starting point to reduce attorney
 > drafting time. It is not legal advice.
 >
+> **Read this together with `Subscription-Agreement-draft-for-attorney-review.md`.**
+> The two are companion documents intended for review in one sitting. That one
+> covers the commercial relationship (price, term, IP, warranties, limitation of
+> liability); this one covers protected health information. Section 6.3 below and
+> Section 2 of that document govern how they fit together.
+>
 > It is modelled on the required elements of a business associate contract at
 > **45 CFR 164.504(e)** and on the sample business associate agreement
 > provisions published by the U.S. Department of Health and Human Services.
@@ -40,13 +46,21 @@ in a separate subscription agreement, or in both? What cap is defensible for a
 single-member LLC at this price point, and should breach-related liability be
 carved out of it or inside it?
 
-**2. Is a separate subscription agreement required, and what must it contain?**
-There is currently **no subscription agreement or terms of service at all** for
-GlowPT. Only this BAA exists. Please advise what the companion commercial
-agreement needs to cover (price, billing, term, cancellation, service levels,
-IP, warranty disclaimers, liability) and confirm how the two documents should
-reference each other. Section 6.3 of this draft currently states that this
-Agreement controls over the service agreement with respect to PHI.
+**2. Do the two documents fit together correctly?**
+A companion **Subscription Agreement and Terms of Service** now exists in draft
+(`Subscription-Agreement-draft-for-attorney-review.md`) and should be reviewed
+at the same time. It incorporates this BAA by reference. Section 6.3 of this
+draft and Section 2.2 of that one state the precedence rule from opposite sides:
+the BAA controls for PHI, the Subscription Agreement controls for everything
+else. Please confirm the two are consistent, that incorporation by reference is
+effective given click-through acceptance, and that nothing falls between them.
+
+**2a. Does the liability cap in the Subscription Agreement reach claims under
+this BAA?** This is the most consequential open question across both documents.
+A cap tied to twelve months of fees is roughly $3,600, which is very small
+against a breach affecting hundreds of patients. Please advise whether PHI
+liability should sit inside that cap, outside it, or under a separate higher cap
+matched to an insurance limit.
 
 **3. Can this be accepted online, or does it need a signature?**
 The product onboards clinics through a web form. Today the clinic checks a box
@@ -405,10 +419,15 @@ amend this Agreement from time to time as is necessary for Covered Entity to
 comply with the HIPAA Rules. Any other amendment must be in writing and signed
 by both Parties.
 
-**6.3 Interpretation.** Any ambiguity in this Agreement shall be resolved to
-permit compliance with the HIPAA Rules. In the event of a conflict between this
-Agreement and the underlying service agreement with respect to PHI, this
-Agreement controls.
+**6.3 Interpretation and Precedence.** Any ambiguity in this Agreement shall be
+resolved to permit compliance with the HIPAA Rules. This Agreement is
+incorporated into and forms part of the GlowPT Subscription Agreement and Terms
+of Service between the Parties (the "**Subscription Agreement**"). **In the
+event of a conflict between this Agreement and the Subscription Agreement with
+respect to PHI, this Agreement controls.** For all other matters, including
+fees, term, intellectual property, warranties, and limitation of liability, the
+Subscription Agreement controls. Neither document may be terminated
+independently of the other.
 
 **6.4 No Third-Party Beneficiaries.** Nothing in this Agreement confers any
 rights on any person other than the Parties and their respective successors and
@@ -435,10 +454,12 @@ counterparts and by electronic signature, each of which is deemed an original.
 > - **Notice provisions.** Addresses and method for formal notice, which
 >   matters because Section 2.5 runs on deadlines.
 >
-> Counsel should also confirm whether a separate service agreement exists that
-> this document should reference by name and date, and should review the entire
-> draft against Pennsylvania law and against `[STATE]` law where the clinic is
-> located.
+> **Update 2026-08-24:** these terms are now drafted in the companion
+> Subscription Agreement (Sections 12, 13, 14, 15.3, and 15.4). They remain
+> absent *here* deliberately. Counsel should decide whether that is the right
+> home for them, or whether any should be restated in this BAA so they clearly
+> reach PHI-related claims. Counsel should also review both drafts against
+> Pennsylvania law and against `[STATE]` law where the clinic is located.
 
 ---
 
