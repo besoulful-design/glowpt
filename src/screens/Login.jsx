@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import * as cognito from '../lib/cognito'
-import { AuthShell, LogoMark, ui } from './AuthShell'
+import { AuthShell, LogoMark, Brand, ui } from './AuthShell'
 import CodeVerify from './CodeVerify'
 
 // /login — returning patients and clinic staff sign in with an email code.
@@ -35,7 +35,7 @@ export default function Login() {
   return (
     <AuthShell>
       <LogoMark size={140} />
-      <div style={ui.title}>Sign in to GlowPT</div>
+      <div style={ui.title}>Sign in to <Brand /></div>
       <div style={ui.muted}>Enter your email and we’ll send you a sign-in code.</div>
       <form onSubmit={handleSubmit} style={ui.form}>
         <input style={ui.input} placeholder="Your email" type="email" value={email}

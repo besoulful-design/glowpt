@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { LogoMark } from './AuthShell'
+import { LogoMark, BRAND } from './AuthShell'
 
 // Public front door at "/" for logged-out visitors.
 // Clinics → onboard; returning patients & staff → sign in.
@@ -9,7 +9,7 @@ export default function Landing() {
     wrap: { maxWidth: 520, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' },
     wordmark: { display: 'flex', alignItems: 'baseline', marginTop: 8, marginBottom: 10 },
     glow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: 52, color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
-    pt: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 52, color: '#F5A81A', letterSpacing: '-0.02em', lineHeight: 1 },
+    pt: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 52, color: BRAND, letterSpacing: '-0.02em', lineHeight: 1 },
     tagline: { fontWeight: 600, fontSize: 18, color: 'rgba(245,168,26,0.85)', marginBottom: 34 },
     headline: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: 30, lineHeight: 1.3, color: '#f5efe4', letterSpacing: '-0.01em', marginBottom: 16, maxWidth: '20ch' },
     sub: { fontSize: 16, lineHeight: 1.6, color: 'rgba(245,239,228,0.6)', marginBottom: 36, maxWidth: '34ch' },

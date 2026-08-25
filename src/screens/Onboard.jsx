@@ -2,7 +2,7 @@ import { useState } from 'react'
 import * as api from '../lib/api'
 import * as cognito from '../lib/cognito'
 import { savePendingOnboard } from '../auth'
-import { AuthShell, LogoMark, ui } from './AuthShell'
+import { AuthShell, LogoMark, Brand, ui } from './AuthShell'
 import { BAA_IS_EXECUTED, BAA_SUMMARY, BAA_SUMMARY_INTRO } from '../lib/legal'
 import CodeVerify from './CodeVerify'
 
@@ -76,7 +76,7 @@ export default function Onboard() {
     <AuthShell>
       <LogoMark size={128} />
       <div style={ui.eyebrow}>For clinics</div>
-      <div style={ui.title}>Bring GlowPT to your clinic</div>
+      <div style={ui.title}>Bring <Brand /> to your clinic</div>
       <div style={ui.muted}>Set up your clinic in a minute. You’ll get a private link to share with your patients.</div>
 
       <form onSubmit={handleSubmit} style={ui.form}>

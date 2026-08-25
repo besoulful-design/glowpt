@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import * as api from '../lib/api'
 import { useAuth } from '../auth'
-import { AuthShell, LogoMark, ui } from './AuthShell'
+import { AuthShell, LogoMark, BRAND, ui } from './AuthShell'
 import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist, assignTherapist, dischargePatient, restorePatient, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
 import { FEELINGS } from '../lib/feelings'
 import QRCode from 'qrcode'
@@ -15,7 +15,7 @@ const s = {
   bar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', borderBottom: '1px solid rgba(245,239,228,0.08)', flexWrap: 'wrap', gap: 12 },
   brand: { display: 'flex', alignItems: 'center', gap: 12 },
   wordmark: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: 26, color: '#f5efe4' },
-  wordmarkPT: { fontFamily: "'DM Sans', sans-serif", fontStyle: 'normal', fontWeight: 600, color: '#F5A81A' },
+  wordmarkPT: { fontFamily: "'DM Sans', sans-serif", fontStyle: 'normal', fontWeight: 600, color: BRAND },
   clinicName: { fontSize: 14, color: 'rgba(245,239,228,0.6)', borderLeft: '1px solid rgba(245,239,228,0.15)', paddingLeft: 12 },
   signOut: { fontSize: 13, color: 'rgba(245,239,228,0.5)', background: 'transparent', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '7px 14px', cursor: 'pointer' },
   wrap: { maxWidth: 980, margin: '0 auto', padding: '24px clamp(14px, 4vw, 28px) 60px' },

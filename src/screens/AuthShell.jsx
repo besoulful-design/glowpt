@@ -1,5 +1,18 @@
 // Shared shell + styling for the auth screens (Join / Login), matching GlowPT's brand.
 
+// The sun's amber, taken from the logo artwork. Import this instead of
+// retyping the hex — the wordmark's "PT" must always match the mark.
+export const BRAND = '#F5A81A'
+
+// The GlowPT wordmark for use INSIDE running text ("Sign in to <Brand/>").
+// "Glow" inherits whatever the surrounding type is; "PT" gets the wordmark
+// treatment. There is one of these — do not hand-roll another.
+export function Brand() {
+  return (
+    <>Glow<span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontStyle: 'normal', color: BRAND }}>PT</span></>
+  )
+}
+
 // The one and only GlowPT mark. Do NOT re-declare this in a screen file —
 // it used to exist twice (here and inside PatientApp) and the copies drifted.
 //

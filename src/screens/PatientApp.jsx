@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import * as api from '../lib/api'
 import { useAuth } from '../auth'
 import { FEELINGS as feelingData } from '../lib/feelings'
-import { LogoMark } from './AuthShell'
+import { LogoMark, BRAND } from './AuthShell'
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] // Mon → Sun
 
@@ -252,7 +252,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     logoFloat: { marginBottom: '16px', animation: 'float 4s ease-in-out infinite' },
     wordmark: { display: 'flex', alignItems: 'baseline', marginBottom: '12px' },
     logoGlow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '57px', color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
-    logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '57px', color: '#F5A81A', letterSpacing: '-0.02em', lineHeight: 1 },
+    logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '57px', color: BRAND, letterSpacing: '-0.02em', lineHeight: 1 },
     tagline: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '21px', color: 'rgba(245,168,26,0.85)', textAlign: 'center', letterSpacing: '0.01em', lineHeight: 1.2 },
     welcomeMiddle: { textAlign: 'center', padding: '0 8px' },
     greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '36px', letterSpacing: '-0.01em' },

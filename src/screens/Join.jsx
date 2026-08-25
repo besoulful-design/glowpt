@@ -3,7 +3,7 @@ import { useParams, Navigate } from 'react-router-dom'
 import * as api from '../lib/api'
 import * as cognito from '../lib/cognito'
 import { savePendingJoin, useAuth } from '../auth'
-import { AuthShell, LogoMark, ui } from './AuthShell'
+import { AuthShell, LogoMark, Brand, ui } from './AuthShell'
 import { patientPrivacyNotice, PRIVACY_NOTICE_VERSION } from '../lib/legal'
 import CodeVerify from './CodeVerify'
 
@@ -83,7 +83,7 @@ export default function Join() {
     <AuthShell>
       <LogoMark size={140} />
       <div style={ui.eyebrow}>{clinic.name}</div>
-      <div style={ui.title}>Welcome to GlowPT</div>
+      <div style={ui.title}>Welcome to <Brand /></div>
       <div style={ui.muted}>Your daily check-in, from {clinic.name}. One good day at a time.</div>
       <form onSubmit={handleSubmit} style={ui.form}>
         <input style={ui.input} placeholder="Your name" value={fullName}
