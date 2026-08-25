@@ -45,6 +45,8 @@ A daily wellness check-in app for physical therapy patients. Patient does a 30-s
 | DB migrations | `supabase/migrations/0001_multitenant.sql` · `0002_therapists.sql` (staff invites + caseload RLS) · `0003_discharge.sql` (patient soft-delete + `checkins_update_own`) |
 | Edge functions | `supabase/functions/ai-response/` · `supabase/functions/weekly-summary/` |
 | Demo seed / reset | `scripts/seed-demo.mjs` · `scripts/reset-demo.mjs` |
+| **Legal drafts (attorney review)** | `legal/BAA-draft-for-attorney-review.md` · `legal/Subscription-Agreement-draft-for-attorney-review.md` |
+| In-app legal copy | `src/lib/legal.js` (privacy notice + BAA summary + version constants) |
 | Env (local, gitignored) | `.env` |
 
 ## Architecture (V2)
@@ -94,6 +96,29 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 
 **Who does what:** **claude.ai = architect** (wrote the planning docs, lives in the web chat, no repo access). **Claude Code (me) = builder** (executes here). **Planning is done; from here it's David + Claude Code.** Only re-engage claude.ai if David wants a second architect opinion on a big call.
 
+> ## 🧭 NEW THREAD? READ THIS FIRST (state as of 2026-08-24, end of session 5)
+>
+> **Two things are open. Neither is a coding task. Nothing is broken.**
+>
+> **1. ⏳ WAITING ON AWS — Bedrock. Do not poll it.**
+> Support case **`178761116000010`** filed 2026-08-24 18:39 EDT; **no reply yet.** Every Bedrock inference quota on `glowpt-prod` reads 0 (372 of 382), so the `bedrock-ai-response` branch cannot be deployed or proven. **The next real signal is AWS's reply, not another API call.** Waiting has already been given two fair runs and both self-serve channels are exhausted. One free retry at the start of a session is fine; a polling loop is a waste. If AWS replied, bring the reply here. Full detail in the **PICK UP HERE** block below.
+> **Production is untouched and healthy** — glowpt.app still calls api.anthropic.com and nothing patient-facing has changed.
+>
+> **2. ⚖️ WAITING ON AN ATTORNEY — two legal drafts are written and ready to be reviewed together.**
+> - `legal/BAA-draft-for-attorney-review.md` — HIPAA/PHI, legally required.
+> - `legal/Subscription-Agreement-draft-for-attorney-review.md` — the commercial deal ($350/mo, term, IP, warranties, **liability cap**).
+>
+> Both are **committed and pushed to `origin/main`**, so a new session reads them straight from the repo. Both are marked **DRAFT — NOT FOR EXECUTION** and carry **`[REVIEW]`** tags at every decision point. `BAA_IS_EXECUTED = false` in `src/lib/legal.js` and stays false until an attorney signs off AND a clinic actually signs. **Demo-data-only still governs until then.**
+>
+> **The three questions counsel must answer, in priority order:**
+> 1. **Does the liability cap reach PHI claims?** 12 months at $350/mo is **$4,200**, trivial against a real breach — and a cap set too low can be struck out entirely, leaving none. Inside the cap, outside it, or a separate higher cap matched to insurance? **This and the insurance question are the same decision.**
+> 2. **Is the clinical disclaimer enforceable, and must it also appear in the patient UI?** Patients write free-text notes nobody reads in real time; nothing detects or escalates an emergency or self-harm. Subscription §4.4 + §11.3. **This is more product-specific and more dangerous than the HIPAA boilerplate.**
+> 3. **Click-through or signature?** Both drafts present the choice (BAA "Acceptance and Execution" §A/§B, Subscription §16.1/§16.2). Pick one, delete the other. Likely also drives the PDF-download backlog item.
+>
+> **⚠️ ONE HAZARD THAT EXPIRES ON ITS OWN:** the BAA's subcontractor table names **AWS alone**, which is only true *after* Bedrock ships. Production still calls Anthropic today. **Do not execute the BAA before `bedrock-ai-response` merges without fixing that table first.**
+>
+> ---
+>
 > ## ⏸️ PICK UP HERE (2026-08-23, end of session) — Bedrock switch is BUILT and BLOCKED ON ONE AWS QUOTA
 >
 > **One-line state:** the Bedrock swap is written, verified locally, and **not merged**. It is blocked because **every Bedrock inference quota on `glowpt-prod` is 0** — cause not definitively established (see the blocker block below), but **nothing about it is fixable in our code**. Production is untouched and healthy — glowpt.app still calls api.anthropic.com and nothing patient-facing has changed.
@@ -414,4 +439,5 @@ Tonight's real (non-dryRun) run: **`{queued: 13, sent: 12}` — 12 delivered, 1 
 - **DNS home = Netlify DNS** (decided 2026-07-15, for consistency with the sibling apps — `mckenziearmcare.com` runs on Netlify DNS: `dns1–4.p05.nsone.net`). `glowpt.app` was registered at GoDaddy 2026-07-15 (default NS `ns13/ns14.domaincontrol.com`) and its nameservers move to Netlify. **Therefore ALL DNS records — including Resend's DKIM/SPF — go in Netlify, NOT GoDaddy.** (Adding them at GoDaddy after the nameserver move is the classic time-waster: they silently do nothing.) Note: `franklinai.com` currently resolves to Afternic nameservers = parked on a resale marketplace, not an active config — worth David checking.
 - **Before real patients (bundle in one session):** ✅ **`glowpt.app` bought 2026-07-15** (.com taken). Then: verify it in **Resend** (DNS) + point Supabase Auth at Resend via **custom SMTP** (fixes both the "Supabase Auth" sender name patients see AND the rate limit). Then HIPAA go-live flips above. **When the domain changes**, also update: Netlify custom domain, Edge-function `APP_URL` secret, and the **hardcoded `glowpt-app.netlify.app/join/…` string shown on the Onboard page** (`Onboard.jsx`, ~line 85).
 - **⭐ Owner/super-admin dashboard (David flagged as a near-term want, 2026-07-14):** a private view for David across ALL clinics — who's signed up, engagement, MRR later — to manage/track the business. Independent of the domain/email work, can be built anytime. **HIPAA note:** keep it to clinic-level aggregates + billing, NOT patient PHI across clinics, to stay clean.
+- **⭐ BACKLOG — DOWNLOADABLE PDF OF THE ACCEPTED AGREEMENTS (added 2026-08-24, David's call).** When a clinic accepts the Subscription Agreement + BAA at onboarding, the app must be able to hand them a **dated PDF of exactly the text they accepted**. Why it matters: the clinic is a covered entity and generally needs the executed BAA **in its own HIPAA compliance records** — an auditor expects to find it there. It also just makes GlowPT look like a real vendor. **Not yet built, and it is close to free**, because the hard part already exists: `src/lib/legal.js` versions every piece of legal text, and the app already records a version identifier per user at consent time. The work is: store which version each clinic accepted plus who accepted and when, then render that stored version to PDF on demand. **Both legal drafts ask counsel whether this is required or merely advisable — do the work after that answer, so the PDF captures whatever fields counsel says must be retained.** Gated to the same point as the BAA itself (before real patients), not before.
 - **Backlog / future:** **"Invite therapist" should send the therapist a real invite email** (today it only creates a pending row — they must go to `/login` themselves; fold into the SMTP/email work); Stripe subscriptions + billing; **beyond-PT** expansion (chiropractic, mental/behavioral health, chronic care, coaching, wellness — note "PT" can also read as *Physical Transformation*).
