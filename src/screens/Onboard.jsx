@@ -83,7 +83,7 @@ export default function Onboard() {
         <input style={ui.input} placeholder="Clinic name (e.g. Riverside PT)" value={clinicName}
           onChange={e => { setClinicName(e.target.value); if (!slugEdited) setSlug(slugify(e.target.value)) }} />
         <div style={{ textAlign: 'left', fontSize: 12, color: 'rgba(245,239,228,0.4)', marginTop: -4 }}>
-          Patient link: {window.location.host}/join/<strong style={{ color: '#c8861d' }}>{effectiveSlug || 'your-clinic'}</strong>
+          Patient link: {window.location.host}/join/<strong style={{ color: '#F5A81A' }}>{effectiveSlug || 'your-clinic'}</strong>
         </div>
         <input style={ui.input} placeholder="Clinic web name" value={effectiveSlug}
           onChange={e => { setSlugEdited(true); setSlug(slugify(e.target.value)) }} />
@@ -95,10 +95,10 @@ export default function Onboard() {
 
         <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.6)', cursor: 'pointer', marginTop: 2 }}>
           <input type="checkbox" checked={baaReviewed} onChange={e => setBaaReviewed(e.target.checked)}
-            style={{ marginTop: 3, accentColor: '#c8861d', width: 16, height: 16, flexShrink: 0 }} />
+            style={{ marginTop: 3, accentColor: '#F5A81A', width: 16, height: 16, flexShrink: 0 }} />
           <span>{BAA_IS_EXECUTED ? 'I agree to the' : 'I’ve reviewed the'}{' '}
             <button type="button" onClick={() => setShowBaa(true)}
-              style={{ background: 'none', border: 'none', color: '#c8861d', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}>
+              style={{ background: 'none', border: 'none', color: '#F5A81A', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}>
               Business Associate Agreement
             </button>.
           </span>
@@ -115,7 +115,7 @@ export default function Onboard() {
         <div onClick={() => setShowBaa(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 200 }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background: '#1a2840', border: '1px solid rgba(200,134,29,0.25)', borderRadius: 8, padding: 28, maxWidth: 520, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' }}>
+            style={{ background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, padding: 28, maxWidth: 520, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' }}>
             <div style={{ ...ui.eyebrow, marginBottom: 14 }}>Business Associate Agreement</div>
             <div style={{ fontSize: 13.5, lineHeight: 1.65, color: 'rgba(245,239,228,0.78)' }}>
               {!BAA_IS_EXECUTED && (

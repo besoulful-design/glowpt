@@ -4,7 +4,7 @@ import * as cognito from '../lib/cognito'
 import { useAuth } from '../auth'
 import { AuthShell, LogoMark, ui } from './AuthShell'
 
-const linkBtn = { background: 'none', border: 'none', color: '#c8861d', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }
+const linkBtn = { background: 'none', border: 'none', color: '#F5A81A', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }
 
 // Shared step-2 for all sign-in flows: user types the code we emailed.
 // `pending` is the flow object from cognito.beginSignIn / beginSignUp (it knows

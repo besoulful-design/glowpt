@@ -45,10 +45,16 @@ function buildWeek(checkins) {
 
 // Mood colors for the 30-day trend — matches the clinic dashboard (1 red → 5 green,
 // with Good/Great kept clearly distinct).
+// NOTE: level 3's #c8861d is the ONLY surviving use of the old brand amber, and it
+// stays on purpose. Here the color is data, not branding — it is the middle step of
+// a red→green sequence, spaced against #d07d45 below it and #b6c24a above it.
+// Warming it to the new brand amber would make 3 jump brighter than its neighbours
+// and read as a warning rather than a neutral middle. Do not "finish" the palette
+// sweep by changing this line.
 const FEELING_COLOR = { 1: '#c0554d', 2: '#d07d45', 3: '#c8861d', 4: '#b6c24a', 5: '#2fa06d' }
 
 // Shared card surface for the Progress screen sections.
-const CARD = { background: '#1a2840', border: '1px solid rgba(200,134,29,0.16)', borderRadius: '12px', padding: '20px' }
+const CARD = { background: '#1a2840', border: '1px solid rgba(245,168,26,0.16)', borderRadius: '12px', padding: '20px' }
 
 // Build the last 30 days (oldest → newest), one slot per day, from check-in rows.
 function build30Days(checkins) {
@@ -246,58 +252,58 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     logoFloat: { marginBottom: '16px', animation: 'float 4s ease-in-out infinite' },
     wordmark: { display: 'flex', alignItems: 'baseline', marginBottom: '12px' },
     logoGlow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '57px', color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
-    logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '57px', color: '#c8861d', letterSpacing: '-0.02em', lineHeight: 1 },
-    tagline: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '21px', color: 'rgba(200,134,29,0.85)', textAlign: 'center', letterSpacing: '0.01em', lineHeight: 1.2 },
+    logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '57px', color: '#F5A81A', letterSpacing: '-0.02em', lineHeight: 1 },
+    tagline: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '21px', color: 'rgba(245,168,26,0.85)', textAlign: 'center', letterSpacing: '0.01em', lineHeight: 1.2 },
     welcomeMiddle: { textAlign: 'center', padding: '0 8px' },
     greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '36px', letterSpacing: '-0.01em' },
-    greetingEm: { color: '#e0a035' },
+    greetingEm: { color: '#FBC02D' },
     welcomeSub: { fontSize: '15px', lineHeight: 1.6, color: 'rgba(245,239,228,0.5)', maxWidth: '30ch', margin: '0 auto' },
     welcomeBottom: { display: 'flex', flexDirection: 'column', gap: '14px' },
-    btnPrimary: { width: '100%', padding: '18px 24px', border: 'none', borderRadius: '4px', background: '#c8861d', color: '#0d1825', fontFamily: "'DM Sans', sans-serif", fontSize: '16px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.01em' },
+    btnPrimary: { width: '100%', padding: '18px 24px', border: 'none', borderRadius: '4px', background: '#F5A81A', color: '#0d1825', fontFamily: "'DM Sans', sans-serif", fontSize: '16px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.01em' },
     btnSecondary: { width: '100%', padding: '18px 24px', border: '1px solid rgba(245,239,228,0.15)', borderRadius: '4px', background: 'transparent', color: 'rgba(245,239,228,0.7)', fontFamily: "'DM Sans', sans-serif", fontSize: '16px', fontWeight: 500, cursor: 'pointer' },
     btnGhost: { width: '100%', padding: '12px', border: 'none', background: 'transparent', color: 'rgba(245,239,228,0.5)', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', cursor: 'pointer' },
     checkinHeader: { padding: '56px 28px 24px' },
-    checkinDate: { fontSize: '11px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#c8861d', fontWeight: 600, marginBottom: '8px' },
+    checkinDate: { fontSize: '11px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: '8px' },
     checkinTitle: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '32px', lineHeight: 1.15, color: '#f5efe4', letterSpacing: '-0.02em' },
-    checkinTitleEm: { fontStyle: 'italic', color: '#e0a035' },
+    checkinTitleEm: { fontStyle: 'italic', color: '#FBC02D' },
     checkinBody: { padding: '8px 28px 40px', display: 'flex', flexDirection: 'column', gap: '28px' },
     qBlock: { display: 'flex', flexDirection: 'column', gap: '14px' },
     qLabel: { fontSize: '11px', fontWeight: 600, color: 'rgba(245,239,228,0.7)', letterSpacing: '0.04em', textTransform: 'uppercase' },
     qQuestion: { fontFamily: "'Fraunces', serif", fontWeight: 400, fontSize: '20px', lineHeight: 1.3, color: '#f5efe4', letterSpacing: '-0.01em' },
     feelingScale: { display: 'flex', gap: '10px', justifyContent: 'space-between' },
-    feelingBtn: (selected) => ({ flex: 1, border: `1px solid ${selected ? '#c8861d' : 'rgba(245,239,228,0.12)'}`, borderRadius: '6px', background: selected ? '#c8861d' : '#1a2840', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px 6px 10px', gap: '6px', transform: selected ? 'scale(1.06)' : 'scale(1)', transition: 'all 0.2s', boxShadow: selected ? '0 4px 18px rgba(200,134,29,0.4)' : 'none' }),
+    feelingBtn: (selected) => ({ flex: 1, border: `1px solid ${selected ? '#F5A81A' : 'rgba(245,239,228,0.12)'}`, borderRadius: '6px', background: selected ? '#F5A81A' : '#1a2840', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px 6px 10px', gap: '6px', transform: selected ? 'scale(1.06)' : 'scale(1)', transition: 'all 0.2s', boxShadow: selected ? '0 4px 18px rgba(245,168,26,0.4)' : 'none' }),
     feelingNum: (selected) => ({ fontFamily: "'Fraunces', serif", fontSize: '36px', fontWeight: selected ? 600 : 400, color: selected ? '#0d1825' : 'rgba(245,239,228,0.7)', lineHeight: 1 }),
     feelingEmoji: { fontSize: '20px', lineHeight: 1 },
     feelingWord: (selected) => ({ fontSize: '10px', color: selected ? 'rgba(13,24,37,0.75)' : 'rgba(245,239,228,0.35)', fontWeight: 500, letterSpacing: '0.04em', textAlign: 'center', lineHeight: 1.2 }),
     movementList: { display: 'flex', flexDirection: 'column', gap: '10px' },
-    movementItem: (checked) => ({ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: checked ? 'rgba(200,134,29,0.08)' : '#1a2840', border: `1px solid ${checked ? '#c8861d' : 'rgba(245,239,228,0.08)'}`, borderRadius: '4px', cursor: 'pointer', transition: 'all 0.2s' }),
-    checkBox: (checked) => ({ width: '22px', height: '22px', border: `1.5px solid ${checked ? '#c8861d' : 'rgba(245,239,228,0.25)'}`, borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: checked ? '#c8861d' : 'transparent', transition: 'all 0.2s' }),
+    movementItem: (checked) => ({ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: checked ? 'rgba(245,168,26,0.08)' : '#1a2840', border: `1px solid ${checked ? '#F5A81A' : 'rgba(245,239,228,0.08)'}`, borderRadius: '4px', cursor: 'pointer', transition: 'all 0.2s' }),
+    checkBox: (checked) => ({ width: '22px', height: '22px', border: `1.5px solid ${checked ? '#F5A81A' : 'rgba(245,239,228,0.25)'}`, borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: checked ? '#F5A81A' : 'transparent', transition: 'all 0.2s' }),
     movementLabel: (checked) => ({ fontSize: '15px', color: checked ? '#f5efe4' : 'rgba(245,239,228,0.7)', fontWeight: checked ? 500 : 400 }),
     noteField: { width: '100%', background: '#1a2840', border: '1px solid rgba(245,239,228,0.08)', borderRadius: '4px', padding: '16px', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", fontSize: '15px', lineHeight: 1.6, resize: 'none', outline: 'none', minHeight: '90px' },
     responseWrap: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '56px 28px 48px', minHeight: '100vh' },
     responseTop: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: '20px' },
     responseMark: { marginBottom: '32px', position: 'relative' },
-    responseEyebrow: { fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#c8861d', fontWeight: 600, marginBottom: '20px' },
+    responseEyebrow: { fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: '20px' },
     responseMessage: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '22px', lineHeight: 1.55, color: '#f5efe4', letterSpacing: '-0.01em', marginBottom: '32px', maxWidth: '34ch' },
     statsRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', width: '100%', marginBottom: '28px' },
-    statCard: { background: '#1a2840', border: '1px solid rgba(200,134,29,0.2)', borderRadius: '4px', padding: '16px', textAlign: 'left' },
-    statLabel: { fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#c8861d', fontWeight: 600, marginBottom: '6px' },
+    statCard: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.2)', borderRadius: '4px', padding: '16px', textAlign: 'left' },
+    statLabel: { fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: '6px' },
     statValue: { fontFamily: "'Fraunces', serif", fontSize: '28px', fontWeight: 400, color: '#f5efe4', letterSpacing: '-0.02em', lineHeight: 1 },
     statSub: { fontSize: '12px', color: 'rgba(245,239,228,0.5)', marginTop: '4px', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
     streakSection: { width: '100%', marginBottom: '8px' },
     streakLabel: { fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(245,239,228,0.5)', fontWeight: 600, marginBottom: '12px' },
     streakDots: { display: 'flex', gap: '8px', justifyContent: 'center' },
-    streakDot: (done, isToday) => ({ width: '38px', height: '38px', borderRadius: '50%', background: isToday ? '#c8861d' : done ? 'rgba(224,160,53,0.15)' : '#1a2840', border: `1px solid ${done || isToday ? '#c8861d' : 'rgba(245,239,228,0.1)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: isToday ? '#0d1825' : done ? '#e0a035' : 'rgba(245,239,228,0.5)', fontWeight: isToday ? 700 : 600, cursor: done ? 'pointer' : 'default', boxShadow: isToday ? '0 4px 14px rgba(200,134,29,0.4)' : 'none', transition: 'all 0.2s' }),
+    streakDot: (done, isToday) => ({ width: '38px', height: '38px', borderRadius: '50%', background: isToday ? '#F5A81A' : done ? 'rgba(251,192,45,0.15)' : '#1a2840', border: `1px solid ${done || isToday ? '#F5A81A' : 'rgba(245,239,228,0.1)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: isToday ? '#0d1825' : done ? '#FBC02D' : 'rgba(245,239,228,0.5)', fontWeight: isToday ? 700 : 600, cursor: done ? 'pointer' : 'default', boxShadow: isToday ? '0 4px 14px rgba(245,168,26,0.4)' : 'none', transition: 'all 0.2s' }),
     streakHint: { fontSize: '11px', color: 'rgba(245,239,228,0.35)', fontStyle: 'italic', fontFamily: "'Fraunces', serif", textAlign: 'center', marginTop: '10px' },
     // Progress screen
     progressWrap: { display: 'flex', flexDirection: 'column', minHeight: '100vh' },
     progressHeader: { padding: '56px 28px 18px' },
-    progressBack: { fontSize: '13px', color: '#c8861d', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', marginBottom: '18px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+    progressBack: { fontSize: '13px', color: '#F5A81A', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', marginBottom: '18px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
     progressTitle: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '34px', color: '#f5efe4', letterSpacing: '-0.02em', lineHeight: 1.1 },
     progressSub: { fontSize: '14px', color: 'rgba(245,239,228,0.5)', marginTop: '8px', fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
     progressBody: { padding: '8px 28px 40px', display: 'flex', flexDirection: 'column', gap: '26px', flex: 1 },
-    streakHero: { background: 'linear-gradient(135deg, rgba(200,134,29,0.16), rgba(13,24,37,0))', border: '1px solid rgba(200,134,29,0.28)', borderRadius: '10px', padding: '26px 20px', textAlign: 'center' },
-    streakBig: { fontFamily: "'Fraunces', serif", fontWeight: 400, fontSize: '66px', color: '#e0a035', lineHeight: 1, letterSpacing: '-0.03em' },
+    streakHero: { background: 'linear-gradient(135deg, rgba(245,168,26,0.16), rgba(13,24,37,0))', border: '1px solid rgba(245,168,26,0.28)', borderRadius: '10px', padding: '26px 20px', textAlign: 'center' },
+    streakBig: { fontFamily: "'Fraunces', serif", fontWeight: 400, fontSize: '66px', color: '#FBC02D', lineHeight: 1, letterSpacing: '-0.03em' },
     streakUnit: { fontSize: '15px', fontWeight: 600, color: '#f5efe4', marginTop: '6px', letterSpacing: '0.02em' },
     streakMsg: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '14px', color: 'rgba(245,239,228,0.6)', marginTop: '10px' },
     trendSection: { ...CARD },
@@ -315,26 +321,26 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     weekLabel: { fontSize: '10px', color: 'rgba(245,239,228,0.5)', marginTop: '9px', textAlign: 'center', lineHeight: 1.2 },
     responseBottom: { width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' },
     journalHeader: { padding: '56px 28px 28px', borderBottom: '1px solid rgba(245,239,228,0.07)' },
-    journalBack: { fontSize: '13px', color: '#c8861d', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', marginBottom: '20px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
-    journalDayName: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.1, color: '#e0a035', letterSpacing: '-0.02em', fontStyle: 'italic' },
+    journalBack: { fontSize: '13px', color: '#F5A81A', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', marginBottom: '20px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+    journalDayName: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.1, color: '#FBC02D', letterSpacing: '-0.02em', fontStyle: 'italic' },
     journalDateSub: { fontSize: '13px', color: 'rgba(245,239,228,0.5)', marginTop: '6px', fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
     journalBody: { padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '60px' },
     journalSection: { display: 'flex', flexDirection: 'column', gap: '10px' },
-    journalSectionLabel: { fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#c8861d', fontWeight: 600 },
-    journalFeelingDisplay: { display: 'flex', alignItems: 'center', gap: '16px', background: '#1a2840', border: '1px solid rgba(200,134,29,0.2)', borderRadius: '4px', padding: '18px' },
+    journalSectionLabel: { fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600 },
+    journalFeelingDisplay: { display: 'flex', alignItems: 'center', gap: '16px', background: '#1a2840', border: '1px solid rgba(245,168,26,0.2)', borderRadius: '4px', padding: '18px' },
     journalFeelingEmoji: { fontSize: '36px', lineHeight: 1 },
-    journalFeelingNum: { fontFamily: "'Fraunces', serif", fontSize: '36px', fontWeight: 400, color: '#e0a035', letterSpacing: '-0.03em', lineHeight: 1 },
+    journalFeelingNum: { fontFamily: "'Fraunces', serif", fontSize: '36px', fontWeight: 400, color: '#FBC02D', letterSpacing: '-0.03em', lineHeight: 1 },
     journalFeelingDesc: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '15px', color: 'rgba(245,239,228,0.7)', lineHeight: 1.4 },
-    journalMovementTag: { display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'rgba(200,134,29,0.08)', border: '1px solid rgba(200,134,29,0.25)', borderRadius: '4px' },
+    journalMovementTag: { display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'rgba(245,168,26,0.08)', border: '1px solid rgba(245,168,26,0.25)', borderRadius: '4px' },
     journalMovementLabel: { fontSize: '14px', color: 'rgba(245,239,228,0.7)', fontWeight: 500 },
     journalNote: { background: '#1a2840', border: '1px solid rgba(245,239,228,0.08)', borderRadius: '4px', padding: '18px', fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '16px', lineHeight: 1.65, color: 'rgba(245,239,228,0.7)' },
-    journalAI: { background: 'linear-gradient(135deg, rgba(200,134,29,0.08) 0%, rgba(13,24,37,0) 100%)', border: '1px solid rgba(200,134,29,0.2)', borderRadius: '4px', padding: '22px', position: 'relative', overflow: 'hidden' },
-    journalAILabel: { fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#c8861d', fontWeight: 600, marginBottom: '14px' },
+    journalAI: { background: 'linear-gradient(135deg, rgba(245,168,26,0.08) 0%, rgba(13,24,37,0) 100%)', border: '1px solid rgba(245,168,26,0.2)', borderRadius: '4px', padding: '22px', position: 'relative', overflow: 'hidden' },
+    journalAILabel: { fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: '14px' },
     journalAIText: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '19px', lineHeight: 1.55, color: '#f5efe4', letterSpacing: '-0.01em' },
     loadingWrap: { position: 'fixed', inset: 0, background: '#0d1825', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '24px', zIndex: 100 },
     loadingText: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '18px', color: 'rgba(245,239,228,0.5)', animation: 'breathe 2s ease-in-out infinite' },
     loadingDots: { display: 'flex', gap: '8px' },
-    loadingDot: (i) => ({ width: '8px', height: '8px', borderRadius: '50%', background: '#c8861d', animation: `dotPulse 1.4s ease-in-out ${i * 0.2}s infinite` }),
+    loadingDot: (i) => ({ width: '8px', height: '8px', borderRadius: '50%', background: '#F5A81A', animation: `dotPulse 1.4s ease-in-out ${i * 0.2}s infinite` }),
     signOut: { position: 'absolute', top: 18, right: 20, fontSize: 12, color: 'rgba(245,239,228,0.4)', background: 'transparent', border: 'none', cursor: 'pointer', letterSpacing: '0.04em' },
   }
 
@@ -346,8 +352,8 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     * { box-sizing: border-box; } body { margin: 0; background: #0d1825; }
     textarea::placeholder { color: rgba(245,239,228,0.35); font-style: italic; font-family: 'Fraunces', serif; }
     input::placeholder { color: rgba(245,239,228,0.35); font-style: italic; font-family: 'DM Sans', sans-serif; }
-    textarea:focus { border-color: rgba(200,134,29,0.4) !important; outline: none; }
-    input:focus { border-color: rgba(200,134,29,0.4) !important; }
+    textarea:focus { border-color: rgba(245,168,26,0.4) !important; outline: none; }
+    input:focus { border-color: rgba(245,168,26,0.4) !important; }
     button:active { opacity: 0.85; }`
 
   if (loading) return (
@@ -446,7 +452,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
                             if (e.target.value.trim() && !movements.includes('Other')) setMovements(prev => [...prev, 'Other'])
                           }}
                           onClick={e => e.stopPropagation()}
-                          style={{ background: 'rgba(245,239,228,0.06)', border: '1px solid rgba(200,134,29,0.3)', borderRadius: '4px', padding: '10px 14px', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+                          style={{ background: 'rgba(245,239,228,0.06)', border: '1px solid rgba(245,168,26,0.3)', borderRadius: '4px', padding: '10px 14px', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', outline: 'none', width: '100%', boxSizing: 'border-box' }} />
                       </div>
                     )
                   })()}
@@ -547,7 +553,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
           <div style={styles.responseWrap}>
             <div style={styles.responseTop}>
               <div style={styles.responseMark}>
-                <div style={{ position: 'absolute', inset: '-12px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(224,160,53,0.2) 0%,transparent 70%)', animation: 'pulse 2.5s ease-in-out infinite' }} />
+                <div style={{ position: 'absolute', inset: '-12px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(251,192,45,0.2) 0%,transparent 70%)', animation: 'pulse 2.5s ease-in-out infinite' }} />
                 <LogoMark size={132} marginBottom={0} />
               </div>
               {aiResponse && <div style={styles.responseEyebrow}>Today's reflection</div>}
@@ -609,7 +615,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {journalDay.movements.map(m => (
                       <div key={m} style={styles.journalMovementTag}>
-                        <svg width="14" height="11" viewBox="0 0 12 9" fill="none"><path d="M1 4L4.5 7.5L11 1" stroke="#c8861d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        <svg width="14" height="11" viewBox="0 0 12 9" fill="none"><path d="M1 4L4.5 7.5L11 1" stroke="#F5A81A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                         <span style={styles.journalMovementLabel}>{m}</span>
                       </div>
                     ))}

@@ -93,10 +93,10 @@ export default function Join() {
           autoComplete="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
         <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.6)', cursor: 'pointer', marginTop: 2 }}>
           <input type="checkbox" checked={consented} onChange={e => setConsented(e.target.checked)}
-            style={{ marginTop: 3, accentColor: '#c8861d', width: 16, height: 16, flexShrink: 0 }} />
+            style={{ marginTop: 3, accentColor: '#F5A81A', width: 16, height: 16, flexShrink: 0 }} />
           <span>I agree that {clinic.name} and GlowPT may store my daily check-ins to support my care, and I’ve read the{' '}
             <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowPrivacy(true) }}
-              style={{ background: 'none', border: 'none', color: '#c8861d', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}>
+              style={{ background: 'none', border: 'none', color: '#F5A81A', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}>
               privacy notice
             </button>.
           </span>
@@ -110,7 +110,7 @@ export default function Join() {
         <div onClick={() => setShowPrivacy(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 200 }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background: '#1a2840', border: '1px solid rgba(200,134,29,0.25)', borderRadius: 8, padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' }}>
+            style={{ background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' }}>
             <div style={{ ...ui.eyebrow, marginBottom: 14 }}>Privacy Notice</div>
             <div style={{ fontSize: 14, lineHeight: 1.65, color: 'rgba(245,239,228,0.8)' }}>
               {patientPrivacyNotice(clinic.name).map(section => (
