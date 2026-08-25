@@ -34,8 +34,8 @@ export default function Landing() {
         <div style={s.sub}>A 30-second check-in with warm, personal encouragement — so more patients finish their plan of care.</div>
 
         <div style={s.btns}>
-          <Link to="/onboard" style={s.btnPrimary}>Bring GlowPT to your clinic →</Link>
-          <Link to="/login" style={s.btnSecondary}>Sign in</Link>
+          <Link to="/onboard" style={s.btnPrimary}>Bring GlowPT to Your Clinic →</Link>
+          <Link to="/login" style={s.btnSecondary}>Sign In</Link>
         </div>
 
         <div style={s.patientNote}>

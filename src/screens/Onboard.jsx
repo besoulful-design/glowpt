@@ -75,8 +75,8 @@ export default function Onboard() {
   return (
     <AuthShell>
       <LogoMark size={128} />
-      <div style={ui.eyebrow}>For clinics</div>
-      <div style={ui.title}>Bring <Brand /> to your clinic</div>
+      <div style={ui.eyebrow}>For Clinics</div>
+      <div style={ui.title}>Bring <Brand /> to Your Clinic</div>
       <div style={ui.muted}>Set up your clinic in a minute. You’ll get a private link to share with your patients.</div>
 
       <form onSubmit={handleSubmit} style={ui.form}>

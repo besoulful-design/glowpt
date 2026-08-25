@@ -59,7 +59,7 @@ export default function CodeVerify({ pending, onResend, onBack }) {
   return (
     <AuthShell>
       <LogoMark size={120} />
-      <div style={ui.title}>Enter your code</div>
+      <div style={ui.title}>Enter Your Code</div>
       <div style={ui.muted}>
         We emailed a code to <strong style={{ color: '#f5efe4' }}>{pending.email}</strong>. Enter it to sign in.
       </div>
@@ -75,7 +75,7 @@ export default function CodeVerify({ pending, onResend, onBack }) {
       </form>
       <div style={ui.fine}>
         {resent ? 'New code sent. ' : <>Didn’t get it? <button type="button" onClick={resend} style={linkBtn}>Resend</button>{'  ·  '}</>}
-        <button type="button" onClick={onBack} style={linkBtn}>Use a different email</button>
+        <button type="button" onClick={onBack} style={linkBtn}>Use a Different Email</button>
       </div>
     </AuthShell>
   )

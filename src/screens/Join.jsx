@@ -70,7 +70,7 @@ export default function Join() {
     return (
       <AuthShell>
         <LogoMark size={116} />
-        <div style={ui.title}>Link not found</div>
+        <div style={ui.title}>That link wasn’t found.</div>
         <div style={ui.muted}>This clinic invite link isn’t valid. Please check with your clinic for the correct link.</div>
       </AuthShell>
     )
@@ -102,7 +102,7 @@ export default function Join() {
           </span>
         </label>
         {error && <div style={ui.error}>{error}</div>}
-        <button style={ui.btn} disabled={busy}>{busy ? 'Sending…' : 'Send my code →'}</button>
+        <button style={ui.btn} disabled={busy}>{busy ? 'Sending…' : 'Send My Code →'}</button>
       </form>
       <div style={ui.fine}>No password needed. We’ll email you a code.</div>
 

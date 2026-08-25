@@ -26,21 +26,21 @@ const s = {
   sub: { fontSize: 14, color: 'rgba(245,239,228,0.5)', marginBottom: 26 },
   tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 24 },
   tile: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.18)', borderRadius: 6, padding: '16px 18px' },
-  tileLabel: { fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: 8 },
+  tileLabel: { fontSize: 11.5, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 8 },
   tileValue: { fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 400, lineHeight: 1 },
   tileSub: { fontSize: 12, color: 'rgba(245,239,228,0.45)', marginTop: 5, fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   linkCard: { background: 'linear-gradient(135deg, rgba(245,168,26,0.1), rgba(13,24,37,0))', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 6, padding: '18px 20px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' },
-  linkLabel: { fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
+  linkLabel: { fontSize: 12, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
   linkUrl: { fontSize: 15, color: '#f5efe4', wordBreak: 'break-all' },
   copyBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   qrCard: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.2)', borderRadius: 6, padding: 20, marginBottom: 28, display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' },
   qrImg: { width: 104, height: 104, borderRadius: 6, background: '#fff', padding: 6, flexShrink: 0 },
-  qrLabel: { fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
+  qrLabel: { fontSize: 12, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
   qrHint: { fontSize: 13.5, color: 'rgba(245,239,228,0.65)', lineHeight: 1.55, marginBottom: 12, maxWidth: '46ch' },
   qrDownload: { display: 'inline-block', background: '#F5A81A', color: '#0d1825', textDecoration: 'none', fontWeight: 600, fontSize: 14, padding: '10px 18px', borderRadius: 4 },
   // Care team (manager)
   care: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.18)', borderRadius: 6, padding: '18px 20px', marginBottom: 28 },
-  careHead: { fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: 14 },
+  careHead: { fontSize: 12, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 14 },
   theraRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(245,239,228,0.06)', fontSize: 14.5 },
   theraCount: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   inviteForm: { display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' },
@@ -63,9 +63,9 @@ const s = {
     color: kind === 'low' ? '#e79a92' : '#FBC02D', border: `1px solid ${kind === 'low' ? 'rgba(192,85,77,0.4)' : 'rgba(245,168,26,0.4)'}` }),
   ok: { fontSize: 12, color: 'rgba(155,176,106,0.9)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   legend: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, padding: '0 16px 16px', fontSize: 12, color: 'rgba(245,239,228,0.55)' },
-  legendLabel: { fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
+  legendLabel: { fontSize: 11.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
   legendItem: { display: 'inline-flex', alignItems: 'center', gap: 6 },
-  rosterHead: { display: 'grid', gap: 12, padding: '0 16px 10px', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
+  rosterHead: { display: 'grid', gap: 12, padding: '0 16px 10px', fontSize: 11.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
   row: { display: 'grid', gap: 12, alignItems: 'center', background: '#1a2840', border: '1px solid rgba(245,239,228,0.06)', borderRadius: 6, padding: '14px 16px', marginBottom: 8 },
   empty: { background: '#1a2840', border: '1px dashed rgba(245,168,26,0.3)', borderRadius: 8, padding: 32, textAlign: 'center', color: 'rgba(245,239,228,0.6)' },
   // Discharge (soft-delete) controls
@@ -105,7 +105,7 @@ function Trend({ last3 }) {
 // patient is on track — no news is good news.
 function NameFlags({ flags }) {
   if (!flags.length) return null
-  return flags.map(f => <span key={f} style={s.pill(f)}>{f === 'low' ? 'Low mood' : 'Inactive'}</span>)
+  return flags.map(f => <span key={f} style={s.pill(f)}>{f === 'low' ? 'Low Mood' : 'Inactive'}</span>)
 }
 
 // Friendly greeting name. Keep a leading title with the name ("Dr. Sam"), otherwise
@@ -240,7 +240,7 @@ export default function Dashboard() {
         <span style={s.wordmark}>Glow<span style={s.wordmarkPT}>PT</span></span>
         {clinic && <span style={s.clinicName}>{clinic.name}</span>}
       </div>
-      <button style={s.signOut} onClick={signOut}>Sign out</button>
+      <button style={s.signOut} onClick={signOut}>Sign Out</button>
     </div>
   )
 
@@ -248,9 +248,9 @@ export default function Dashboard() {
     return (
       <AuthShell>
         <LogoMark size={116} />
-        <div style={ui.title}>No clinic linked yet</div>
+        <div style={ui.title}>No clinic is linked yet.</div>
         <div style={ui.muted}>Your account isn’t attached to a clinic. If you’re setting one up, use the clinic onboarding page.</div>
-        <button style={{ ...ui.btn, maxWidth: 200 }} onClick={signOut}>Sign out</button>
+        <button style={{ ...ui.btn, maxWidth: 200 }} onClick={signOut}>Sign Out</button>
       </AuthShell>
     )
   }
@@ -274,14 +274,14 @@ export default function Dashboard() {
           <>
             <div style={s.tiles}>
               <div style={s.tile}><div style={s.tileLabel}>Patients</div><div style={s.tileValue}>{stats.total}</div><div style={s.tileSub}>enrolled</div></div>
-              <div style={s.tile}><div style={s.tileLabel}>Active this week</div><div style={s.tileValue}>{stats.active}</div><div style={s.tileSub}>checked in</div></div>
+              <div style={s.tile}><div style={s.tileLabel}>Active This Week</div><div style={s.tileValue}>{stats.active}</div><div style={s.tileSub}>checked in</div></div>
               <div style={s.tile}><div style={s.tileLabel}>Engagement</div><div style={s.tileValue}>{stats.engagement}%</div><div style={s.tileSub}>of roster</div></div>
-              <div style={s.tile}><div style={s.tileLabel}>Need attention</div><div style={{ ...s.tileValue, color: stats.atRisk ? '#FBC02D' : '#f5efe4' }}>{stats.atRisk}</div><div style={s.tileSub}>flagged</div></div>
+              <div style={s.tile}><div style={s.tileLabel}>Need Attention</div><div style={{ ...s.tileValue, color: stats.atRisk ? '#FBC02D' : '#f5efe4' }}>{stats.atRisk}</div><div style={s.tileSub}>flagged</div></div>
             </div>
 
             <div style={s.linkCard}>
               <div>
-                <div style={s.linkLabel}>Your patient invite link</div>
+                <div style={s.linkLabel}>Your Patient Invite Link</div>
                 <div style={s.linkUrl}>{joinUrl}</div>
               </div>
               <button style={s.copyBtn} onClick={copyLink}>{copied ? 'Copied ✓' : 'Copy link'}</button>
@@ -291,7 +291,7 @@ export default function Dashboard() {
               <div style={s.qrCard}>
                 <img src={qrUrl} alt="Patient sign-up QR code" style={s.qrImg} />
                 <div style={{ flex: 1, minWidth: 130 }}>
-                  <div style={s.qrLabel}>Patient sign-up QR</div>
+                  <div style={s.qrLabel}>Patient Sign-Up QR</div>
                   <div style={s.qrHint}>Print this for your front desk and treatment rooms. Patients scan it with their phone camera to join — no links to send.</div>
                   <a href={qrUrl} download={`glowpt-${clinic?.slug || 'clinic'}-qr.png`} style={s.qrDownload}>Download QR ↓</a>
                 </div>
@@ -300,7 +300,7 @@ export default function Dashboard() {
 
             {/* Care team — invite therapists and see how many patients each carries. */}
             <div style={s.care}>
-              <div style={s.careHead}>Care team</div>
+              <div style={s.careHead}>Care Team</div>
               {therapists.length === 0 && invites.length === 0 && (
                 <div style={s.emptyTeam}>No therapists yet. Invite one below — once they sign in, you can assign patients to them.</div>
               )}
@@ -317,7 +317,7 @@ export default function Dashboard() {
                 <input style={s.inviteInput} placeholder="Therapist name" value={tName} onChange={e => setTName(e.target.value)} autoComplete="name" />
                 <input style={s.inviteInput} placeholder="Therapist email" type="email" value={tEmail} onChange={e => setTEmail(e.target.value)}
                   autoComplete="off" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
-                <button style={s.inviteBtn} type="submit">Invite therapist →</button>
+                <button style={s.inviteBtn} type="submit">Invite Therapist →</button>
               </form>
               {notice && <div style={s.notice}>{notice}</div>}
               {invites.length > 0 && (
@@ -341,7 +341,7 @@ export default function Dashboard() {
         {!loading && roster.length > 0 && (
           <>
             <div style={s.legend}>
-              <span style={s.legendLabel}>3-day trend — daily feeling</span>
+              <span style={s.legendLabel}>3-Day Trend — Daily Feeling</span>
               {[1, 2, 3, 4, 5].map(n => (
                 <span key={n} style={s.legendItem}>
                   <span style={s.face}>{FEELINGS[n].emoji}</span> {FEELINGS[n].word}
@@ -352,7 +352,7 @@ export default function Dashboard() {
             <div style={s.scroll}>
               <div style={{ minWidth: isManager ? 680 : 560 }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
-                  <div>Patient</div><div>Last check-in</div><div style={{ textAlign: 'center' }}>Streak</div><div>3-day trend</div><div style={{ textAlign: 'center' }}>Avg</div>
+                  <div>Patient</div><div>Last Check-In</div><div style={{ textAlign: 'center' }}>Streak</div><div>3-Day Trend</div><div style={{ textAlign: 'center' }}>Avg</div>
                   {isManager && <div>Therapist</div>}
                 </div>
                 {roster.map(r => (

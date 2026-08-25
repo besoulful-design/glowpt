@@ -59,7 +59,7 @@ export function AuthShell({ children }) {
 }
 
 export const ui = {
-  eyebrow: { fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: 10 },
+  eyebrow: { fontSize: 12, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 10 },
   title: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: 34, lineHeight: 1.2, color: '#f5efe4', marginBottom: 14, letterSpacing: '-0.01em' },
   muted: { fontSize: 15, lineHeight: 1.6, color: 'rgba(245,239,228,0.55)', maxWidth: '34ch', marginBottom: 28 },
   form: { display: 'flex', flexDirection: 'column', gap: 12, width: '100%' },

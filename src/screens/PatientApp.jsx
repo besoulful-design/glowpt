@@ -263,12 +263,12 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     btnSecondary: { width: '100%', padding: '18px 24px', border: '1px solid rgba(245,239,228,0.15)', borderRadius: '4px', background: 'transparent', color: 'rgba(245,239,228,0.7)', fontFamily: "'DM Sans', sans-serif", fontSize: '16px', fontWeight: 500, cursor: 'pointer' },
     btnGhost: { width: '100%', padding: '12px', border: 'none', background: 'transparent', color: 'rgba(245,239,228,0.5)', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', cursor: 'pointer' },
     checkinHeader: { padding: '56px 28px 24px' },
-    checkinDate: { fontSize: '11px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: '8px' },
+    checkinDate: { fontSize: '12px', letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '8px' },
     checkinTitle: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '32px', lineHeight: 1.15, color: '#f5efe4', letterSpacing: '-0.02em' },
     checkinTitleEm: { fontStyle: 'italic', color: '#FBC02D' },
     checkinBody: { padding: '8px 28px 40px', display: 'flex', flexDirection: 'column', gap: '28px' },
     qBlock: { display: 'flex', flexDirection: 'column', gap: '14px' },
-    qLabel: { fontSize: '11px', fontWeight: 600, color: 'rgba(245,239,228,0.7)', letterSpacing: '0.04em', textTransform: 'uppercase' },
+    qLabel: { fontSize: '12px', fontWeight: 600, color: 'rgba(245,239,228,0.7)', letterSpacing: '0.01em' },
     qQuestion: { fontFamily: "'Fraunces', serif", fontWeight: 400, fontSize: '20px', lineHeight: 1.3, color: '#f5efe4', letterSpacing: '-0.01em' },
     feelingScale: { display: 'flex', gap: '10px', justifyContent: 'space-between' },
     feelingBtn: (selected) => ({ flex: 1, border: `1px solid ${selected ? '#F5A81A' : 'rgba(245,239,228,0.12)'}`, borderRadius: '6px', background: selected ? '#F5A81A' : '#1a2840', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px 6px 10px', gap: '6px', transform: selected ? 'scale(1.06)' : 'scale(1)', transition: 'all 0.2s', boxShadow: selected ? '0 4px 18px rgba(245,168,26,0.4)' : 'none' }),
@@ -283,22 +283,22 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     responseWrap: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '56px 28px 48px', minHeight: '100vh' },
     responseTop: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: '20px' },
     responseMark: { marginBottom: '32px', position: 'relative' },
-    responseEyebrow: { fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: '20px' },
+    responseEyebrow: { fontSize: '12px', letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '20px' },
     responseMessage: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '22px', lineHeight: 1.55, color: '#f5efe4', letterSpacing: '-0.01em', marginBottom: '32px', maxWidth: '34ch' },
     statsRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', width: '100%', marginBottom: '28px' },
     statCard: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.2)', borderRadius: '4px', padding: '16px', textAlign: 'left' },
-    statLabel: { fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: '6px' },
+    statLabel: { fontSize: '11.5px', letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '6px' },
     statValue: { fontFamily: "'Fraunces', serif", fontSize: '28px', fontWeight: 400, color: '#f5efe4', letterSpacing: '-0.02em', lineHeight: 1 },
     statSub: { fontSize: '12px', color: 'rgba(245,239,228,0.5)', marginTop: '4px', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
     streakSection: { width: '100%', marginBottom: '8px' },
-    streakLabel: { fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(245,239,228,0.5)', fontWeight: 600, marginBottom: '12px' },
+    streakLabel: { fontSize: '12px', letterSpacing: '0.01em', color: 'rgba(245,239,228,0.5)', fontWeight: 600, marginBottom: '12px' },
     streakDots: { display: 'flex', gap: '8px', justifyContent: 'center' },
     streakDot: (done, isToday) => ({ width: '38px', height: '38px', borderRadius: '50%', background: isToday ? '#F5A81A' : done ? 'rgba(251,192,45,0.15)' : '#1a2840', border: `1px solid ${done || isToday ? '#F5A81A' : 'rgba(245,239,228,0.1)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: isToday ? '#0d1825' : done ? '#FBC02D' : 'rgba(245,239,228,0.5)', fontWeight: isToday ? 700 : 600, cursor: done ? 'pointer' : 'default', boxShadow: isToday ? '0 4px 14px rgba(245,168,26,0.4)' : 'none', transition: 'all 0.2s' }),
     streakHint: { fontSize: '11px', color: 'rgba(245,239,228,0.35)', fontStyle: 'italic', fontFamily: "'Fraunces', serif", textAlign: 'center', marginTop: '10px' },
     // Progress screen
     progressWrap: { display: 'flex', flexDirection: 'column', minHeight: '100vh' },
     progressHeader: { padding: '56px 28px 18px' },
-    progressBack: { fontSize: '13px', color: '#F5A81A', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', marginBottom: '18px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+    progressBack: { fontSize: '13px', color: '#F5A81A', fontWeight: 600, letterSpacing: '0.01em', cursor: 'pointer', marginBottom: '18px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
     progressTitle: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '34px', color: '#f5efe4', letterSpacing: '-0.02em', lineHeight: 1.1 },
     progressSub: { fontSize: '14px', color: 'rgba(245,239,228,0.5)', marginTop: '8px', fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
     progressBody: { padding: '8px 28px 40px', display: 'flex', flexDirection: 'column', gap: '26px', flex: 1 },
@@ -321,12 +321,12 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     weekLabel: { fontSize: '10px', color: 'rgba(245,239,228,0.5)', marginTop: '9px', textAlign: 'center', lineHeight: 1.2 },
     responseBottom: { width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' },
     journalHeader: { padding: '56px 28px 28px', borderBottom: '1px solid rgba(245,239,228,0.07)' },
-    journalBack: { fontSize: '13px', color: '#F5A81A', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', marginBottom: '20px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+    journalBack: { fontSize: '13px', color: '#F5A81A', fontWeight: 600, letterSpacing: '0.01em', cursor: 'pointer', marginBottom: '20px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
     journalDayName: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.1, color: '#FBC02D', letterSpacing: '-0.02em', fontStyle: 'italic' },
     journalDateSub: { fontSize: '13px', color: 'rgba(245,239,228,0.5)', marginTop: '6px', fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
     journalBody: { padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '60px' },
     journalSection: { display: 'flex', flexDirection: 'column', gap: '10px' },
-    journalSectionLabel: { fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600 },
+    journalSectionLabel: { fontSize: '11.5px', letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600 },
     journalFeelingDisplay: { display: 'flex', alignItems: 'center', gap: '16px', background: '#1a2840', border: '1px solid rgba(245,168,26,0.2)', borderRadius: '4px', padding: '18px' },
     journalFeelingEmoji: { fontSize: '36px', lineHeight: 1 },
     journalFeelingNum: { fontFamily: "'Fraunces', serif", fontSize: '36px', fontWeight: 400, color: '#FBC02D', letterSpacing: '-0.03em', lineHeight: 1 },
@@ -335,7 +335,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     journalMovementLabel: { fontSize: '14px', color: 'rgba(245,239,228,0.7)', fontWeight: 500 },
     journalNote: { background: '#1a2840', border: '1px solid rgba(245,239,228,0.08)', borderRadius: '4px', padding: '18px', fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '16px', lineHeight: 1.65, color: 'rgba(245,239,228,0.7)' },
     journalAI: { background: 'linear-gradient(135deg, rgba(245,168,26,0.08) 0%, rgba(13,24,37,0) 100%)', border: '1px solid rgba(245,168,26,0.2)', borderRadius: '4px', padding: '22px', position: 'relative', overflow: 'hidden' },
-    journalAILabel: { fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#F5A81A', fontWeight: 600, marginBottom: '14px' },
+    journalAILabel: { fontSize: '11.5px', letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '14px' },
     journalAIText: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '19px', lineHeight: 1.55, color: '#f5efe4', letterSpacing: '-0.01em' },
     loadingWrap: { position: 'fixed', inset: 0, background: '#0d1825', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '24px', zIndex: 100 },
     loadingText: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '18px', color: 'rgba(245,239,228,0.5)', animation: 'breathe 2s ease-in-out infinite' },
@@ -374,7 +374,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
 
         {screen === 'welcome' && (
           <div style={styles.welcomeWrap}>
-            <button style={styles.signOut} onClick={signOut}>Sign out</button>
+            <button style={styles.signOut} onClick={signOut}>Sign Out</button>
             <div style={styles.welcomeTop}>
               <div style={styles.logoFloat}><LogoMark size={208} marginBottom={0} /></div>
               <div style={styles.wordmark}>
@@ -388,9 +388,9 @@ Respond directly to ${firstName} in second person. Reference what they actually 
               <div style={styles.welcomeSub}>Your daily check-in is waiting. It only takes a moment.</div>
             </div>
             <div style={styles.welcomeBottom}>
-              <button style={styles.btnPrimary} onClick={startNewCheckin}>Start today's check-in →</button>
+              <button style={styles.btnPrimary} onClick={startNewCheckin}>Start Today's Check-In →</button>
               {totalCheckins > 0 && (
-                <button style={styles.btnSecondary} onClick={() => setScreen('progress')}>View my progress</button>
+                <button style={styles.btnSecondary} onClick={() => setScreen('progress')}>View My Progress</button>
               )}
             </div>
           </div>
@@ -404,7 +404,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
             </div>
             <div style={styles.checkinBody}>
               <div style={styles.qBlock}>
-                <div style={styles.qLabel}>Body check</div>
+                <div style={styles.qLabel}>Body Check</div>
                 <div style={styles.qQuestion}>How does your body feel right now?</div>
                 <div style={styles.feelingScale}>
                   {[1, 2, 3, 4, 5].map(n => {
@@ -465,7 +465,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
                 <textarea style={styles.noteField} placeholder="Felt a little stiff this morning but loosened up after my walk…" rows={3} value={note} onChange={e => setNote(e.target.value)} />
               </div>
 
-              <button style={{ ...styles.btnPrimary, marginTop: '8px' }} onClick={handleSubmit}>Save today's check-in →</button>
+              <button style={{ ...styles.btnPrimary, marginTop: '8px' }} onClick={handleSubmit}>Save Today's Check-In →</button>
               <div style={{ height: '20px' }} />
             </div>
           </div>
@@ -475,7 +475,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
           <div style={styles.progressWrap}>
             <div style={styles.progressHeader}>
               <div style={styles.progressBack} onClick={() => setScreen('welcome')}>← Back</div>
-              <div style={styles.progressTitle}>Your progress</div>
+              <div style={styles.progressTitle}>Your Progress</div>
               <div style={styles.progressSub}>Every check-in is a step forward, {firstName}.</div>
             </div>
             <div style={styles.progressBody}>
@@ -487,19 +487,19 @@ Respond directly to ${firstName} in second person. Reference what they actually 
 
               <div style={styles.statsRow}>
                 <div style={styles.statCard}>
-                  <div style={styles.statLabel}>This week</div>
+                  <div style={styles.statLabel}>This Week</div>
                   <div style={styles.statValue}>{weekCount}</div>
                   <div style={styles.statSub}>days checked in</div>
                 </div>
                 <div style={styles.statCard}>
-                  <div style={styles.statLabel}>All time</div>
+                  <div style={styles.statLabel}>All Time</div>
                   <div style={styles.statValue}>{totalCheckins}</div>
                   <div style={styles.statSub}>check-ins</div>
                 </div>
               </div>
 
               <div style={styles.trendSection}>
-                <div style={styles.streakLabel}>Your month</div>
+                <div style={styles.streakLabel}>Your Month</div>
                 {(() => {
                   const sum = monthSummary(history)
                   const weeks = weeklyAverages(history)
@@ -544,7 +544,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
             <div style={{ ...styles.responseBottom, padding: '0 28px 40px' }}>
               {week.find(d => d.today)?.done
                 ? <button style={styles.btnPrimary} onClick={() => setScreen('welcome')}>Done ✓</button>
-                : <button style={styles.btnPrimary} onClick={startNewCheckin}>Start today's check-in →</button>}
+                : <button style={styles.btnPrimary} onClick={startNewCheckin}>Start Today's Check-In →</button>}
             </div>
           </div>
         )}
@@ -556,25 +556,25 @@ Respond directly to ${firstName} in second person. Reference what they actually 
                 <div style={{ position: 'absolute', inset: '-12px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(251,192,45,0.2) 0%,transparent 70%)', animation: 'pulse 2.5s ease-in-out infinite' }} />
                 <LogoMark size={132} marginBottom={0} />
               </div>
-              {aiResponse && <div style={styles.responseEyebrow}>Today's reflection</div>}
+              {aiResponse && <div style={styles.responseEyebrow}>Today's Reflection</div>}
               {aiResponse && <div style={styles.responseMessage}>{aiResponse}</div>}
 
               <div style={styles.statsRow}>
                 <div style={styles.statCard}>
-                  <div style={styles.statLabel}>Today's feeling</div>
+                  <div style={styles.statLabel}>Today's Feeling</div>
                   <div style={{ fontSize: '22px', marginBottom: '4px' }}>{selectedFeeling ? feelingData[selectedFeeling].emoji : '—'}</div>
                   <div style={styles.statValue}>{selectedFeeling || '—'}</div>
                   <div style={styles.statSub}>{selectedFeeling ? feelingData[selectedFeeling].word : 'out of 5'}</div>
                 </div>
                 <div style={styles.statCard}>
-                  <div style={styles.statLabel}>This week</div>
+                  <div style={styles.statLabel}>This Week</div>
                   <div style={styles.statValue}>{weekCount}</div>
                   <div style={styles.statSub}>days checked in</div>
                 </div>
               </div>
 
               <div style={styles.streakSection}>
-                <div style={styles.streakLabel}>Your week — tap any day</div>
+                <div style={styles.streakLabel}>Your Week — Tap Any Day</div>
                 <div style={styles.streakDots}>
                   {week.map(d => (
                     <div key={d.id} style={styles.streakDot(d.done, d.today)} onClick={() => openJournal(d)}>{d.day}</div>
@@ -585,7 +585,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
             </div>
 
             <div style={styles.responseBottom}>
-              <button style={styles.btnPrimary} onClick={() => setScreen('welcome')}>Done for today ✓</button>
+              <button style={styles.btnPrimary} onClick={() => setScreen('welcome')}>Done for Today ✓</button>
             </div>
           </div>
         )}
@@ -599,7 +599,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
             </div>
             <div style={styles.journalBody}>
               <div style={styles.journalSection}>
-                <div style={styles.journalSectionLabel}>Body feeling</div>
+                <div style={styles.journalSectionLabel}>Body Feeling</div>
                 <div style={styles.journalFeelingDisplay}>
                   <div style={styles.journalFeelingEmoji}>{journalDay.emoji}</div>
                   <div>
@@ -625,14 +625,14 @@ Respond directly to ${firstName} in second person. Reference what they actually 
 
               {journalDay.note && (
                 <div style={styles.journalSection}>
-                  <div style={styles.journalSectionLabel}>Your note</div>
+                  <div style={styles.journalSectionLabel}>Your Note</div>
                   <div style={styles.journalNote}>{journalDay.note}</div>
                 </div>
               )}
 
               {journalDay.response && (
                 <div style={styles.journalSection}>
-                  <div style={styles.journalSectionLabel}>Today's reflection</div>
+                  <div style={styles.journalSectionLabel}>Today's Reflection</div>
                   <div style={styles.journalAI}>
                     <div style={styles.journalAILabel}>GlowPT</div>
                     <div style={styles.journalAIText}>{journalDay.response}</div>

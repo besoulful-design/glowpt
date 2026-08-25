@@ -35,14 +35,14 @@ export default function Login() {
   return (
     <AuthShell>
       <LogoMark size={140} />
-      <div style={ui.title}>Sign in to <Brand /></div>
+      <div style={ui.title}>Sign In to <Brand /></div>
       <div style={ui.muted}>Enter your email and we’ll send you a sign-in code.</div>
       <form onSubmit={handleSubmit} style={ui.form}>
         <input style={ui.input} placeholder="Your email" type="email" value={email}
           onChange={e => setEmail(e.target.value)}
           autoComplete="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
         {error && <div style={ui.error}>{error}</div>}
-        <button style={ui.btn} disabled={busy}>{busy ? 'Sending…' : 'Send my code →'}</button>
+        <button style={ui.btn} disabled={busy}>{busy ? 'Sending…' : 'Send My Code →'}</button>
       </form>
       <div style={ui.fine}>New patient? Use the link your clinic gave you.</div>
     </AuthShell>
