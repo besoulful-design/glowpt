@@ -460,7 +460,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
               </div>
 
               <div style={styles.qBlock}>
-                <div style={styles.qLabel}>Anything else?</div>
+                <div style={styles.qLabel}>Anything Else?</div>
                 <div style={styles.qQuestion}>A moment, a win, a thought.</div>
                 <textarea style={styles.noteField} placeholder="Felt a little stiff this morning but loosened up after my walk…" rows={3} value={note} onChange={e => setNote(e.target.value)} />
               </div>
@@ -531,13 +531,13 @@ Respond directly to ${firstName} in second person. Reference what they actually 
               </div>
 
               <div style={{ ...styles.cardSection, padding: '20px 16px' }}>
-                <div style={{ ...styles.streakLabel, paddingLeft: '4px' }}>This week — tap a day</div>
+                <div style={{ ...styles.streakLabel, paddingLeft: '4px' }}>This Week — Tap a Day</div>
                 <div style={{ ...styles.streakDots, justifyContent: 'space-between', gap: '4px' }}>
                   {week.map(d => (
                     <div key={d.id} style={styles.streakDot(d.done, d.today)} onClick={() => openJournal(d)}>{d.day}</div>
                   ))}
                 </div>
-                <div style={styles.streakHint}>Tap a completed day to read your entry</div>
+                <div style={styles.streakHint}>Tap a completed day to read your entry.</div>
               </div>
             </div>
 
@@ -580,7 +580,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
                     <div key={d.id} style={styles.streakDot(d.done, d.today)} onClick={() => openJournal(d)}>{d.day}</div>
                   ))}
                 </div>
-                <div style={styles.streakHint}>Tap a completed day to read your entry</div>
+                <div style={styles.streakHint}>Tap a completed day to read your entry.</div>
               </div>
             </div>
 

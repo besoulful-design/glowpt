@@ -322,7 +322,7 @@ export default function Dashboard() {
               {notice && <div style={s.notice}>{notice}</div>}
               {invites.length > 0 && (
                 <div style={s.pending}>
-                  <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Pending (waiting for first sign-in):</strong><br />
+                  <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Pending (Waiting for First Sign-In):</strong><br />
                   {invites.map(i => `${i.full_name || '—'} · ${i.email}`).join('  ·  ')}
                 </div>
               )}
