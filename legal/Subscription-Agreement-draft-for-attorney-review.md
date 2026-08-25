@@ -440,5 +440,64 @@ third-party beneficiaries of this Agreement.
 
 ---
 
+## 16. ACCEPTANCE
+
+> **[REVIEW] — READ WITH "ACCEPTANCE AND EXECUTION" AT THE END OF THE BAA. THE
+> TWO DRAFTS CURRENTLY ASSUME DIFFERENT SIGNING MECHANICS AND MUST BE
+> RECONCILED BEFORE EITHER IS USED.**
+>
+> This Agreement is drafted for **click-through acceptance**, and Section 2.1
+> states that accepting it also accepts the BAA. The BAA, however, still carries
+> signature blocks. Please choose one model and make both documents match:
+>
+> - **Both accepted by one click.** Section 16.1 below governs; delete Section
+>   16.2 and use Section A of the BAA. This is the only model that works with
+>   self-serve web sign-up.
+> - **Both signed.** Use Section 16.2 below and Section B of the BAA, and amend
+>   Section 2.1 above so it no longer says the click accepts the BAA.
+> - **Mixed (this Agreement clicked, BAA signed).** Possible, but Section 2.1
+>   must be rewritten, and onboarding gains a manual step.
+>
+> Please also advise whether the product should generate a dated PDF of whatever
+> was accepted, downloadable by the clinic. A covered entity generally needs the
+> executed BAA in its own compliance records, and that operational need may
+> decide this question regardless of what is legally sufficient.
+
+**16.1 Electronic acceptance.** You accept this Agreement and the BAA by
+clicking to accept during sign-up. The individual accepting represents that they
+are authorized to bind the Clinic. We record and retain the identity and email
+address of the accepting individual, the date and time, and the version
+identifier of the text displayed. You may request a copy at any time.
+
+Accepted version: `[SUBSCRIPTION AGREEMENT VERSION IDENTIFIER]`
+
+**16.2 Signature.** *(Use only if the signature model is chosen.)*
+
+**CUSTOMER**
+
+`[CLINIC LEGAL NAME]`
+
+By: ______________________________
+
+Name: `[NAME]`
+
+Title: `[TITLE]`
+
+Date: ______________________________
+
+**GLOWPT**
+
+FranklinAI Solutions LLC
+
+By: ______________________________
+
+Name: David Peterson
+
+Title: `[TITLE]`
+
+Date: ______________________________
+
+---
+
 *End of draft. Not for execution until reviewed by counsel. Read with
 `BAA-draft-for-attorney-review.md`.*

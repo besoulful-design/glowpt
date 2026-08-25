@@ -63,14 +63,19 @@ liability should sit inside that cap, outside it, or under a separate higher cap
 matched to an insurance limit.
 
 **3. Can this be accepted online, or does it need a signature?**
-The product onboards clinics through a web form. Today the clinic checks a box
-to confirm it has reviewed a plain-language summary. Is **click-through
-acceptance** sufficient to form a binding BAA, or is a wet or electronic
-signature required? If click-through is acceptable, what must the interface
-capture and retain as evidence (identity of the person accepting, their
-authority to bind the clinic, timestamp, the exact version of the text shown)?
-The application already versions its legal text and records a consent version
-per user.
+**The two drafts currently contradict each other on this and must be
+reconciled before use.** The Subscription Agreement is drafted for
+click-through acceptance and says that accepting it also accepts this BAA; this
+BAA is drafted with signature blocks. See **ACCEPTANCE AND EXECUTION** at the
+end of this document, which sets out the two options and asks you to choose one.
+
+The product onboards clinics through a web form with no human in the loop, so a
+required signature inserts a manual step into an otherwise self-serve flow. Is
+**click-through acceptance** sufficient to form a binding BAA? If so, what must
+the interface capture and retain as evidence (identity of the accepting person,
+their authority to bind the clinic, timestamp, the exact version of the text
+shown)? The application already versions its legal text and records a version
+identifier per user, so implementing whatever is required is straightforward.
 
 **4. Insurance.** Is cyber liability and/or technology errors and omissions
 coverage required or strongly advised before handling real patient data? At
@@ -463,7 +468,57 @@ counterparts and by electronic signature, each of which is deemed an original.
 
 ---
 
-## SIGNATURES
+## ACCEPTANCE AND EXECUTION
+
+> **[REVIEW] — PICK ONE OF THE TWO OPTIONS BELOW AND DELETE THE OTHER. THE
+> DRAFTS ARE CURRENTLY INCONSISTENT ON THIS POINT AND MUST NOT BE USED UNTIL IT
+> IS RESOLVED.**
+>
+> The companion Subscription Agreement is drafted for **click-through
+> acceptance** and states at Section 2.1 that accepting it also accepts this
+> BAA. This BAA, however, is drafted with **signature blocks**. Both cannot be
+> right. The choice is partly legal and partly a product decision, because the
+> clinic signs up through a web form with no human in the loop.
+>
+> **Option A — electronic acceptance, no signature.** This BAA is accepted at
+> the same moment and by the same click as the Subscription Agreement. Lowest
+> friction and the only option that scales to self-serve sign-up. Use Section
+> A below and delete Section B.
+>
+> **Option B — separate signature.** The clinic signs this BAA, by wet or
+> electronic signature, in addition to accepting the Subscription Agreement.
+> Higher assurance, but it puts a manual step in the middle of onboarding and
+> Section 2.1 of the Subscription Agreement would need to be amended so it no
+> longer claims the click accepts this BAA. Use Section B below and delete
+> Section A.
+>
+> **Questions for counsel:**
+> - Is click-through acceptance sufficient to form a binding business associate
+>   contract under 45 CFR 164.504(e), given E-SIGN and UETA? My understanding as
+>   a non-lawyer is that HIPAA requires the arrangement to be documented but does
+>   not require a handwritten signature. Please confirm or correct.
+> - **Operational point worth weighing:** the clinic is a covered entity and
+>   generally needs a copy of the executed BAA in its own compliance records.
+>   Whichever option is chosen, should the product generate a dated PDF of the
+>   accepted agreement and make it downloadable by the clinic? That may matter
+>   more in practice than which option is chosen.
+> - If Option A, what must be captured and retained as evidence of acceptance?
+
+### Section A — Electronic Acceptance
+
+This Agreement is accepted electronically by Covered Entity as part of, and at
+the same time as, the GlowPT Subscription Agreement and Terms of Service. By
+accepting the Subscription Agreement, the individual doing so represents that
+they are authorized to bind Covered Entity to this Agreement.
+
+Business Associate records and retains, for each acceptance: the identity and
+email address of the accepting individual, the date and time of acceptance, and
+the version identifier of the text displayed at the time of acceptance. Covered
+Entity may request a copy of the accepted Agreement at any time.
+
+Accepted version: `[BAA VERSION IDENTIFIER]`
+
+### Section B — Signature
 
 **COVERED ENTITY**
 
@@ -491,4 +546,5 @@ Date: ______________________________
 
 ---
 
-*End of draft. Not for execution until reviewed by counsel.*
+*End of draft. Not for execution until reviewed by counsel. Read with
+`Subscription-Agreement-draft-for-attorney-review.md`.*
