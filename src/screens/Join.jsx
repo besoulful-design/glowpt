@@ -95,10 +95,12 @@ export default function Join() {
           <input type="checkbox" checked={consented} onChange={e => setConsented(e.target.checked)}
             style={{ marginTop: 3, accentColor: '#F5A81A', width: 16, height: 16, flexShrink: 0 }} />
           <span>I agree that {clinic.name} and GlowPT may store my daily check-ins to support my care, and I’ve read the{' '}
-            <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowPrivacy(true) }}
-              style={{ background: 'none', border: 'none', color: '#F5A81A', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}>
+            <span role="button" tabIndex={0}
+              onClick={e => { e.preventDefault(); e.stopPropagation(); setShowPrivacy(true) }}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setShowPrivacy(true) } }}
+              style={{ color: '#F5A81A', textDecoration: 'underline', cursor: 'pointer' }}>
               privacy notice
-            </button>.
+            </span>.
           </span>
         </label>
         {error && <div style={ui.error}>{error}</div>}

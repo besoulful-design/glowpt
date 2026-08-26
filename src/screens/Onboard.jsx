@@ -97,10 +97,12 @@ export default function Onboard() {
           <input type="checkbox" checked={baaReviewed} onChange={e => setBaaReviewed(e.target.checked)}
             style={{ marginTop: 3, accentColor: '#F5A81A', width: 16, height: 16, flexShrink: 0 }} />
           <span>{BAA_IS_EXECUTED ? 'I agree to the' : 'I’ve reviewed the'}{' '}
-            <button type="button" onClick={() => setShowBaa(true)}
-              style={{ background: 'none', border: 'none', color: '#F5A81A', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}>
+            <span role="button" tabIndex={0}
+              onClick={e => { e.preventDefault(); e.stopPropagation(); setShowBaa(true) }}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setShowBaa(true) } }}
+              style={{ color: '#F5A81A', textDecoration: 'underline', cursor: 'pointer' }}>
               Business Associate Agreement
-            </button>.
+            </span>.
           </span>
         </label>
 

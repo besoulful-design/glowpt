@@ -31,7 +31,7 @@ export default function Landing() {
         <div style={s.tagline}>One good day at a time.</div>
 
         <div style={s.headline}>A daily check-in to keep patients engaged between visits.</div>
-        <div style={s.sub}>A 30-second check-in with warm, personal encouragement — so more patients finish their plan of care.</div>
+        <div style={s.sub}>So more plans of care get completed, and the clinic stays full.</div>
 
         <div style={s.btns}>
           <Link to="/onboard" style={s.btnPrimary}>Bring GlowPT to Your Clinic →</Link>
