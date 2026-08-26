@@ -4,6 +4,8 @@ import { useAuth } from '../auth'
 import { AuthShell, LogoMark, BRAND, ui } from './AuthShell'
 import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist, assignTherapist, dischargePatient, restorePatient, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
 import { FEELINGS } from '../lib/feelings'
+import { BAA_IS_EXECUTED } from '../lib/legal'
+import { CONTACT_EMAIL } from '../lib/marketing'
 import QRCode from 'qrcode'
 
 // The 3-day trend shows the SAME emoji faces the patient taps at check-in (from
@@ -33,6 +35,11 @@ const s = {
   linkLabel: { fontSize: 12, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
   linkUrl: { fontSize: 15, color: '#f5efe4', wordBreak: 'break-all' },
   copyBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
+  // Shown to staff while no BAA is executed. It is a NOTICE, not a control —
+  // nothing in the app stops a clinic adding real patients today.
+  baaBanner: { background: 'rgba(245,168,26,0.09)', border: '1px solid rgba(245,168,26,0.35)', borderRadius: 6, padding: '14px 18px', marginBottom: 24, fontSize: 13.5, lineHeight: 1.6, color: 'rgba(245,239,228,0.85)' },
+  baaBannerLead: { fontWeight: 600, color: '#F5A81A' },
+  baaBannerLink: { color: '#F5A81A' },
   qrCard: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.2)', borderRadius: 6, padding: 20, marginBottom: 28, display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' },
   qrImg: { width: 104, height: 104, borderRadius: 6, background: '#fff', padding: 6, flexShrink: 0 },
   qrLabel: { fontSize: 12, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
@@ -262,6 +269,15 @@ export default function Dashboard() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap'); * { box-sizing: border-box; } html { -webkit-text-size-adjust: 100%; } html, body { margin: 0; background: #0d1825; overflow-x: hidden; }`}</style>
       {Bar}
       <div style={s.wrap}>
+        {!BAA_IS_EXECUTED && (
+          <div style={s.baaBanner}>
+            <span style={s.baaBannerLead}>Demo data only for now. </span>
+            You’ll review and sign the full Business Associate Agreement before any real patient
+            information enters GlowPT. Email{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`} style={s.baaBannerLink}>{CONTACT_EMAIL}</a> to get that started.
+          </div>
+        )}
+
         {staffName && <div style={s.greet}>Welcome back, {staffName}</div>}
         <div style={s.h1}>{isManager ? 'Clinic overview' : 'Your patients'}</div>
         <div style={s.sub}>
