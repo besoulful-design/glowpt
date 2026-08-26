@@ -4,6 +4,7 @@ import * as cognito from '../lib/cognito'
 import { savePendingOnboard } from '../auth'
 import { AuthShell, LogoMark, Brand, ui } from './AuthShell'
 import { BAA_IS_EXECUTED, BAA_SUMMARY, BAA_SUMMARY_INTRO } from '../lib/legal'
+import { PRICE_LINE } from '../lib/marketing'
 import CodeVerify from './CodeVerify'
 
 function slugify(s) {
@@ -92,6 +93,10 @@ export default function Onboard() {
         <input style={ui.input} placeholder="Your work email" type="email" value={email}
           onChange={e => setEmail(e.target.value)}
           autoComplete="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+
+        {/* The amount is on screen at the moment they commit — this IS the
+            "amount stated at sign-up" the Subscription Agreement refers to. */}
+        <div style={{ textAlign: 'left', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.75)', marginTop: 6 }}>{PRICE_LINE}</div>
 
         <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.6)', cursor: 'pointer', marginTop: 2 }}>
           <input type="checkbox" checked={baaReviewed} onChange={e => setBaaReviewed(e.target.checked)}
