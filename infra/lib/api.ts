@@ -154,6 +154,13 @@ export class Api extends Construct {
       ['/rpc/assign-therapist', apigwv2.HttpMethod.POST],
       ['/rpc/discharge-patient', apigwv2.HttpMethod.POST],
       ['/rpc/restore-patient', apigwv2.HttpMethod.POST],
+      // Platform admin (cross-clinic). Authorised by the DB, not by the route:
+      // these carry the same Cognito authorizer as everything else, and each
+      // admin_* function refuses a caller who is not in platform_admins.
+      ['/admin/me', apigwv2.HttpMethod.GET],
+      ['/admin/clinics', apigwv2.HttpMethod.GET],
+      ['/admin/clinics/activation', apigwv2.HttpMethod.POST],
+      ['/admin/clinics/baa', apigwv2.HttpMethod.POST],
     ];
     for (const [routePath, method] of authed) {
       this.httpApi.addRoutes({ path: routePath, methods: [method], integration });

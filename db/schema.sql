@@ -110,16 +110,32 @@ create table public.users (
 );
 
 -- ---- public.clinics (no PHI) ----
+-- baa_signed_at and activated_at are TWO facts on purpose: the first is the
+-- legal record of a signature, the second is the gate that lets a clinic enrol
+-- patients. Usually flipped together, but a demo clinic is active with no BAA,
+-- and a clinic can sign before it is switched on. One column would force a lie.
 create table public.clinics (
   id            uuid primary key default gen_random_uuid(),
   name          text not null,
   slug          text not null unique,
   baa_signed_at timestamptz,
   baa_version   text,
+  activated_at  timestamptz,                      -- null = closed, no PHI accepted
+  activated_by  uuid references public.users(id),
   created_at    timestamptz not null default now()
 );
 
 -- ---- public.profiles (PHI: names a person as a patient of a clinic) ----
+-- Cross-clinic operator identity (David). Deliberately NOT a profiles role:
+-- profiles are clinic-scoped and every RLS policy assumes it. RLS is enabled
+-- and FORCEd with NO policies and no grant to glowpt_app, so the table is
+-- invisible to the application role — only the definer functions below read it,
+-- which means a compromised app role cannot make itself an admin.
+create table public.platform_admins (
+  user_id  uuid primary key references public.users(id) on delete cascade,
+  added_at timestamptz not null default now()
+);
+
 create table public.profiles (
   id           uuid primary key references public.users(id) on delete cascade,
   clinic_id    uuid references public.clinics(id) on delete set null,
@@ -216,6 +232,19 @@ create or replace function public.auth_clinic_id() returns uuid
   set row_security = off
 as $$ select clinic_id from public.profiles where id = public.current_user_id() $$;
 
+-- The activation gate's reader. Same shape as the three helpers around it: a
+-- policy that reads clinics under FORCE RLS must not re-enter RLS or it recurses.
+create or replace function public.clinic_is_active(p_clinic uuid) returns boolean
+  language sql stable security definer
+  set search_path = public
+  set row_security = off
+as $$
+  select exists (
+    select 1 from public.clinics
+    where id = p_clinic and activated_at is not null
+  )
+$$;
+
 create or replace function public.is_my_patient(p_user uuid) returns boolean
   language sql stable security definer
   set search_path = public
@@ -253,12 +282,14 @@ end $$;
 -- patient with no account resolving their clinic from /join/<slug>). Replaces
 -- the old clinics "USING (true)" blanket, which exposed the entire customer
 -- list. This returns exactly one clinic's public fields for one slug.
+-- is_active lets the public /join page tell "no such clinic" apart from "not
+-- open yet", so a patient reads a sentence instead of hitting a thrown error.
 create or replace function public.get_clinic_by_slug(p_slug text)
-  returns table (id uuid, name text, slug text)
+  returns table (id uuid, name text, slug text, is_active boolean)
   language sql stable security definer
   set search_path = public set row_security = off
 as $$
-  select c.id, c.name, c.slug
+  select c.id, c.name, c.slug, (c.activated_at is not null) as is_active
   from public.clinics c
   where c.slug = lower(trim(p_slug))
 $$;
@@ -293,6 +324,12 @@ begin
 
   select id from public.clinics where slug = lower(trim(p_slug)) into v_clinic;
   if v_clinic is null then raise exception 'Clinic not found'; end if;
+
+  -- The activation gate. Enforced here, not in the UI, so it holds regardless
+  -- of what the frontend does or whether the frontend is the caller at all.
+  if not public.clinic_is_active(v_clinic) then
+    raise exception 'Clinic is not open for sign-ups yet' using errcode = 'P0001';
+  end if;
 
   if exists (select 1 from public.profiles
              where id = public.current_user_id()
@@ -498,6 +535,8 @@ alter table public.access_log    enable row level security;
 alter table public.access_log    force  row level security;
 alter table public.staff_invites enable row level security;
 alter table public.staff_invites force  row level security;
+alter table public.platform_admins enable row level security;
+alter table public.platform_admins force  row level security;
 
 -- public.users has NO policies: glowpt_app gets no grant on it at all, and only
 -- the SECURITY DEFINER functions (bypassing RLS) ever touch it. Locked by design.
@@ -532,9 +571,13 @@ create policy profiles_update_self on public.profiles
 -- ---- checkins ----
 -- The 3 orphan V1 policies (incl. "Allow anonymous inserts for testing") are
 -- intentionally absent. Hole 2 closed by their absence + the clinic_id check.
+-- clinic_is_active: blocking only the join would still let an already-attached
+-- patient write PHI to a clinic that was never switched on (or was switched off).
 create policy checkins_insert_own on public.checkins
   for insert to glowpt_app
-  with check (user_id = public.current_user_id() and clinic_id = public.auth_clinic_id());
+  with check (user_id = public.current_user_id()
+              and clinic_id = public.auth_clinic_id()
+              and public.clinic_is_active(clinic_id));
 create policy checkins_select_own on public.checkins
   for select to glowpt_app
   using (user_id = public.current_user_id());
@@ -548,7 +591,9 @@ create policy checkins_select_caseload on public.checkins
 create policy checkins_update_own on public.checkins
   for update to glowpt_app
   using (user_id = public.current_user_id())
-  with check (user_id = public.current_user_id() and clinic_id = public.auth_clinic_id());
+  with check (user_id = public.current_user_id()
+              and clinic_id = public.auth_clinic_id()
+              and public.clinic_is_active(clinic_id));
 
 -- ---- consents ----
 -- Q4: therapist read narrowed to caseload, consistent with profiles/checkins.
@@ -601,6 +646,131 @@ grant select, insert, update on public.profiles      to glowpt_auth;
 grant select, insert, update on public.consents      to glowpt_auth;
 grant select, insert, update on public.staff_invites to glowpt_auth;
 grant select                 on public.checkins      to glowpt_auth;  -- read-only: weekly_summary_rows counts them
+grant select                 on public.platform_admins to glowpt_auth;  -- is_platform_admin() reads it
+grant select, insert         on public.access_log    to glowpt_auth;  -- admin_* functions log their own actions
+
+-- ========================= PLATFORM ADMIN (cross-clinic) =========================
+-- The operator surface. Clinic-level only: counts and timestamps, never a
+-- patient name or check-in body, so no PHI crosses a clinic boundary. Every one
+-- re-checks is_platform_admin() itself — the caller's identity is never trusted
+-- from a parameter, same rule as every other RPC here.
+
+create or replace function public.is_platform_admin() returns boolean
+  language sql stable security definer
+  set search_path = public
+  set row_security = off
+as $$
+  select exists (
+    select 1 from public.platform_admins where user_id = public.current_user_id()
+  )
+$$;
+
+-- Manager contact IS included: operating the switch means emailing the clinic,
+-- and a clinic manager's work email is not patient health information.
+create or replace function public.admin_list_clinics()
+  returns table (
+    id              uuid,
+    name            text,
+    slug            text,
+    created_at      timestamptz,
+    activated_at    timestamptz,
+    baa_signed_at   timestamptz,
+    baa_version     text,
+    manager_name    text,
+    manager_email   text,
+    patient_count   bigint,
+    staff_count     bigint,
+    checkins_7d     bigint,
+    last_checkin_at timestamptz
+  )
+  language plpgsql stable security definer
+  set search_path = public set row_security = off
+as $$
+begin
+  if not public.is_platform_admin() then
+    raise exception 'Not authorised' using errcode = '42501';
+  end if;
+
+  return query
+    select c.id, c.name, c.slug, c.created_at, c.activated_at,
+           c.baa_signed_at, c.baa_version,
+           m.full_name, mu.email::text,   -- users.email is citext; the return type is text
+           (select count(*) from public.profiles p
+             where p.clinic_id = c.id and p.role = 'patient' and p.discharged_at is null),
+           (select count(*) from public.profiles p
+             where p.clinic_id = c.id and p.role in ('manager', 'therapist')),
+           (select count(*) from public.checkins k
+             where k.clinic_id = c.id and k.created_at > now() - interval '7 days'),
+           (select max(k.created_at) from public.checkins k where k.clinic_id = c.id)
+    from public.clinics c
+    left join lateral (
+      select p.id, p.full_name from public.profiles p
+      where p.clinic_id = c.id and p.role = 'manager'
+      order by p.id limit 1
+    ) m on true
+    left join public.users mu on mu.id = m.id
+    order by c.created_at desc;
+end $$;
+
+-- Flipping OFF is deliberately allowed: if something goes wrong at a clinic,
+-- stopping new PHI must not require a deploy.
+create or replace function public.admin_set_clinic_active(p_clinic uuid, p_active boolean)
+  returns timestamptz
+  language plpgsql security definer
+  set search_path = public set row_security = off
+as $$
+declare v_now timestamptz;
+begin
+  if not public.is_platform_admin() then
+    raise exception 'Not authorised' using errcode = '42501';
+  end if;
+
+  if p_active then
+    v_now := now();
+    update public.clinics
+       set activated_at = coalesce(activated_at, v_now),
+           activated_by = public.current_user_id()
+     where id = p_clinic
+    returning activated_at into v_now;
+  else
+    update public.clinics
+       set activated_at = null,
+           activated_by = public.current_user_id()
+     where id = p_clinic
+    returning activated_at into v_now;
+  end if;
+
+  if not found then raise exception 'Clinic not found'; end if;
+
+  insert into public.access_log (actor_id, clinic_id, action)
+  values (public.current_user_id(), p_clinic,
+          case when p_active then 'clinic_activated' else 'clinic_deactivated' end);
+
+  return v_now;
+end $$;
+
+-- Recording the signature is separate from opening the gate, on purpose.
+create or replace function public.admin_record_baa(p_clinic uuid, p_version text)
+  returns timestamptz
+  language plpgsql security definer
+  set search_path = public set row_security = off
+as $$
+declare v_now timestamptz := now();
+begin
+  if not public.is_platform_admin() then
+    raise exception 'Not authorised' using errcode = '42501';
+  end if;
+
+  update public.clinics
+     set baa_signed_at = v_now, baa_version = p_version
+   where id = p_clinic;
+  if not found then raise exception 'Clinic not found'; end if;
+
+  insert into public.access_log (actor_id, clinic_id, action)
+  values (public.current_user_id(), p_clinic, 'baa_recorded');
+
+  return v_now;
+end $$;
 
 -- Functions: revoke the PUBLIC default, then grant EXECUTE explicitly.
 -- NOTE: register_user is deliberately ABSENT from glowpt_app's list. Identity
@@ -621,7 +791,12 @@ grant execute on function
   public.invite_staff(text, text, text),
   public.assign_therapist(uuid, uuid),
   public.discharge_patient(uuid),
-  public.restore_patient(uuid)
+  public.restore_patient(uuid),
+  public.clinic_is_active(uuid),
+  public.is_platform_admin(),
+  public.admin_list_clinics(),
+  public.admin_set_clinic_active(uuid, boolean),
+  public.admin_record_baa(uuid, text)
 to glowpt_app;
 
 -- glowpt_postconfirm: the Cognito post-confirmation Lambda's role. It may run
@@ -665,6 +840,7 @@ alter table public.checkins      owner to glowpt_owner;
 alter table public.consents      owner to glowpt_owner;
 alter table public.access_log    owner to glowpt_owner;
 alter table public.staff_invites owner to glowpt_owner;
+alter table public.platform_admins owner to glowpt_owner;
 
 alter function public.current_user_id()                       owner to glowpt_auth;
 alter function public.auth_role()                             owner to glowpt_auth;
@@ -680,6 +856,11 @@ alter function public.discharge_patient(uuid)                 owner to glowpt_au
 alter function public.restore_patient(uuid)                   owner to glowpt_auth;
 alter function public.register_user(uuid, citext, text)       owner to glowpt_auth;
 alter function public.weekly_summary_rows()                   owner to glowpt_auth;
+alter function public.clinic_is_active(uuid)                  owner to glowpt_auth;
+alter function public.is_platform_admin()                     owner to glowpt_auth;
+alter function public.admin_list_clinics()                    owner to glowpt_auth;
+alter function public.admin_set_clinic_active(uuid, boolean)  owner to glowpt_auth;
+alter function public.admin_record_baa(uuid, text)            owner to glowpt_auth;
 
 
 -- ============================ INTEGRITY TIGHTENINGS (approved by David 2026-08-07) ============================

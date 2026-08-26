@@ -8,6 +8,7 @@ import Onboard from './screens/Onboard'
 import PatientApp from './screens/PatientApp'
 import NoClinic from './screens/NoClinic'
 import Dashboard from './screens/Dashboard'
+import Admin from './screens/Admin'
 
 function Splash() {
   return <AuthShell><LogoMark size={132} /><div style={ui.muted}>Loading…</div></AuthShell>
@@ -45,6 +46,9 @@ export default function App() {
       <Route path="/onboard" element={<Onboard />} />
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<StaffRoute />} />
+      {/* /admin gates itself against the server, not against a role in the
+          token — see Admin.jsx. A non-admin lands back on "/". */}
+      <Route path="/admin" element={<Admin />} />
       <Route path="/" element={<Home />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

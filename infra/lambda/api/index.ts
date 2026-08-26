@@ -163,7 +163,7 @@ async function getClinicBySlug(client: Client, event: APIGatewayProxyEventV2With
   const slug = event.pathParameters?.slug;
   if (!slug) throw new HttpError(400, 'slug_required');
   const { rows } = await client.query(
-    'select id, name, slug from public.get_clinic_by_slug($1)',
+    'select id, name, slug, is_active from public.get_clinic_by_slug($1)',
     [slug],
   );
   if (!rows[0]) throw new HttpError(404, 'clinic_not_found');
@@ -289,7 +289,7 @@ async function getClinic(client: Client, event: APIGatewayProxyEventV2WithJWTAut
   const sub = requireSub(event);
   const row = await withUser(client, sub, async (c) => {
     const { rows } = await c.query(
-      'select id, name, slug from public.clinics where id = public.auth_clinic_id()',
+      'select id, name, slug, activated_at from public.clinics where id = public.auth_clinic_id()',
     );
     return rows[0];
   });
@@ -466,6 +466,53 @@ type Route = (
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
 ) => Promise<APIGatewayProxyResultV2>;
 
+// ----------------------------- platform admin -----------------------------
+// Cross-clinic operator surface. Authorisation is NOT decided here: every
+// admin_* function re-checks public.is_platform_admin() itself and raises
+// 42501, which the shared error handler maps to 403. These routes
+// are ordinary JWT-authorised routes — being signed in is not being an admin.
+
+async function getAdminMe(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const sub = requireSub(event);
+  const result = await withUser(client, sub, async (c) =>
+    c.query('select public.is_platform_admin() as is_admin'),
+  );
+  return json(200, { is_admin: result.rows[0]?.is_admin === true });
+}
+
+async function getAdminClinics(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const sub = requireSub(event);
+  const result = await withUser(client, sub, async (c) =>
+    c.query('select * from public.admin_list_clinics()'),
+  );
+  return json(200, { clinics: result.rows });
+}
+
+async function postAdminActivation(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const sub = requireSub(event);
+  const b = parseBody(event);
+  const clinicId = typeof b.clinic_id === 'string' ? b.clinic_id : '';
+  if (!clinicId) throw new HttpError(400, 'clinic_id_required');
+  if (typeof b.active !== 'boolean') throw new HttpError(400, 'active_required');
+  const result = await withUser(client, sub, async (c) =>
+    c.query('select public.admin_set_clinic_active($1, $2) as activated_at', [clinicId, b.active]),
+  );
+  return json(200, { activated_at: result.rows[0]?.activated_at ?? null });
+}
+
+async function postAdminBaa(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const sub = requireSub(event);
+  const b = parseBody(event);
+  const clinicId = typeof b.clinic_id === 'string' ? b.clinic_id : '';
+  const version = typeof b.version === 'string' ? b.version : '';
+  if (!clinicId) throw new HttpError(400, 'clinic_id_required');
+  if (!version) throw new HttpError(400, 'version_required');
+  const result = await withUser(client, sub, async (c) =>
+    c.query('select public.admin_record_baa($1, $2) as baa_signed_at', [clinicId, version]),
+  );
+  return json(200, { baa_signed_at: result.rows[0]?.baa_signed_at ?? null });
+}
+
 const ROUTES: Record<string, Route> = {
   'GET /clinics/by-slug/{slug}': getClinicBySlug, // public
   'GET /me': getMe,
@@ -484,6 +531,10 @@ const ROUTES: Record<string, Route> = {
   'POST /rpc/assign-therapist': rpcAssignTherapist,
   'POST /rpc/discharge-patient': rpcDischargePatient,
   'POST /rpc/restore-patient': rpcRestorePatient,
+  'GET /admin/me': getAdminMe,
+  'GET /admin/clinics': getAdminClinics,
+  'POST /admin/clinics/activation': postAdminActivation,
+  'POST /admin/clinics/baa': postAdminBaa,
 };
 
 export const handler = async (
@@ -510,6 +561,11 @@ export const handler = async (
     // constraint violation could quote a value, an internal fault could leak
     // schema detail) returns a generic message instead.
     if (sqlstate === 'P0001') return json(400, { error: 'request_failed', detail: message });
+    // 42501 = insufficient_privilege. Raised deliberately by the admin_* RPCs
+    // when the caller is not a platform admin, and by Postgres itself when a
+    // grant is missing. Either way it is an authorisation failure, not a
+    // malformed request, so it gets a 403 and the frontend can act on it.
+    if (sqlstate === '42501') return json(403, { error: 'forbidden' });
     return json(400, { error: 'request_failed' });
   } finally {
     await client?.end().catch(() => {

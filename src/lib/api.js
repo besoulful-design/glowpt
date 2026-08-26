@@ -91,3 +91,13 @@ export const restorePatient = (patientId) =>
 // -- ai-response (the reflection; same shape as before: { prompt } -> { response }) --
 export const aiResponse = (prompt) =>
   request('/ai-response', { method: 'POST', body: { prompt } });
+
+// -- Platform admin (cross-clinic). The API carries the same Cognito token as
+// every other call; the DB decides whether the caller is an admin, so a
+// non-admin gets a 403 from the server, not a hidden button. --
+export const getAdminMe = () => request('/admin/me');
+export const listAllClinics = () => request('/admin/clinics');
+export const setClinicActive = (clinicId, active) =>
+  request('/admin/clinics/activation', { method: 'POST', body: { clinic_id: clinicId, active } });
+export const recordClinicBaa = (clinicId, version) =>
+  request('/admin/clinics/baa', { method: 'POST', body: { clinic_id: clinicId, version } });

@@ -10,8 +10,14 @@
 set client_min_messages = notice;
 
 -- =================== BUILD CLINIC A (the real way, via RPCs) ===================
+-- NOTE: provision_clinic now creates a CLOSED clinic. Every join below would be
+-- refused until the platform admin switches it on — which is the gate working,
+-- and is asserted directly in T17. The admin row itself is seeded by run_tests.sh
+-- as the schema owner, because glowpt_app deliberately cannot write that table.
 begin; select set_config('app.user_id','11111111-1111-1111-1111-111111111111',true);
   select provision_clinic('Clinic A','clinic-a'); commit;
+begin; select set_config('app.user_id','77777777-7777-7777-7777-777777777777',true);
+  select admin_set_clinic_active((select id from admin_list_clinics() where slug='clinic-a'), true); commit;
 begin; select set_config('app.user_id','22222222-2222-2222-2222-222222222222',true);
   select join_clinic('clinic-a','Pat A1','v1'); commit;
 begin; select set_config('app.user_id','33333333-3333-3333-3333-333333333333',true);
@@ -27,8 +33,14 @@ begin; select set_config('app.user_id','11111111-1111-1111-1111-111111111111',tr
 -- =================== BUILD CLINIC B ===================
 begin; select set_config('app.user_id','55555555-5555-5555-5555-555555555555',true);
   select provision_clinic('Clinic B','clinic-b'); commit;
+begin; select set_config('app.user_id','77777777-7777-7777-7777-777777777777',true);
+  select admin_set_clinic_active((select id from admin_list_clinics() where slug='clinic-b'), true); commit;
 begin; select set_config('app.user_id','66666666-6666-6666-6666-666666666666',true);
   select join_clinic('clinic-b','Pat B1','v1'); commit;
+
+-- =========== BUILD CLINIC C (provisioned, deliberately left CLOSED) ===========
+begin; select set_config('app.user_id','88888888-8888-8888-8888-888888888888',true);
+  select provision_clinic('Clinic C','clinic-c'); commit;
 
 -- =================== CHECK-INS (legit, via RLS insert) ===================
 begin; select set_config('app.user_id','22222222-2222-2222-2222-222222222222',true);
@@ -46,11 +58,19 @@ begin; select set_config('app.user_id','66666666-6666-6666-6666-666666666666',tr
 do $$
 declare
   pat_a1 uuid := '22222222-2222-2222-2222-222222222222';
+  pat_c1 uuid := '99999999-9999-9999-9999-999999999999';
+  admin_id uuid := '77777777-7777-7777-7777-777777777777';
   clinic_b uuid;
+  clinic_c uuid;
   n int;
   denied boolean;
 begin
   select id from public.clinics where slug='clinic-b' into clinic_b;
+  -- The admin holds no profile anywhere, so a plain select on clinics returns
+  -- nothing for them under RLS. admin_list_clinics() is their only view — and
+  -- resolving clinic C through it proves the cross-clinic read works.
+  perform set_config('app.user_id', admin_id::text, true);
+  select id from public.admin_list_clinics() where slug='clinic-c' into clinic_c;
 
   -- T1 HOLE 1: patient tries to promote self to manager  (expect DENIED)
   perform set_config('app.user_id', pat_a1::text, true);
@@ -152,4 +172,64 @@ begin
     perform public.register_user(gen_random_uuid(), 'evil@x.com', 'Evil');
   exception when insufficient_privilege then denied := true; end;
   raise notice '% T15 glowpt_app cannot call register_user', case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- ===================== ACTIVATION GATE (2026-08-26) =====================
+  -- T17 GATE: a clinic is CLOSED when provisioned. Pat C1 cannot join it.
+  perform set_config('app.user_id', pat_c1::text, true);
+  denied := false;
+  begin
+    perform public.join_clinic('clinic-c','Pat C1','v1');
+  exception when others then denied := (sqlerrm like '%not open for sign-ups%'); end;
+  raise notice '% T17 join refused while clinic is closed', case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T18 SWITCH ON: the admin opens clinic C, and the same join now succeeds.
+  perform set_config('app.user_id', admin_id::text, true);
+  perform public.admin_set_clinic_active(clinic_c, true);
+  perform set_config('app.user_id', pat_c1::text, true);
+  perform public.join_clinic('clinic-c','Pat C1','v1');
+  select count(*) into n from public.profiles where id = pat_c1 and clinic_id = clinic_c;
+  raise notice '% T18 join succeeds once the admin switches the clinic on', case when n=1 then 'PASS:' else 'FAIL:' end;
+
+  -- T19 SWITCH OFF: an ALREADY-ATTACHED patient cannot write PHI to a clinic
+  -- that has been switched back off. Gating only the join would miss this.
+  perform set_config('app.user_id', admin_id::text, true);
+  perform public.admin_set_clinic_active(clinic_c, false);
+  perform set_config('app.user_id', pat_c1::text, true);
+  denied := false;
+  begin
+    insert into public.checkins (user_id, clinic_id, feeling)
+      values (current_user_id(), clinic_c, 3);
+  exception when insufficient_privilege or check_violation then denied := true;
+            when others then denied := true; end;
+  raise notice '% T19 check-in refused while clinic is switched off', case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T20 AUTHZ: an ordinary patient cannot flip anyone's switch.
+  perform set_config('app.user_id', pat_a1::text, true);
+  denied := false;
+  begin
+    perform public.admin_set_clinic_active(clinic_c, true);
+  exception when insufficient_privilege then denied := true;
+            when others then denied := (sqlerrm like '%Not authorised%'); end;
+  raise notice '% T20 non-admin cannot activate a clinic', case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T21 AUTHZ: nor read the cross-clinic operator list.
+  denied := false;
+  begin
+    perform * from public.admin_list_clinics();
+  exception when insufficient_privilege then denied := true;
+            when others then denied := (sqlerrm like '%Not authorised%'); end;
+  raise notice '% T21 non-admin cannot list clinics', case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T22 LEAST PRIVILEGE: glowpt_app cannot read platform_admins directly, so it
+  -- cannot enrol itself as an admin even knowing the table exists.
+  denied := false;
+  begin
+    select count(*) into n from public.platform_admins;
+  exception when insufficient_privilege then denied := true; end;
+  raise notice '% T22 glowpt_app cannot read platform_admins', case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T23 LEGIT: the admin sees all three clinics, and no PHI columns exist to see.
+  perform set_config('app.user_id', admin_id::text, true);
+  select count(*) into n from public.admin_list_clinics();
+  raise notice '% T23 admin sees every clinic (want 3) -> %', case when n=3 then 'PASS:' else 'FAIL:' end, n;
 end $$;

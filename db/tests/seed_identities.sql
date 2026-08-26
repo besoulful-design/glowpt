@@ -15,6 +15,10 @@ select register_user('33333333-3333-3333-3333-333333333333','pata2@a.com','Pat A
 select register_user('44444444-4444-4444-4444-444444444444','thera@a.com','Ther A');
 select register_user('55555555-5555-5555-5555-555555555555','mgrb@b.com','Mgr B');
 select register_user('66666666-6666-6666-6666-666666666666','patb1@b.com','Pat B1');
+-- Platform-admin + a third clinic used only for the activation-gate tests.
+select register_user('77777777-7777-7777-7777-777777777777','admin@glowpt.app','Platform Admin');
+select register_user('88888888-8888-8888-8888-888888888888','mgrc@c.com','Mgr C');
+select register_user('99999999-9999-9999-9999-999999999999','patc1@c.com','Pat C1');
 
 \set QUIET off
 do $$

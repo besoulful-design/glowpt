@@ -30,6 +30,12 @@ echo "Seeding identities (as glowpt_postconfirm, the Lambda's role) ..."
 "$PSQL" -U glowpt_postconfirm -d "$DB" -h "$HOST" -p "$PORT" -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/seed_identities.sql" 2>&1 | grep -E "PASS:|FAIL:" || true
 
+# The platform-admin row is seeded as the schema owner, not by the app: glowpt_app
+# has no grant on platform_admins at all, which is precisely what T22 asserts.
+echo "Seeding the platform admin (as schema owner) ..."
+"$PSQL" -d "$DB" -h "$HOST" -p "$PORT" -q -v ON_ERROR_STOP=1 \
+  -c "insert into public.platform_admins (user_id) values ('77777777-7777-7777-7777-777777777777');"
+
 echo "Running RLS tests (as glowpt_app) ..."
 "$PSQL" -U glowpt_app -d "$DB" -h "$HOST" -p "$PORT" -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/rls_tests.sql" 2>&1 | grep -E "PASS:|FAIL:" || true

@@ -76,6 +76,22 @@ export default function Join() {
     )
   }
 
+  // The clinic exists but has not been switched on yet, so no patient may
+  // attach to it. Caught here so they read a sentence instead of watching the
+  // form throw — the actual refusal is server-side, in join_clinic.
+  if (clinic.is_active === false) {
+    return (
+      <AuthShell>
+        <LogoMark size={116} />
+        <div style={ui.eyebrow}>{clinic.name}</div>
+        <div style={ui.title}>This clinic isn’t open yet.</div>
+        <div style={ui.muted}>
+          {clinic.name} is still getting set up on GlowPT. Check back shortly, or ask your clinic when to sign up.
+        </div>
+      </AuthShell>
+    )
+  }
+
   if (pending) return <CodeVerify pending={pending} onResend={sendCode} onBack={() => setPending(null)} />
 
 

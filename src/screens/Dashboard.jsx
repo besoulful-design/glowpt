@@ -269,7 +269,20 @@ export default function Dashboard() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap'); * { box-sizing: border-box; } html { -webkit-text-size-adjust: 100%; } html, body { margin: 0; background: #0d1825; overflow-x: hidden; }`}</style>
       {Bar}
       <div style={s.wrap}>
-        {!BAA_IS_EXECUTED && (
+        {/* Two different facts, so two different messages. A closed clinic is a
+            hard stop — its /join link genuinely refuses patients — and saying
+            "demo data only" there would leave a manager wondering why nobody
+            can sign up. clinic.activated_at is undefined until the API deploy
+            that adds it, which reads as closed; harmless, since the same deploy
+            carries both. */}
+        {clinic && !clinic.activated_at ? (
+          <div style={s.baaBanner}>
+            <span style={s.baaBannerLead}>Your clinic isn’t switched on yet. </span>
+            Patients can’t join or check in until it is. We’ll switch it on once the Business
+            Associate Agreement is signed — email{' '}
+            <a href={`mailto:${CONTACT_EMAIL}`} style={s.baaBannerLink}>{CONTACT_EMAIL}</a> to get that started.
+          </div>
+        ) : !BAA_IS_EXECUTED && (
           <div style={s.baaBanner}>
             <span style={s.baaBannerLead}>Demo data only for now. </span>
             You’ll review and sign the full Business Associate Agreement before any real patient
