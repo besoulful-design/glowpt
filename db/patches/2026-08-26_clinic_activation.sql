@@ -107,7 +107,13 @@ create policy checkins_update_own on public.checkins
 
 -- (c) The public /join page can tell the difference between "no such clinic"
 --     and "not open yet", so a patient gets a sentence instead of a thrown error.
-create or replace function public.get_clinic_by_slug(p_slug text)
+-- DROP first, not "create or replace": adding is_active changes the function's
+-- OUT parameters, and Postgres refuses to replace a function whose return type
+-- differs. Inside this transaction the old definition stays visible to other
+-- sessions until commit, so the live /join lookup never sees it missing.
+drop function if exists public.get_clinic_by_slug(text);
+
+create function public.get_clinic_by_slug(p_slug text)
   returns table (id uuid, name text, slug text, is_active boolean)
   language sql stable security definer
   set search_path = public set row_security = off
