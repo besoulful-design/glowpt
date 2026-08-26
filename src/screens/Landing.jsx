@@ -11,7 +11,11 @@ export default function Landing() {
     glow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: 52, color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
     pt: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 52, color: BRAND, letterSpacing: '-0.02em', lineHeight: 1 },
     tagline: { fontWeight: 600, fontSize: 18, color: 'rgba(245,168,26,0.85)', marginBottom: 34 },
-    headline: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: 26, lineHeight: 1.35, color: '#f5efe4', letterSpacing: '-0.01em', marginBottom: 36, maxWidth: '24ch' },
+    // The header is two stacked sentences, not a headline + sub. The second is
+    // stepped down so the pair reads in order instead of running together —
+    // at one size they collided mid-line in iPhone portrait.
+    headline: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: 26, lineHeight: 1.35, color: '#f5efe4', letterSpacing: '-0.01em', marginBottom: 16, maxWidth: '24ch' },
+    headlineTwo: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: 22, lineHeight: 1.4, color: 'rgba(245,239,228,0.72)', letterSpacing: '-0.01em', marginBottom: 36, maxWidth: '24ch' },
     btnPrimary: { display: 'block', width: '100%', padding: '17px 24px', borderRadius: 4, background: '#F5A81A', color: '#0d1825', fontSize: 16, fontWeight: 600, textDecoration: 'none', textAlign: 'center' },
     btnSecondary: { display: 'block', width: '100%', padding: '17px 24px', borderRadius: 4, background: 'transparent', color: 'rgba(245,239,228,0.8)', border: '1px solid rgba(245,239,228,0.18)', fontSize: 16, fontWeight: 500, textDecoration: 'none', textAlign: 'center', marginTop: 12 },
     btns: { width: '100%', maxWidth: 340 },
@@ -29,7 +33,8 @@ export default function Landing() {
         </div>
         <div style={s.tagline}>One good day at a time.</div>
 
-        <div style={s.headline}>A daily check-in app for patients to stay engaged between visits. More plans of care get completed, with zero work for your therapists.</div>
+        <div style={s.headline}>A daily check-in app for patients to stay engaged between visits.</div>
+        <div style={s.headlineTwo}>More plans of care get completed, with zero work for your therapists.</div>
 
         <div style={s.btns}>
           <Link to="/onboard" style={s.btnPrimary}>Bring GlowPT to Your Clinic →</Link>
