@@ -272,10 +272,14 @@ export default function Dashboard() {
         {/* Two different facts, so two different messages. A closed clinic is a
             hard stop — its /join link genuinely refuses patients — and saying
             "demo data only" there would leave a manager wondering why nobody
-            can sign up. clinic.activated_at is undefined until the API deploy
-            that adds it, which reads as closed; harmless, since the same deploy
-            carries both. */}
-        {clinic && !clinic.activated_at ? (
+            can sign up.
+
+            === null, NOT !clinic.activated_at. Netlify ships this file on push
+            while the API ships on a separate cdk deploy, so for a while the old
+            API returns no activated_at at all. undefined would then read as
+            "closed" and tell every live clinic, Riverside included, that it had
+            been switched off. Only an explicit null means closed. */}
+        {clinic && clinic.activated_at === null ? (
           <div style={s.baaBanner}>
             <span style={s.baaBannerLead}>Your clinic isn’t switched on yet. </span>
             Patients can’t join or check in until it is. We’ll switch it on once the Business
