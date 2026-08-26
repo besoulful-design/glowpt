@@ -57,6 +57,10 @@ export default function Admin() {
   const { session, loading: authLoading, signOut } = useAuth()
   const [allowed, setAllowed] = useState(undefined) // undefined = checking
   const [clinics, setClinics] = useState([])
+  // The back link names the clinic itself rather than saying "Dashboard": one
+  // button names a set of clinics, the other names a specific clinic, so which
+  // is which needs no knowledge of roles. Nothing in the UI says "admin".
+  const [myClinic, setMyClinic] = useState(null)
   const [busyId, setBusyId] = useState('')
   const [error, setError] = useState('')
 
@@ -71,6 +75,7 @@ export default function Admin() {
     ;(async () => {
       try {
         const { is_admin } = await api.getAdminMe()
+        api.getClinic().then(c => { if (active) setMyClinic(c) }).catch(() => {})
         if (!active) return
         setAllowed(is_admin)
         if (is_admin) await load()
@@ -126,10 +131,10 @@ export default function Admin() {
         <div style={s.brand}>
           <LogoMark size={34} marginBottom={0} />
           <div style={s.wordmark}>Glow<span style={s.wordmarkPT}>PT</span></div>
-          <div style={s.tag}>Platform admin</div>
+          <div style={s.tag}>All Clinics</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Link to="/dashboard" style={s.navLink}>Dashboard</Link>
+          <Link to="/dashboard" style={s.navLink}>{myClinic?.name || 'Dashboard'}</Link>
           <button style={s.signOut} onClick={signOut}>Sign Out</button>
         </div>
       </div>

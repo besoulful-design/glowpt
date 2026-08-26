@@ -264,7 +264,7 @@ export default function Dashboard() {
         {clinic && <span style={s.clinicName}>{clinic.name}</span>}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {isAdmin && <Link to="/admin" style={s.adminLink}>Admin</Link>}
+        {isAdmin && <Link to="/admin" style={s.adminLink}>All Clinics</Link>}
         <button style={s.signOut} onClick={signOut}>Sign Out</button>
       </div>
     </div>
