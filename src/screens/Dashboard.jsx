@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import * as api from '../lib/api'
 import { useAuth } from '../auth'
 import { AuthShell, LogoMark, BRAND, ui } from './AuthShell'
@@ -40,6 +41,7 @@ const s = {
   baaBanner: { background: 'rgba(245,168,26,0.09)', border: '1px solid rgba(245,168,26,0.35)', borderRadius: 6, padding: '14px 18px', marginBottom: 24, fontSize: 13.5, lineHeight: 1.6, color: 'rgba(245,239,228,0.85)' },
   baaBannerLead: { fontWeight: 600, color: '#F5A81A' },
   baaBannerLink: { color: '#F5A81A' },
+  adminLink: { fontSize: 13, fontWeight: 600, color: '#F5A81A', textDecoration: 'none', border: '1px solid rgba(245,168,26,0.4)', borderRadius: 4, padding: '7px 14px' },
   qrCard: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.2)', borderRadius: 6, padding: 20, marginBottom: 28, display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' },
   qrImg: { width: 104, height: 104, borderRadius: 6, background: '#fff', padding: 6, flexShrink: 0 },
   qrLabel: { fontSize: 12, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
@@ -136,6 +138,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [qrUrl, setQrUrl] = useState('')
+  // Only a platform admin sees the Admin link. The server answers this, and the
+  // /admin screen re-checks on its own — this just decides whether to show it.
+  const [isAdmin, setIsAdmin] = useState(false)
   const [tName, setTName] = useState('')
   const [tEmail, setTEmail] = useState('')
   const [notice, setNotice] = useState('')
@@ -184,6 +189,17 @@ export default function Dashboard() {
     QRCode.toDataURL(url, { width: 320, margin: 2, color: { dark: '#0d1825', light: '#ffffff' } })
       .then(setQrUrl).catch(() => setQrUrl(''))
   }, [clinic])
+
+  // Ask once whether this staff member is also a platform admin. A plain false
+  // on any failure: the link is a convenience, and /admin enforces access itself.
+  useEffect(() => {
+    if (!profile) return
+    let active = true
+    api.getAdminMe()
+      .then(r => { if (active) setIsAdmin(r?.is_admin === true) })
+      .catch(() => { if (active) setIsAdmin(false) })
+    return () => { active = false }
+  }, [profile])
 
   const stats = clinicStats(roster)
   const joinUrl = clinic ? `${window.location.origin}/join/${clinic.slug}` : ''
@@ -247,7 +263,10 @@ export default function Dashboard() {
         <span style={s.wordmark}>Glow<span style={s.wordmarkPT}>PT</span></span>
         {clinic && <span style={s.clinicName}>{clinic.name}</span>}
       </div>
-      <button style={s.signOut} onClick={signOut}>Sign Out</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {isAdmin && <Link to="/admin" style={s.adminLink}>Admin</Link>}
+        <button style={s.signOut} onClick={signOut}>Sign Out</button>
+      </div>
     </div>
   )
 
