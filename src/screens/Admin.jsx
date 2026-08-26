@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import * as api from '../lib/api'
 import { useAuth } from '../auth'
 import { AuthShell, LogoMark, BRAND, ui } from './AuthShell'
@@ -23,6 +23,8 @@ const s = {
   wordmark: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: 26 },
   wordmarkPT: { fontFamily: "'DM Sans', sans-serif", fontStyle: 'normal', fontWeight: 600, color: BRAND },
   tag: { fontSize: 13, color: 'rgba(245,239,228,0.6)', borderLeft: '1px solid rgba(245,239,228,0.15)', paddingLeft: 12 },
+  navLink: { fontSize: 13, fontWeight: 600, color: BRAND, textDecoration: 'none', border: '1px solid rgba(245,168,26,0.4)', borderRadius: 4, padding: '7px 14px' },
+  signOut: { fontSize: 13, color: 'rgba(245,239,228,0.5)', background: 'transparent', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '7px 14px', cursor: 'pointer' },
   wrap: { maxWidth: 1040, margin: '0 auto', padding: '24px clamp(14px, 4vw, 28px) 60px' },
   h1: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: 30, marginBottom: 4 },
   sub: { fontSize: 14, color: 'rgba(245,239,228,0.5)', marginBottom: 26 },
@@ -52,7 +54,7 @@ function when(ts) {
 }
 
 export default function Admin() {
-  const { session, loading: authLoading } = useAuth()
+  const { session, loading: authLoading, signOut } = useAuth()
   const [allowed, setAllowed] = useState(undefined) // undefined = checking
   const [clinics, setClinics] = useState([])
   const [busyId, setBusyId] = useState('')
@@ -125,6 +127,10 @@ export default function Admin() {
           <LogoMark size={34} marginBottom={0} />
           <div style={s.wordmark}>Glow<span style={s.wordmarkPT}>PT</span></div>
           <div style={s.tag}>Platform admin</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Link to="/dashboard" style={s.navLink}>Dashboard</Link>
+          <button style={s.signOut} onClick={signOut}>Sign Out</button>
         </div>
       </div>
 
