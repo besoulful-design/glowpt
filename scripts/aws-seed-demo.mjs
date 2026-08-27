@@ -146,11 +146,37 @@ async function createCognitoUser(email) {
 
 async function resetDemo() {
   console.log('Resetting any existing Riverside demo...');
+
+  // platform_admins.user_id cascades from users, and every demo account is about
+  // to be deleted and recreated with a FRESH Cognito sub. Without this, a routine
+  // re-pristine silently strips David of platform-admin access and /admin starts
+  // bouncing him with no explanation. Capture by email, restore after seeding —
+  // restoring exactly who was an admin before, never granting anyone new.
+  const { rows: adminRows } = await db.query(
+    `select u.email from public.platform_admins pa join public.users u on u.id = pa.user_id`,
+  );
+  savedAdminEmails = adminRows.map(r => r.email);
+  if (savedAdminEmails.length) console.log(`  preserving platform admin: ${savedAdminEmails.join(', ')}`);
+
   for (const email of ALL_EMAILS) await deleteCognitoUser(email);
   // DB: deleting the users cascades to profiles/checkins/consents/access_log.
   await db.query('delete from public.users where email = any($1::citext[])', [ALL_EMAILS]);
   await db.query('delete from public.clinics where slug = $1', [CLINIC.slug]);
   console.log('  cleared Cognito users + DB rows.');
+}
+
+// Set by resetDemo, consumed after seeding once the new identities exist.
+let savedAdminEmails = [];
+
+async function restorePlatformAdmins() {
+  if (!savedAdminEmails.length) return;
+  const { rowCount } = await db.query(
+    `insert into public.platform_admins (user_id)
+     select id from public.users where email = any($1::citext[])
+     on conflict do nothing`,
+    [savedAdminEmails],
+  );
+  console.log(`Platform admin restored (${rowCount} row${rowCount === 1 ? '' : 's'}).`);
 }
 
 async function seedDemo() {
@@ -223,6 +249,7 @@ async function main() {
   try {
     await resetDemo();
     await seedDemo();
+    await restorePlatformAdmins();
     console.log(`\nDone. Riverside PT is pristine.`);
     console.log(`  Manager sign-in:  ${MANAGER_EMAIL}`);
     console.log(`  Showcase patient: ${alias('grace')} (log in AS Grace for the Progress screen)`);
