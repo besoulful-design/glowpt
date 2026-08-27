@@ -44,7 +44,7 @@ export default function Landing() {
         </div>
         <div style={s.tagline}>One good day at a time.</div>
 
-        <div style={s.headline}>A daily check-in app for patients to stay engaged between visits.</div>
+        <div style={s.headline}>A daily check-in app for patients to stay engaged between visits to help complete plans of care.</div>
 
         <div style={s.btns}>
           <Link to="/onboard" style={s.btnPrimary}>Bring GlowPT to Your Clinic →</Link>
