@@ -96,7 +96,11 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 
 **Who does what:** **claude.ai = architect** (wrote the planning docs, lives in the web chat, no repo access). **Claude Code (me) = builder** (executes here). **Planning is done; from here it's David + Claude Code.** Only re-engage claude.ai if David wants a second architect opinion on a big call.
 
-> ## 🧭 NEW THREAD? READ THIS FIRST (state as of 2026-08-24, end of session 5)
+> ## 🧭 NEW THREAD? READ THIS FIRST (state as of 2026-08-26, end of session 6)
+>
+> **✅ SESSION 6 (2026-08-26) SHIPPED A LOT. All of it is live in production and proven; none of it is outstanding work.** In order: the landing page became one header + a **More Info modal** carrying the pitch, the price and a contact address; **$350/mo now appears in the product for the first time** (modal + `/onboard`, where it is the "amount stated at sign-up" the Subscription Agreement refers to); and — the big one — a **per-clinic activation gate plus a platform-admin screen at `/admin`**, so a clinic that signs up is **CLOSED** until David switches it on. Riverside was re-pristined. Full detail in the entries lower down; the two items below are unchanged and remain the only open threads.
+>
+> **🔑 THE ONE NEW OPERATIONAL HABIT:** when a clinic signs up, **nothing happens until David opens `/admin` and presses Switch On.** That is deliberate — it is the only human decision left in the flow, and it is the moment the BAA and the first payment get confirmed. `Record BAA Signed` and `Switch On` are separate buttons on purpose.
 >
 > **Two things are open. Neither is a coding task. Nothing is broken.**
 >
