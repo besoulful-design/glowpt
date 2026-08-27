@@ -51,7 +51,7 @@ export default function Join() {
     try {
       setPending(await sendCode())
     } catch (err) {
-      setError(err?.message || 'Couldn’t send a code just now — try again.')
+      setError(err?.message || 'Couldn’t send a code just now. Try again.')
     } finally {
       setBusy(false)
     }

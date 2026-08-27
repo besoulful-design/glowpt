@@ -39,8 +39,8 @@ export default function CodeVerify({ pending, onResend, onBack }) {
       submitting.current = false
       setBusy(false)
       const msg = /CodeMismatch|NotAuthorized|ExpiredCode|did not/i.test(err?.name || err?.message || '')
-        ? 'That code didn’t work — check it and try again, or resend.'
-        : 'Something went wrong signing you in — please try the code again, or resend.'
+        ? 'That code didn’t work. Check it and try again, or resend.'
+        : 'Something went wrong signing you in. Please try the code again, or resend.'
       setError(msg)
     }
   }
@@ -52,7 +52,7 @@ export default function CodeVerify({ pending, onResend, onBack }) {
       if (next) setFlow(next) // the session rotates on a fresh sign-in code
       setResent(true)
     } catch {
-      setError('Couldn’t resend just now — try again in a moment.')
+      setError('Couldn’t resend just now. Try again in a moment.')
     }
   }
 

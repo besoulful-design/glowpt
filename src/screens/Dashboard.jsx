@@ -302,7 +302,7 @@ export default function Dashboard() {
           <div style={s.baaBanner}>
             <span style={s.baaBannerLead}>Your clinic isn’t switched on yet. </span>
             Patients can’t join or check in until it is. We’ll switch it on once the Business
-            Associate Agreement is signed — email{' '}
+            Associate Agreement is signed. Email{' '}
             <a href={`mailto:${CONTACT_EMAIL}`} style={s.baaBannerLink}>{CONTACT_EMAIL}</a> to get that started.
           </div>
         ) : !BAA_IS_EXECUTED && (
@@ -344,7 +344,7 @@ export default function Dashboard() {
                 <img src={qrUrl} alt="Patient sign-up QR code" style={s.qrImg} />
                 <div style={{ flex: 1, minWidth: 130 }}>
                   <div style={s.qrLabel}>Patient Sign-Up QR</div>
-                  <div style={s.qrHint}>Print this for your front desk and treatment rooms. Patients scan it with their phone camera to join — no links to send.</div>
+                  <div style={s.qrHint}>Print this for your front desk and treatment areas. Patients scan it with their phone camera to join. No links to send.</div>
                   <a href={qrUrl} download={`glowpt-${clinic?.slug || 'clinic'}-qr.png`} style={s.qrDownload}>Download QR ↓</a>
                 </div>
               </div>
@@ -354,7 +354,7 @@ export default function Dashboard() {
             <div style={s.care}>
               <div style={s.careHead}>Care Team</div>
               {therapists.length === 0 && invites.length === 0 && (
-                <div style={s.emptyTeam}>No therapists yet. Invite one below — once they sign in, you can assign patients to them.</div>
+                <div style={s.emptyTeam}>No therapists yet. Invite one below, and once they sign in you can assign patients to them.</div>
               )}
               {therapists.map(t => {
                 const load = roster.filter(r => r.therapistId === t.id).length
@@ -393,7 +393,7 @@ export default function Dashboard() {
         {!loading && roster.length > 0 && (
           <>
             <div style={s.legend}>
-              <span style={s.legendLabel}>3-Day Trend — Daily Feeling</span>
+              <span style={s.legendLabel}>3-Day Trend · Daily Feeling</span>
               {[1, 2, 3, 4, 5].map(n => (
                 <span key={n} style={s.legendItem}>
                   <span style={s.face}>{FEELINGS[n].emoji}</span> {FEELINGS[n].word}

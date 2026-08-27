@@ -26,11 +26,11 @@ export function patientPrivacyNotice(clinicName) {
     },
     {
       heading: 'Who can see it',
-      body: `Your care team at ${clinic} — your assigned therapist and the practice manager. Every time a staff member opens patient information, that access is recorded. No other clinic using GlowPT can see anything about you.`,
+      body: `Your care team at ${clinic}: your assigned therapist and the practice manager. Every time a staff member opens patient information, that access is recorded. No other clinic using GlowPT can see anything about you.`,
     },
     {
       heading: 'How the daily reflection is written',
-      body: `The short message you get back after each check-in is written by an AI assistant. To write it, we send that one check-in — your first name, your feeling score, your movement, and your note — to our AI provider, Anthropic. Your email address, your last name, and your history are not sent. Anthropic works for us under a written agreement and does not use what you write to train its systems.`,
+      body: `The short message you get back after each check-in is written by an AI assistant. To write it, we send that one check-in (your first name, your feeling score, your movement, and your note) to our AI provider, Anthropic. Your email address, your last name, and your history are not sent. Anthropic works for us under a written agreement and does not use what you write to train its systems.`,
     },
     {
       heading: 'The weekly email',
@@ -46,7 +46,7 @@ export function patientPrivacyNotice(clinicName) {
     },
     {
       heading: 'Your choices',
-      body: `Your health record belongs to ${clinic}, so requests to see, correct, or delete your information go to them directly, and they can answer questions about how it is handled. You can stop using GlowPT whenever you like — ask ${clinic} to close your account. Choosing not to use GlowPT does not affect the care you receive.`,
+      body: `Your health record belongs to ${clinic}, so requests to see, correct, or delete your information go to them directly, and they can answer questions about how it is handled. You can stop using GlowPT whenever you like. Ask ${clinic} to close your account. Choosing not to use GlowPT does not affect the care you receive.`,
     },
   ]
 }

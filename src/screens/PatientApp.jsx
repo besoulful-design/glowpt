@@ -82,7 +82,7 @@ function streakFromDays(days) {
 
 function streakMessage(s) {
   if (s <= 0) return 'Check in today to start your streak.'
-  if (s === 1) return 'Great start — one day down.'
+  if (s === 1) return 'Great start. One day down.'
   if (s < 4) return 'You’re building momentum.'
   if (s < 7) return 'You’re on a roll!'
   return 'Incredible consistency 🌟'
@@ -96,8 +96,8 @@ function trendMessage(days) {
   if (recent == null) return 'Check in to start building your trend.'
   if (prev == null) return 'Keep checking in to see your trend take shape.'
   if (recent >= prev + 0.4) return 'You’re trending up lately 🌤'
-  if (recent <= prev - 0.4) return 'Some tougher days recently — gentle steps still count 💛'
-  return 'You’re holding steady — consistency matters most 🌱'
+  if (recent <= prev - 0.4) return 'Some tougher days recently. Gentle steps still count 💛'
+  return 'You’re holding steady. Consistency matters most 🌱'
 }
 
 // One-line takeaway for the month: average mood + how many days.
@@ -180,7 +180,7 @@ export default function PatientApp() {
 
   const handleSubmit = async () => {
     setLoading(true)
-    let response = "You showed up today — and that's everything."
+    let response = "You showed up today, and that's everything."
 
     try {
       const allMovements = [...movements, ...(otherMovement.trim() ? [otherMovement.trim()] : [])]
@@ -189,14 +189,14 @@ export default function PatientApp() {
       const feelingWord = selectedFeeling ? feelingData[selectedFeeling].word : 'not rated'
       const isPlanningTo = movements.includes('Planning to do my exercises')
 
-      const prompt = `You are GlowPT, a warm and encouraging wellness companion for physical therapy patients. Write a short, personal response (3-4 sentences max) for ${firstName} based on their daily check-in. Be warm, specific, and uplifting — never clinical. Use their name once.
+      const prompt = `You are GlowPT, a warm and encouraging wellness companion for physical therapy patients. Write a short, personal response (3-4 sentences max) for ${firstName} based on their daily check-in. Be warm, specific, and uplifting, never clinical. Use their name once.
 
 Their check-in today:
 - Feeling score: ${selectedFeeling || 'not rated'} out of 5 (${feelingWord})
 - Movement: ${movementText}${isPlanningTo ? ' (note: they are planning to do their exercises later today, not done yet)' : ''}
 - Their note: "${noteText}"
 
-Respond directly to ${firstName} in second person. Reference what they actually shared. End with one gentle encouragement.`
+Respond directly to ${firstName} in second person. Reference what they actually shared. End with one gentle encouragement. Do not use em dashes in your response.`
 
       // The reflection now comes from POST /ai-response (behind the Cognito
       // authorizer). Falls back gracefully on any error.
@@ -531,7 +531,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
               </div>
 
               <div style={{ ...styles.cardSection, padding: '20px 16px' }}>
-                <div style={{ ...styles.streakLabel, paddingLeft: '4px' }}>This Week — Tap a Day</div>
+                <div style={{ ...styles.streakLabel, paddingLeft: '4px' }}>This Week · Tap a Day</div>
                 <div style={{ ...styles.streakDots, justifyContent: 'space-between', gap: '4px' }}>
                   {week.map(d => (
                     <div key={d.id} style={styles.streakDot(d.done, d.today)} onClick={() => openJournal(d)}>{d.day}</div>
@@ -574,7 +574,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
               </div>
 
               <div style={styles.streakSection}>
-                <div style={styles.streakLabel}>Your Week — Tap Any Day</div>
+                <div style={styles.streakLabel}>Your Week · Tap Any Day</div>
                 <div style={styles.streakDots}>
                   {week.map(d => (
                     <div key={d.id} style={styles.streakDot(d.done, d.today)} onClick={() => openJournal(d)}>{d.day}</div>

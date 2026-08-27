@@ -93,7 +93,7 @@ export default function Admin() {
       await api.setClinicActive(clinic.id, active)
       await load()
     } catch (err) {
-      setError(err?.message || 'That didn’t go through — try again.')
+      setError(err?.message || 'That didn’t go through. Try again.')
     } finally {
       setBusyId('')
     }
@@ -106,7 +106,7 @@ export default function Admin() {
       await api.recordClinicBaa(clinic.id, BAA_VERSION)
       await load()
     } catch (err) {
-      setError(err?.message || 'That didn’t go through — try again.')
+      setError(err?.message || 'That didn’t go through. Try again.')
     } finally {
       setBusyId('')
     }

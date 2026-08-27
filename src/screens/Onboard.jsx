@@ -54,18 +54,18 @@ export default function Onboard() {
     try {
       await api.getClinicBySlug(effectiveSlug)
       setBusy(false)
-      return setError('That clinic web name is taken — try another.')
+      return setError('That clinic web name is taken. Try another.')
     } catch (err) {
       if (err.status !== 404) {
         setBusy(false)
-        return setError('Couldn’t check that name just now — try again.')
+        return setError('Couldn’t check that name just now. Try again.')
       }
     }
 
     try {
       setPending(await sendCode())
     } catch (err) {
-      setError(err?.message || 'Couldn’t send a code just now — try again.')
+      setError(err?.message || 'Couldn’t send a code just now. Try again.')
     } finally {
       setBusy(false)
     }
