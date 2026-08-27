@@ -88,7 +88,7 @@ export default function Onboard() {
             touching, so it is shown as a result rather than asked as a question.
             The field only appears if they choose to change it — which also keeps
             the signup form at four fields on a page selling a one-minute setup. */}
-        <div style={{ textAlign: 'left', fontSize: 12, color: 'rgba(245,239,228,0.4)', marginTop: -4, lineHeight: 1.6 }}>
+        <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(245,239,228,0.4)', marginTop: -4, lineHeight: 1.6 }}>
           Patient link: {window.location.host}/join/<strong style={{ color: '#F5A81A' }}>{effectiveSlug || 'your-clinic'}</strong>
           {!editingSlug && (
             <>
@@ -114,9 +114,9 @@ export default function Onboard() {
 
         {/* The amount is on screen at the moment they commit — this IS the
             "amount stated at sign-up" the Subscription Agreement refers to. */}
-        <div style={{ textAlign: 'left', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.75)', marginTop: 6 }}>{PRICE_LINE}</div>
+        <div style={{ textAlign: 'center', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.75)', marginTop: 6 }}>{PRICE_LINE}</div>
 
-        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.6)', cursor: 'pointer', marginTop: 2 }}>
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', justifyContent: 'center', textAlign: 'left', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.6)', cursor: 'pointer', marginTop: 2 }}>
           <input type="checkbox" checked={baaReviewed} onChange={e => setBaaReviewed(e.target.checked)}
             style={{ marginTop: 3, accentColor: '#F5A81A', width: 16, height: 16, flexShrink: 0 }} />
           <span>{BAA_IS_EXECUTED ? 'I agree to the' : 'I’ve reviewed the'}{' '}

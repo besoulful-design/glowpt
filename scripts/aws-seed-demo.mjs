@@ -157,8 +157,12 @@ async function seedDemo() {
   await db.query('begin');
   try {
     // 1. Clinic
+    // activated_at is set explicitly: since 2026-08-26 a clinic is CLOSED until a
+    // platform admin switches it on, and a demo clinic that cannot accept a join
+    // or a check-in is not a demo. This is the one place a clinic is created
+    // outside provision_clinic, so it is the one place that must remember.
     const { rows: [clinic] } = await db.query(
-      'insert into public.clinics (name, slug) values ($1, $2) returning id',
+      'insert into public.clinics (name, slug, activated_at) values ($1, $2, now()) returning id',
       [CLINIC.name, CLINIC.slug],
     );
     console.log(`Clinic: ${CLINIC.name} (${clinic.id})`);
