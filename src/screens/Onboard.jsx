@@ -17,6 +17,7 @@ export default function Onboard() {
   const [clinicName, setClinicName] = useState('')
   const [slug, setSlug] = useState('')
   const [slugEdited, setSlugEdited] = useState(false)
+  const [editingSlug, setEditingSlug] = useState(false)
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [baaReviewed, setBaaReviewed] = useState(false)
@@ -83,11 +84,28 @@ export default function Onboard() {
       <form onSubmit={handleSubmit} style={ui.form}>
         <input style={ui.input} placeholder="Clinic name (e.g. Riverside PT)" value={clinicName}
           onChange={e => { setClinicName(e.target.value); if (!slugEdited) setSlug(slugify(e.target.value)) }} />
-        <div style={{ textAlign: 'left', fontSize: 12, color: 'rgba(245,239,228,0.4)', marginTop: -4 }}>
+        {/* The link name is derived from the clinic name and almost never needs
+            touching, so it is shown as a result rather than asked as a question.
+            The field only appears if they choose to change it — which also keeps
+            the signup form at four fields on a page selling a one-minute setup. */}
+        <div style={{ textAlign: 'left', fontSize: 12, color: 'rgba(245,239,228,0.4)', marginTop: -4, lineHeight: 1.6 }}>
           Patient link: {window.location.host}/join/<strong style={{ color: '#F5A81A' }}>{effectiveSlug || 'your-clinic'}</strong>
+          {!editingSlug && (
+            <>
+              {' · '}
+              <span role="button" tabIndex={0}
+                onClick={() => setEditingSlug(true)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingSlug(true) } }}
+                style={{ color: '#F5A81A', textDecoration: 'underline', cursor: 'pointer' }}>
+                Edit
+              </span>
+            </>
+          )}
         </div>
-        <input style={ui.input} placeholder="Clinic web name" value={effectiveSlug}
-          onChange={e => { setSlugEdited(true); setSlug(slugify(e.target.value)) }} />
+        {editingSlug && (
+          <input style={ui.input} placeholder="Link name" value={effectiveSlug} autoFocus
+            onChange={e => { setSlugEdited(true); setSlug(slugify(e.target.value)) }} />
+        )}
         <input style={ui.input} placeholder="Your name" value={fullName}
           onChange={e => setFullName(e.target.value)} autoComplete="name" />
         <input style={ui.input} placeholder="Your work email" type="email" value={email}
