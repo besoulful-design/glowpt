@@ -1,6 +1,7 @@
 # GlowPT — commercial & marketing state (handoff)
 
-*Written 2026-08-27, for the FranklinAI marketing-site project. Assembled from
+*Written 2026-08-27, updated 2026-08-28 (discovery call resolved, inbound link
+from the FranklinAI site recorded). For the FranklinAI marketing-site project. Assembled from
 `CLAUDE.md`, `src/lib/marketing.js`, `src/screens/Onboard.jsx`,
 `src/screens/Dashboard.jsx`, and the two legal drafts in `legal/` — not from
 memory. If this file and the code ever disagree, the code wins.*
@@ -51,6 +52,7 @@ This is the most important thing for marketing to get right.
   left in the flow**, and it is deliberately the moment the BAA and the first
   payment get confirmed. "Record BAA Signed" and "Switch On" are separate buttons.
 - So the honest description is: **self-serve sign-up, manually activated.**
+  (Framed on the FranklinAI side as "two doors, one gate" — see below.)
   Marketing can say "set up your clinic in a minute" — it should NOT imply
   patients can start checking in immediately after signup.
 - What a manager sees on a closed clinic (live copy):
@@ -58,12 +60,41 @@ This is the most important thing for marketing to get right.
   > is. We'll switch it on once the Business Associate Agreement is signed —
   > email david@franklinaisolutions.com to get that started.
 
-## Discovery call — NO RECORD
+## Discovery call — RESOLVED 2026-08-28
 
-Nothing about a discovery call exists in the GlowPT repo, project doc, or either
-contract. The only human touchpoint currently designed is the activation email
-above. If a discovery-call step was decided elsewhere, it needs reconciling with
-the activation gate, since that is where such a call would naturally slot in.
+*The first version of this note said "no record" and asked for reconciliation.
+Answered on the FranklinAI side; recorded here so nobody reopens it.*
+
+The discovery call is real and lives on the FranklinAI site, not in this repo:
+a cal.com booking link in the GlowPT modal, labelled "Book a Free Discovery Call".
+That is why grepping this repo found nothing.
+
+**There is no conflict with the activation gate. They are the same moment wearing
+different clothes** — both are the human step where the BAA and the money get
+confirmed.
+
+- The owner who wants to talk first **books the call**, and gets switched on after.
+- The owner who wants to start **signs up at `/onboard`, lands closed, emails
+  David**, and gets switched on after.
+
+**Two doors, one gate.** The gate was already built, which is why the FranklinAI
+modal can carry both buttons honestly.
+
+## Inbound traffic from the FranklinAI site
+
+As of 2026-08-27 the GlowPT modal on franklinaisolutions.com carries two CTAs:
+a **ghost** "Bring GlowPT to Your Clinic" → `https://glowpt.app/onboard` (new tab)
+and a **filled** "Book a Free Discovery Call" → cal.com. Self-serve sits first;
+the filled style stays exclusive to the call, site-wide.
+
+Consequences for this repo:
+- **`/onboard` is now a linked destination from a marketing surface**, not only a
+  URL David hands out. Its copy has to stand on its own.
+- The ghost button's label deliberately matches glowpt.app's own primary button,
+  so the click never lands on a page showing an identical button. **If the landing
+  page's button label changes, that match breaks** and the FranklinAI side needs telling.
+- `/onboard` states that patients cannot join until the clinic is switched on
+  (added 2026-08-28), so the closed dashboard is expected rather than alarming.
 
 ## Contact — one hard rule
 

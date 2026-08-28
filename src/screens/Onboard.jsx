@@ -132,6 +132,15 @@ export default function Onboard() {
         {error && <div style={ui.error}>{error}</div>}
         <button style={ui.btn} disabled={busy}>{busy ? 'Setting up…' : 'Create my clinic →'}</button>
       </form>
+      {/* A new clinic is created CLOSED and cannot take a patient until an admin
+          switches it on, so without this line the manager signs up full of intent
+          and lands on a dashboard that looks broken. Deliberately promises no
+          timeframe and no email: activation is a manual column flip that sends
+          nothing, so the dashboard banner is the only next step that actually
+          exists. Point at it rather than at a notification we do not send. */}
+      <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'rgba(245,239,228,0.55)', marginTop: 16, maxWidth: '38ch' }}>
+        Patients can’t join until we switch your clinic on. You’ll see the next step on your dashboard as soon as you sign up.
+      </div>
       {!BAA_IS_EXECUTED && (
         <div style={ui.fine}>This is a summary. You’ll review and sign the full agreement before any real patient information enters GlowPT.</div>
       )}
