@@ -17,7 +17,7 @@ export const MONTHLY_PRICE_USD = 350
 export const PRICE_LINE = `$${MONTHLY_PRICE_USD} per month, per clinic. Patients join free.`
 
 export const whatGlowptIs = {
-  lead: 'Patients walk out doing great, then drift off before their plan of care is done. GlowPT keeps them engaged between visits, so more plans of care get completed and the clinic stays full.',
+  lead: 'The GlowPT app keeps patients engaged between visits, so more plans of care get completed and the clinic stays full.',
   points: [
     'A 30-second daily check-in, with warm encouragement that keeps patients coming back.',
     'Zero work for your therapists. No building, no monitoring, no calls.',

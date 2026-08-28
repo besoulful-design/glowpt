@@ -15,7 +15,11 @@ export default function Landing() {
     glow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: 52, color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
     pt: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 52, color: BRAND, letterSpacing: '-0.02em', lineHeight: 1 },
     tagline: { fontWeight: 600, fontSize: 18, color: 'rgba(245,168,26,0.85)', marginBottom: 34 },
-    headline: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: 26, lineHeight: 1.35, color: '#f5efe4', letterSpacing: '-0.01em', marginBottom: 36, maxWidth: '24ch' },
+    // fontStyle is stated explicitly and must stay. font-style INHERITS, and the
+    // Fraunces import here loads only an upright-300 and an italic-400 instance,
+    // so anything that leaves the property unset is one stray ancestor (or one
+    // Safari font-matching quirk) away from rendering the hero in italic. It did.
+    headline: { fontFamily: "'Fraunces', serif", fontStyle: 'normal', fontWeight: 300, fontSize: 26, lineHeight: 1.35, color: '#f5efe4', letterSpacing: '-0.01em', marginBottom: 36, maxWidth: '24ch' },
     btnPrimary: { display: 'block', width: '100%', padding: '17px 24px', borderRadius: 4, background: '#F5A81A', color: '#0d1825', fontSize: 16, fontWeight: 600, textDecoration: 'none', textAlign: 'center' },
     btnSecondary: { display: 'block', width: '100%', padding: '17px 24px', borderRadius: 4, background: 'transparent', color: 'rgba(245,239,228,0.8)', border: '1px solid rgba(245,239,228,0.18)', fontSize: 16, fontWeight: 500, textDecoration: 'none', textAlign: 'center', marginTop: 12 },
     btns: { width: '100%', maxWidth: 340 },
