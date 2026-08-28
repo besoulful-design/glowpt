@@ -6,6 +6,7 @@ import { AuthShell, LogoMark, Brand, ui } from './AuthShell'
 import { BAA_IS_EXECUTED, BAA_SUMMARY, BAA_SUMMARY_INTRO } from '../lib/legal'
 import { PRICE_LINE } from '../lib/marketing'
 import CodeVerify from './CodeVerify'
+import { useScrollLock } from '../lib/useScrollLock'
 
 function slugify(s) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
@@ -25,6 +26,9 @@ export default function Onboard() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [pending, setPending] = useState(null)
+
+  // Above the early return below: hooks cannot sit after a conditional return.
+  useScrollLock(showBaa)
 
   const effectiveSlug = slugEdited ? slug : slugify(clinicName)
 
@@ -77,7 +81,6 @@ export default function Onboard() {
   return (
     <AuthShell>
       <LogoMark size={128} />
-      <div style={ui.eyebrow}>For Clinics</div>
       <div style={ui.title}>Bring <Brand /> to Your Clinic</div>
       <div style={ui.muted}>Set up your clinic in a minute. You’ll get a private link to share with your patients.</div>
 

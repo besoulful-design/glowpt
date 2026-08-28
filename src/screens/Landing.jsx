@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LogoMark, BRAND } from './AuthShell'
 import { PRICE_LINE, whatGlowptIs, CONTACT_EMAIL } from '../lib/marketing'
+import { useScrollLock } from '../lib/useScrollLock'
 
 // Public front door at "/" for logged-out visitors.
 // Clinics → onboard; returning patients & staff → sign in.
 export default function Landing() {
   const [showInfo, setShowInfo] = useState(false)
+  useScrollLock(showInfo)
 
   const s = {
     page: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 28px 56px' },

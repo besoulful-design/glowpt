@@ -4,6 +4,7 @@ import * as api from '../lib/api'
 import * as cognito from '../lib/cognito'
 import { savePendingJoin, useAuth } from '../auth'
 import { AuthShell, LogoMark, Brand, ui } from './AuthShell'
+import { useScrollLock } from '../lib/useScrollLock'
 import { patientPrivacyNotice, PRIVACY_NOTICE_VERSION } from '../lib/legal'
 import CodeVerify from './CodeVerify'
 
@@ -17,6 +18,7 @@ export default function Join() {
   const [email, setEmail] = useState('')
   const [consented, setConsented] = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
+  useScrollLock(showPrivacy)
   const [pending, setPending] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
