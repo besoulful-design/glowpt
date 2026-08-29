@@ -67,4 +67,14 @@ export const ui = {
   btn: { width: '100%', padding: '16px 24px', border: 'none', borderRadius: 4, background: '#F5A81A', color: '#0d1825', fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, cursor: 'pointer', marginTop: 4 },
   error: { color: '#e8a0a0', fontSize: 13, textAlign: 'left' },
   fine: { fontSize: 12, color: 'rgba(245,239,228,0.35)', marginTop: 18, fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
+
+  // Modal close controls, shared by all three modals (More Info, BAA, privacy).
+  // One definition on purpose, same reasoning as lib/useScrollLock.js.
+  //
+  // The X is absolutely placed, so its panel needs position: 'relative'. It sits
+  // INSIDE the panel's own scroll box and therefore scrolls away with the content,
+  // which matches the FranklinAI site and is why the small Close at the foot is
+  // kept: the X dismisses from the top, Close dismisses when you have read to the end.
+  modalCloseX: { position: 'absolute', top: 10, right: 12, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'none', border: 'none', borderRadius: 4, color: 'rgba(245,239,228,0.45)', fontSize: 17, lineHeight: 1, cursor: 'pointer' },
+  modalCloseBtn: { display: 'block', margin: '20px auto 0', padding: '9px 24px', borderRadius: 4, background: '#F5A81A', color: '#0d1825', fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer' },
 }

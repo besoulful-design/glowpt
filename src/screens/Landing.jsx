@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { LogoMark, BRAND } from './AuthShell'
+import { LogoMark, BRAND, ui } from './AuthShell'
 import { PRICE_LINE, whatGlowptIs, CONTACT_EMAIL } from '../lib/marketing'
 import { useScrollLock } from '../lib/useScrollLock'
 
@@ -29,7 +29,7 @@ export default function Landing() {
     footer: { fontSize: 12, color: 'rgba(245,239,228,0.3)', marginTop: 40, fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
     moreInfo: { background: 'none', border: 'none', font: 'inherit', fontSize: 14, fontWeight: 500, color: BRAND, textDecoration: 'underline', cursor: 'pointer', padding: 0, marginTop: 20 },
     overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 200 },
-    modal: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' },
+    modal: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, position: 'relative', padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' },
     modalHead: { fontSize: 12, fontWeight: 600, letterSpacing: '0.01em', color: BRAND, marginBottom: 14 },
     modalLead: { fontSize: 14, lineHeight: 1.65, color: 'rgba(245,239,228,0.8)', margin: '0 0 18px' },
     bullet: { display: 'flex', gap: 10, fontSize: 14, lineHeight: 1.6, color: 'rgba(245,239,228,0.8)', marginBottom: 12 },
@@ -37,7 +37,6 @@ export default function Landing() {
     price: { fontSize: 14, lineHeight: 1.6, color: 'rgba(245,239,228,0.95)', fontWeight: 500, borderTop: '1px solid rgba(245,239,228,0.12)', paddingTop: 16, marginTop: 18 },
     contact: { fontSize: 13, lineHeight: 1.6, color: 'rgba(245,239,228,0.6)', marginTop: 10 },
     contactLink: { color: BRAND },
-    modalClose: { display: 'block', width: '100%', padding: '15px 24px', borderRadius: 4, background: BRAND, color: '#0d1825', fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', marginTop: 20 },
   }
 
   return (
@@ -69,6 +68,7 @@ export default function Landing() {
       {showInfo && (
         <div style={s.overlay} onClick={() => setShowInfo(false)}>
           <div style={s.modal} onClick={e => e.stopPropagation()}>
+            <button type="button" aria-label="Close" style={ui.modalCloseX} onClick={() => setShowInfo(false)}>✕</button>
             <div style={s.modalHead}>How GlowPT Works</div>
             <p style={s.modalLead}>{whatGlowptIs.lead}</p>
             {whatGlowptIs.points.map(point => (
@@ -78,7 +78,7 @@ export default function Landing() {
             <div style={s.contact}>
               Questions? Email <a href={`mailto:${CONTACT_EMAIL}`} style={s.contactLink}>{CONTACT_EMAIL}</a>.
             </div>
-            <button type="button" style={s.modalClose} onClick={() => setShowInfo(false)}>Close</button>
+            <button type="button" style={ui.modalCloseBtn} onClick={() => setShowInfo(false)}>Close</button>
           </div>
         </div>
       )}

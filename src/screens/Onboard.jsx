@@ -152,7 +152,8 @@ export default function Onboard() {
         <div onClick={() => setShowBaa(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 200 }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, padding: 28, maxWidth: 520, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' }}>
+            style={{ background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, position: 'relative', padding: 28, maxWidth: 520, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' }}>
+            <button type="button" aria-label="Close" style={ui.modalCloseX} onClick={() => setShowBaa(false)}>✕</button>
             <div style={{ ...ui.eyebrow, marginBottom: 14 }}>Business Associate Agreement</div>
             <div style={{ fontSize: 13.5, lineHeight: 1.65, color: 'rgba(245,239,228,0.78)' }}>
               {!BAA_IS_EXECUTED && (
@@ -165,7 +166,7 @@ export default function Onboard() {
                 </div>
               ))}
             </div>
-            <button onClick={() => setShowBaa(false)} style={{ ...ui.btn, marginTop: 20 }}>Close</button>
+            <button onClick={() => setShowBaa(false)} style={ui.modalCloseBtn}>Close</button>
           </div>
         </div>
       )}
