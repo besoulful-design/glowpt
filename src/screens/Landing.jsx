@@ -21,7 +21,7 @@ export default function Landing() {
     // Fraunces import here loads only an upright-300 and an italic-400 instance,
     // so anything that leaves the property unset is one stray ancestor (or one
     // Safari font-matching quirk) away from rendering the hero in italic. It did.
-    headline: { fontFamily: "'Fraunces', serif", fontStyle: 'normal', fontWeight: 300, fontSize: 26, lineHeight: 1.35, color: '#f5efe4', letterSpacing: '-0.01em', marginBottom: 36, maxWidth: '24ch' },
+    headline: { fontFamily: "'Fraunces', serif", fontStyle: 'normal', fontWeight: 300, fontSize: 26, lineHeight: 1.35, color: '#f5efe4', letterSpacing: '-0.01em', marginBottom: 36, maxWidth: '28ch' },
     btnPrimary: { display: 'block', width: '100%', padding: '17px 24px', borderRadius: 4, background: '#F5A81A', color: '#0d1825', fontSize: 16, fontWeight: 600, textDecoration: 'none', textAlign: 'center' },
     btnSecondary: { display: 'block', width: '100%', padding: '17px 24px', borderRadius: 4, background: 'transparent', color: 'rgba(245,239,228,0.8)', border: '1px solid rgba(245,239,228,0.18)', fontSize: 16, fontWeight: 500, textDecoration: 'none', textAlign: 'center', marginTop: 12 },
     btns: { width: '100%', maxWidth: 340 },
@@ -49,7 +49,7 @@ export default function Landing() {
         </div>
         <div style={s.tagline}>One good day at a time.</div>
 
-        <div style={s.headline}>The GlowPT app keeps patients engaged between visits, so more plans of care get completed and the clinic stays full.</div>
+        <div style={s.headline}>The GlowPT app engages patients between visits. More plans of care get completed and the clinic stays full.</div>
 
         <div style={s.btns}>
           <Link to="/onboard" style={s.btnPrimary}>Bring GlowPT to Your Clinic →</Link>

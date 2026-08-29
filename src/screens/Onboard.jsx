@@ -81,7 +81,9 @@ export default function Onboard() {
   return (
     <AuthShell>
       <LogoMark size={128} />
-      <div style={ui.title}>Bring <Brand /> to Your Clinic</div>
+      {/* Explicit break: the natural wrap put "Your" on line 1 at desktop width
+          and broke differently per browser. This pins it to Bring GlowPT to / Your Clinic. */}
+      <div style={ui.title}>Bring <Brand /> to<br />Your Clinic</div>
       <div style={ui.muted}>Set up your clinic in a minute. You’ll get a private link to share with your patients.</div>
 
       <form onSubmit={handleSubmit} style={ui.form}>
