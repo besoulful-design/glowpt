@@ -49,7 +49,7 @@ export default function Landing() {
         </div>
         <div style={s.tagline}>One good day at a time.</div>
 
-        <div style={s.headline}>The GlowPT app engages patients between visits. More plans of care get completed and the clinic stays full.</div>
+        <div style={s.headline}>The GlowPT app engages patients between visits. More completed plans of care and the clinic stays full.</div>
 
         <div style={s.btns}>
           <Link to="/onboard" style={s.btnPrimary}>Bring GlowPT to Your Clinic →</Link>
