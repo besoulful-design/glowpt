@@ -134,6 +134,20 @@ export default function Onboard() {
           </span>
         </label>
 
+        {/* This line qualifies the checkbox directly above it: the link opens a
+            SUMMARY, not the executable agreement. It lived below the submit
+            button until 2026-08-30, where it read as generic footer fine print
+            and a manager could tick the box without ever meeting it. It is
+            gated on the same !BAA_IS_EXECUTED flag as the checkbox's own
+            "I've reviewed" wording, so the two are a pair and must move
+            together. Styled as DM Sans, NOT ui.fine: ui.fine is italic Fraunces
+            and every other line on this screen is upright sans. */}
+        {!BAA_IS_EXECUTED && (
+          <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'rgba(245,239,228,0.55)', maxWidth: '44ch', marginTop: 8 }}>
+            This is a summary. You’ll review and sign the full agreement before any real patient information enters GlowPT.
+          </div>
+        )}
+
         {error && <div style={ui.error}>{error}</div>}
         <button style={ui.btn} disabled={busy}>{busy ? 'Setting up…' : 'Create my clinic →'}</button>
       </form>
@@ -143,12 +157,9 @@ export default function Onboard() {
           timeframe and no email: activation is a manual column flip that sends
           nothing, so the dashboard banner is the only next step that actually
           exists. Point at it rather than at a notification we do not send. */}
-      <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'rgba(245,239,228,0.55)', marginTop: 16, maxWidth: '38ch' }}>
+      <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'rgba(245,239,228,0.55)', marginTop: 16, maxWidth: '44ch' }}>
         Patients can’t join until we switch your clinic on. You’ll see the next step on your dashboard as soon as you sign up.
       </div>
-      {!BAA_IS_EXECUTED && (
-        <div style={ui.fine}>This is a summary. You’ll review and sign the full agreement before any real patient information enters GlowPT.</div>
-      )}
 
       {showBaa && (
         <div onClick={() => setShowBaa(false)}
