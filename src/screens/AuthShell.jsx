@@ -66,7 +66,11 @@ export const ui = {
   input: { width: '100%', background: '#1a2840', border: '1px solid rgba(245,239,228,0.12)', borderRadius: 4, padding: '15px 16px', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", fontSize: 15 },
   btn: { width: '100%', padding: '16px 24px', border: 'none', borderRadius: 4, background: '#F5A81A', color: '#0d1825', fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 600, cursor: 'pointer', marginTop: 4 },
   error: { color: '#e8a0a0', fontSize: 13, textAlign: 'left' },
-  fine: { fontSize: 12, color: 'rgba(245,239,228,0.35)', marginTop: 18, fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
+  // Upright DM Sans, inherited from AuthShell. It was italic Fraunces until
+  // 2026-08-30: a serif italic dropped into screens that are otherwise upright
+  // sans read as a different typeface rather than as quieter text. Fine print
+  // is now distinguished by size and opacity alone, which is the whole job.
+  fine: { fontSize: 12, color: 'rgba(245,239,228,0.35)', marginTop: 18 },
 
   // Modal close controls, shared by all three modals (More Info, BAA, privacy).
   // One definition on purpose, same reasoning as lib/useScrollLock.js.

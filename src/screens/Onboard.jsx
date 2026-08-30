@@ -140,8 +140,11 @@ export default function Onboard() {
             and a manager could tick the box without ever meeting it. It is
             gated on the same !BAA_IS_EXECUTED flag as the checkbox's own
             "I've reviewed" wording, so the two are a pair and must move
-            together. Styled as DM Sans, NOT ui.fine: ui.fine is italic Fraunces
-            and every other line on this screen is upright sans. */}
+            together. It does not use ui.fine because it sits mid-form and wants
+            the same weight as the closed-clinic note below the button, not the
+            fainter 0.35 of true fine print. (ui.fine was italic Fraunces when
+            this line was moved out of it; it is upright sans as of 2026-08-30,
+            so the typeface no longer differs, only the opacity.) */}
         {!BAA_IS_EXECUTED && (
           <div style={{ fontSize: 12.5, lineHeight: 1.6, color: 'rgba(245,239,228,0.55)', maxWidth: '44ch', marginTop: 8 }}>
             This is a summary. You’ll review and sign the full agreement before any real patient information enters GlowPT.
