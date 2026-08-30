@@ -26,7 +26,7 @@ export const whatGlowptIs = {
   points: [
     'A 30-second daily check-in, with warm encouragement that keeps patients coming back.',
     'A private journal and weekly streaks, in every patient\'s pocket.',
-    'One subscription covers the clinic, no matter how many patients you have. Patients join free.',
+    'One subscription covers the clinic and all its patients for free.',
     'Reaches every patient, not just the ones you can bill remote monitoring on.',
     'More completed plans of care, because engaged patients finish their care.',
     'Zero work for your therapists. No building, no monitoring, no calls.',
