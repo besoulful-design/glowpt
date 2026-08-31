@@ -481,7 +481,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
             <div style={styles.progressBody}>
               <div style={styles.streakHero}>
                 <div style={styles.streakBig}>{streak}</div>
-                <div style={styles.streakUnit}>day streak</div>
+                <div style={styles.streakUnit}>day streak{streak > 0 ? ' 🔥' : ''}</div>
                 <div style={styles.streakMsg}>{streakMessage(streak)}</div>
               </div>
 

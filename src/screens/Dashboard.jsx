@@ -411,7 +411,7 @@ export default function Dashboard() {
                   <div key={r.id} style={{ ...s.row, gridTemplateColumns: rosterCols }}>
                     <div style={s.name}><span>{r.name}</span><NameFlags flags={r.flags} /></div>
                     <div style={s.cell}>{relativeDay(r.lastCheckin)}</div>
-                    <div style={{ ...s.cell, textAlign: 'center' }}>{r.streak > 0 ? String(r.streak) : '—'}</div>
+                    <div style={{ ...s.cell, textAlign: 'center' }}>{r.streak > 0 ? `${r.streak}🔥` : '—'}</div>
                     <div><Trend last3={r.last3} /></div>
                     <div style={{ ...s.cell, textAlign: 'center' }}>
                       {r.avg != null
