@@ -74,7 +74,8 @@ const firstName = (n: string | null) => (n || 'there').trim().split(' ')[0];
 
 function shell(inner: string) {
   return `<div style="font-family:-apple-system,Segoe UI,sans-serif;background:#0d1825;color:#f5efe4;padding:32px;border-radius:8px;max-width:480px;margin:auto">
-    <div style="font-size:26px;font-weight:600;margin-bottom:18px">Glow<span style="color:#c8861d">PT</span></div>
+    <img src="${APP_URL}/apple-touch-icon.png" alt="GlowPT" width="56" height="56" style="display:block;width:56px;height:56px;border:0;border-radius:13px;margin-bottom:12px">
+    <div style="font-size:26px;font-weight:600;margin-bottom:18px">Glow<span style="color:#F5A81A">PT</span></div>
     ${inner}
   </div>`;
 }
@@ -82,13 +83,13 @@ function shell(inner: string) {
 function patientEmail(name: string, count: number) {
   const line =
     count > 0
-      ? `You checked in <strong>${count}</strong> ${count === 1 ? 'day' : 'days'} last week. 🌅`
-      : `A fresh week is here. A good time to check back in. 🌅`;
+      ? `You checked in <strong>${count}</strong> ${count === 1 ? 'day' : 'days'} last week.`
+      : `A fresh week is here. A good time to check back in.`;
   return shell(`
     <p style="font-size:17px;line-height:1.5">Hi ${name},</p>
     <p style="font-size:16px;line-height:1.6;color:rgba(245,239,228,0.8)">${line}</p>
     <p style="font-size:15px;line-height:1.6;color:rgba(245,239,228,0.6)">Open GlowPT to see your reflections and log today.</p>
-    <a href="${APP_URL}" style="display:inline-block;margin-top:14px;background:#c8861d;color:#0d1825;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:4px">Open GlowPT →</a>
+    <a href="${APP_URL}" style="display:inline-block;margin-top:14px;background:#F5A81A;color:#0d1825;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:4px">Open GlowPT →</a>
     <p style="font-size:13px;color:rgba(245,239,228,0.35);margin-top:22px">One good day at a time.</p>`);
 }
 
@@ -101,12 +102,12 @@ function clinicEmail(
 ) {
   return shell(`
     <p style="font-size:17px;line-height:1.5">Your weekly GlowPT summary for <strong>${clinicName}</strong> is ready.</p>
-    <div style="background:#1a2840;border:1px solid rgba(200,134,29,0.2);border-radius:6px;padding:16px;margin:14px 0">
+    <div style="background:#1a2840;border:1px solid rgba(245,168,26,0.2);border-radius:6px;padding:16px;margin:14px 0">
       <p style="margin:0 0 8px;font-size:15px;color:rgba(245,239,228,0.8)"><strong>${active}</strong> of <strong>${total}</strong> patients checked in (${engagement}% engagement)</p>
-      <p style="margin:0;font-size:15px;color:${needAttention ? '#e0a035' : 'rgba(245,239,228,0.8)'}"><strong>${needAttention}</strong> patient${needAttention === 1 ? '' : 's'} may need attention</p>
+      <p style="margin:0;font-size:15px;color:${needAttention ? '#FBC02D' : 'rgba(245,239,228,0.8)'}"><strong>${needAttention}</strong> patient${needAttention === 1 ? '' : 's'} may need attention</p>
     </div>
     <p style="font-size:14px;line-height:1.6;color:rgba(245,239,228,0.6)">Log in to see who's engaged and who could use a nudge.</p>
-    <a href="${APP_URL}/dashboard" style="display:inline-block;margin-top:12px;background:#c8861d;color:#0d1825;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:4px">Open dashboard →</a>`);
+    <a href="${APP_URL}/dashboard" style="display:inline-block;margin-top:12px;background:#F5A81A;color:#0d1825;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:4px">Open dashboard →</a>`);
 }
 
 interface SummaryRow {
