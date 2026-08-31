@@ -73,7 +73,7 @@ export const ui = {
   fine: { fontSize: 12, color: 'rgba(245,239,228,0.35)', marginTop: 18 },
 
   // Modal close controls, shared by all three modals (More Info, BAA, privacy).
-  // One definition on purpose, same reasoning as lib/useScrollLock.js.
+  // One definition on purpose, same reasoning as lib/useModal.js.
   //
   // The X is absolutely placed, so its panel needs position: 'relative'. It sits
   // INSIDE the panel's own scroll box and therefore scrolls away with the content,

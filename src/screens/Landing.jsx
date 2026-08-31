@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LogoMark, BRAND, ui } from './AuthShell'
 import { PRICE_LINE, whatGlowptIs, CONTACT_EMAIL } from '../lib/marketing'
-import { useScrollLock } from '../lib/useScrollLock'
+import { useModal } from '../lib/useModal'
 
 // Public front door at "/" for logged-out visitors.
 // Clinics → onboard; returning patients & staff → sign in.
 export default function Landing() {
   const [showInfo, setShowInfo] = useState(false)
-  useScrollLock(showInfo)
+  const panelRef = useModal(showInfo, () => setShowInfo(false))
 
   const s = {
     page: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px 28px 56px' },
@@ -29,7 +29,7 @@ export default function Landing() {
     footer: { fontSize: 12, color: 'rgba(245,239,228,0.3)', marginTop: 40, fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
     moreInfo: { background: 'none', border: 'none', font: 'inherit', fontSize: 14, fontWeight: 500, color: BRAND, textDecoration: 'underline', cursor: 'pointer', padding: 0, marginTop: 20 },
     overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 200 },
-    modal: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, position: 'relative', padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' },
+    modal: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, position: 'relative', padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left', outline: 'none' },
     modalHead: { fontSize: 12, fontWeight: 600, letterSpacing: '0.01em', color: BRAND, marginBottom: 14 },
     modalLead: { fontSize: 14, lineHeight: 1.65, color: 'rgba(245,239,228,0.8)', margin: '0 0 18px' },
     bullet: { display: 'flex', gap: 10, fontSize: 14, lineHeight: 1.6, color: 'rgba(245,239,228,0.8)', marginBottom: 12 },
@@ -70,9 +70,9 @@ export default function Landing() {
 
       {showInfo && (
         <div style={s.overlay} onClick={() => setShowInfo(false)}>
-          <div style={s.modal} onClick={e => e.stopPropagation()}>
+          <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="more-info-title" style={s.modal} onClick={e => e.stopPropagation()}>
             <button type="button" aria-label="Close" style={ui.modalCloseX} onClick={() => setShowInfo(false)}>✕</button>
-            <div style={s.modalHead}>How GlowPT Works</div>
+            <div id="more-info-title" style={s.modalHead}>How GlowPT Works</div>
             <p style={s.modalLead}>{whatGlowptIs.lead}</p>
             {whatGlowptIs.points.map(point => (
               <div key={point} style={s.bullet}><span style={s.tick}>✓</span><span>{point}</span></div>

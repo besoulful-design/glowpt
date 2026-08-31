@@ -6,7 +6,7 @@ import { AuthShell, LogoMark, Brand, ui } from './AuthShell'
 import { BAA_IS_EXECUTED, BAA_SUMMARY, BAA_SUMMARY_INTRO } from '../lib/legal'
 import { PRICE_LINE } from '../lib/marketing'
 import CodeVerify from './CodeVerify'
-import { useScrollLock } from '../lib/useScrollLock'
+import { useModal } from '../lib/useModal'
 
 function slugify(s) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
@@ -28,7 +28,7 @@ export default function Onboard() {
   const [pending, setPending] = useState(null)
 
   // Above the early return below: hooks cannot sit after a conditional return.
-  useScrollLock(showBaa)
+  const panelRef = useModal(showBaa, () => setShowBaa(false))
 
   const effectiveSlug = slugEdited ? slug : slugify(clinicName)
 
@@ -167,10 +167,10 @@ export default function Onboard() {
       {showBaa && (
         <div onClick={() => setShowBaa(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 200 }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{ background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, position: 'relative', padding: 28, maxWidth: 520, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' }}>
+          <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="baa-title" onClick={e => e.stopPropagation()}
+            style={{ background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, position: 'relative', padding: 28, maxWidth: 520, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left', outline: 'none' }}>
             <button type="button" aria-label="Close" style={ui.modalCloseX} onClick={() => setShowBaa(false)}>✕</button>
-            <div style={{ ...ui.eyebrow, marginBottom: 14 }}>Business Associate Agreement</div>
+            <div id="baa-title" style={{ ...ui.eyebrow, marginBottom: 14 }}>Business Associate Agreement</div>
             <div style={{ fontSize: 13.5, lineHeight: 1.65, color: 'rgba(245,239,228,0.78)' }}>
               {!BAA_IS_EXECUTED && (
                 <p style={{ marginTop: 0, marginBottom: 18, fontStyle: 'italic', color: 'rgba(245,239,228,0.55)' }}>{BAA_SUMMARY_INTRO}</p>

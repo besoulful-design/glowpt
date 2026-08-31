@@ -4,7 +4,7 @@ import * as api from '../lib/api'
 import * as cognito from '../lib/cognito'
 import { savePendingJoin, useAuth } from '../auth'
 import { AuthShell, LogoMark, Brand, ui } from './AuthShell'
-import { useScrollLock } from '../lib/useScrollLock'
+import { useModal } from '../lib/useModal'
 import { patientPrivacyNotice, PRIVACY_NOTICE_VERSION } from '../lib/legal'
 import CodeVerify from './CodeVerify'
 
@@ -18,7 +18,7 @@ export default function Join() {
   const [email, setEmail] = useState('')
   const [consented, setConsented] = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
-  useScrollLock(showPrivacy)
+  const panelRef = useModal(showPrivacy, () => setShowPrivacy(false))
   const [pending, setPending] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -129,10 +129,10 @@ export default function Join() {
       {showPrivacy && (
         <div onClick={() => setShowPrivacy(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 200 }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{ background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, position: 'relative', padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left' }}>
+          <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="privacy-title" onClick={e => e.stopPropagation()}
+            style={{ background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, position: 'relative', padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left', outline: 'none' }}>
             <button type="button" aria-label="Close" style={ui.modalCloseX} onClick={() => setShowPrivacy(false)}>✕</button>
-            <div style={{ ...ui.eyebrow, marginBottom: 14 }}>Privacy Notice</div>
+            <div id="privacy-title" style={{ ...ui.eyebrow, marginBottom: 14 }}>Privacy Notice</div>
             <div style={{ fontSize: 14, lineHeight: 1.65, color: 'rgba(245,239,228,0.8)' }}>
               {patientPrivacyNotice(clinic.name).map(section => (
                 <div key={section.heading} style={{ marginBottom: 16 }}>
