@@ -85,7 +85,7 @@ function streakMessage(s) {
   if (s === 1) return 'Great start. One day down.'
   if (s < 4) return 'You’re building momentum.'
   if (s < 7) return 'You’re on a roll!'
-  return 'Incredible consistency 🌟'
+  return 'Incredible consistency.'
 }
 
 const avgFeeling = arr => { const fs = arr.filter(d => d.feeling != null).map(d => d.feeling); return fs.length ? fs.reduce((a, b) => a + b, 0) / fs.length : null }
@@ -95,9 +95,9 @@ function trendMessage(days) {
   const recent = avgFeeling(days.slice(-7)), prev = avgFeeling(days.slice(-14, -7))
   if (recent == null) return 'Check in to start building your trend.'
   if (prev == null) return 'Keep checking in to see your trend take shape.'
-  if (recent >= prev + 0.4) return 'You’re trending up lately 🌤'
-  if (recent <= prev - 0.4) return 'Some tougher days recently. Gentle steps still count 💛'
-  return 'You’re holding steady. Consistency matters most 🌱'
+  if (recent >= prev + 0.4) return 'You’re trending up lately.'
+  if (recent <= prev - 0.4) return 'Some tougher days recently. Gentle steps still count.'
+  return 'You’re holding steady. Consistency matters most.'
 }
 
 // One-line takeaway for the month: average mood + how many days.
@@ -481,7 +481,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
             <div style={styles.progressBody}>
               <div style={styles.streakHero}>
                 <div style={styles.streakBig}>{streak}</div>
-                <div style={styles.streakUnit}>day streak{streak > 0 ? ' 🔥' : ''}</div>
+                <div style={styles.streakUnit}>day streak</div>
                 <div style={styles.streakMsg}>{streakMessage(streak)}</div>
               </div>
 
