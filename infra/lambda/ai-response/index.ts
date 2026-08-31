@@ -64,7 +64,7 @@ const {
   AWS_REGION = 'us-east-1',
 } = process.env;
 
-const FALLBACK = "You showed up today — and that's everything.";
+const FALLBACK = "You showed up today, and that's everything.";
 
 // Created once per container. No secret fetch on the cold path any more.
 const bedrock = new BedrockRuntimeClient({ region: AWS_REGION });
