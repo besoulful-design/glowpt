@@ -44,7 +44,7 @@ const {
   AWS_REGION = 'us-east-1',
 } = process.env;
 
-const FALLBACK = "You showed up today — and that's everything.";
+const FALLBACK = "You showed up today, and that's everything.";
 
 const secrets = new SecretsManagerClient({ region: AWS_REGION });
 

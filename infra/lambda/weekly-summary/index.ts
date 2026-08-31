@@ -83,7 +83,7 @@ function patientEmail(name: string, count: number) {
   const line =
     count > 0
       ? `You checked in <strong>${count}</strong> ${count === 1 ? 'day' : 'days'} last week. 🌅`
-      : `A fresh week is here — a good time to check back in. 🌅`;
+      : `A fresh week is here. A good time to check back in. 🌅`;
   return shell(`
     <p style="font-size:17px;line-height:1.5">Hi ${name},</p>
     <p style="font-size:16px;line-height:1.6;color:rgba(245,239,228,0.8)">${line}</p>
@@ -150,7 +150,7 @@ function buildOutbox(rows: SummaryRow[]): OutboxItem[] {
       const needAttention = total - active;
       outbox.push({
         to: r.email,
-        subject: `GlowPT weekly summary — ${r.clinic_name}`,
+        subject: `GlowPT weekly summary · ${r.clinic_name}`,
         html: clinicEmail(r.clinic_name, total, active, engagement, needAttention),
         recipientId: r.recipient_id,
         role: r.role,
