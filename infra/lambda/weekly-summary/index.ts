@@ -138,7 +138,7 @@ function buildOutbox(rows: SummaryRow[]): OutboxItem[] {
     if (r.role === 'patient') {
       outbox.push({
         to: r.email,
-        subject: 'Your GlowPT week 🌅',
+        subject: 'Your GlowPT week',
         html: patientEmail(firstName(r.full_name), r.checkin_days),
         recipientId: r.recipient_id,
         role: r.role,
