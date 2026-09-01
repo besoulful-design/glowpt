@@ -81,8 +81,12 @@ export default function Landing() {
               <div>{PRICE_LINE}</div>
               <div>{PATIENTS_FREE_LINE}</div>
             </div>
+            {/* Two elements, not one sentence: the address is long enough to
+                wrap at phone width, which broke the line after "Email". Stacked
+                to match the price block directly above it. */}
             <div style={s.contact}>
-              Questions? Email <a href={`mailto:${CONTACT_EMAIL}`} style={s.contactLink}>{CONTACT_EMAIL}</a>.
+              <div>Questions? Email</div>
+              <div><a href={`mailto:${CONTACT_EMAIL}`} style={s.contactLink}>{CONTACT_EMAIL}</a>.</div>
             </div>
             <button type="button" style={ui.modalCloseBtn} onClick={() => setShowInfo(false)}>Close</button>
           </div>
