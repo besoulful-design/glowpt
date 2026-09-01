@@ -27,6 +27,11 @@ export default function Landing() {
     btns: { width: '100%', maxWidth: 340 },
     patientNote: { fontSize: 13, lineHeight: 1.6, color: 'rgba(245,239,228,0.45)', marginTop: 26, maxWidth: '36ch' },
     footer: { fontSize: 12, color: 'rgba(245,239,228,0.3)', marginTop: 40, fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
+    // Matches the byline's face on purpose: these two lines read as one footer
+    // block, so an upright sans line under an italic serif one would look like
+    // a mistake rather than a distinction. (This is the opposite call to
+    // ui.fine, which went upright because it sits among sans form copy.)
+    footerLegal: { fontSize: 12, color: 'rgba(245,239,228,0.3)', marginTop: 6, fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
     moreInfo: { background: 'none', border: 'none', font: 'inherit', fontSize: 14, fontWeight: 500, color: BRAND, textDecoration: 'underline', cursor: 'pointer', padding: 0, marginTop: 20 },
     overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 200 },
     modal: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, position: 'relative', padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left', outline: 'none' },
@@ -65,7 +70,12 @@ export default function Landing() {
           Are you a patient? Use the private link your clinic gave you to get started, or sign in above if you’ve joined already.
         </div>
 
+        {/* The byline is a credit ("who made this"); the line below names the
+            legal entity a clinic actually contracts with. Two lines, each doing
+            one job. Entity name is the no-comma form used by lib/legal.js, both
+            attorney drafts, and the AWS Company-name field the BAA binds to. */}
         <div style={s.footer}>A FranklinAI product · Philadelphia</div>
+        <div style={s.footerLegal}>© {new Date().getFullYear()} FranklinAI Solutions LLC</div>
       </div>
 
       {showInfo && (
