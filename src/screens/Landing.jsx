@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LogoMark, BRAND, ui } from './AuthShell'
-import { PRICE_LINE, whatGlowptIs, CONTACT_EMAIL } from '../lib/marketing'
+import { PRICE_LINE, PATIENTS_FREE_LINE, whatGlowptIs, CONTACT_EMAIL } from '../lib/marketing'
 import { useModal } from '../lib/useModal'
 
 // Public front door at "/" for logged-out visitors.
@@ -77,7 +77,10 @@ export default function Landing() {
             {whatGlowptIs.points.map(point => (
               <div key={point} style={s.bullet}><span style={s.tick}>✓</span><span>{point}</span></div>
             ))}
-            <div style={s.price}>{PRICE_LINE}</div>
+            <div style={s.price}>
+              <div>{PRICE_LINE}</div>
+              <div>{PATIENTS_FREE_LINE}</div>
+            </div>
             <div style={s.contact}>
               Questions? Email <a href={`mailto:${CONTACT_EMAIL}`} style={s.contactLink}>{CONTACT_EMAIL}</a>.
             </div>

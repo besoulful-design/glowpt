@@ -11,10 +11,16 @@
 export const CONTACT_EMAIL = 'david@franklinaisolutions.com'
 
 // Subscription-Agreement §5.1 states this figure and also refers to "the
-// amount stated at sign-up" — so this constant IS that statement. Change it
+// amount stated at sign-up" — so PRICE_LINE IS that statement. Change it
 // here and both surfaces follow.
 export const MONTHLY_PRICE_USD = 350
-export const PRICE_LINE = `$${MONTHLY_PRICE_USD} per month, per clinic. Patients join free.`
+export const PRICE_LINE = `$${MONTHLY_PRICE_USD} per month, per clinic.`
+// Deliberately a SECOND constant, not a second sentence inside PRICE_LINE.
+// As one string the two sentences wrapped wherever the viewport happened to
+// land, so "free." dropped alone onto its own line in iPhone portrait. Both
+// surfaces now stack them as two elements, so the break is the same
+// everywhere instead of being decided by the measure.
+export const PATIENTS_FREE_LINE = 'Patients join free.'
 
 export const whatGlowptIs = {
   lead: 'The GlowPT app engages patients between visits. More completed plans of care and the clinic stays full.',
