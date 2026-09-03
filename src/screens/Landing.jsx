@@ -26,12 +26,16 @@ export default function Landing() {
     btnSecondary: { display: 'block', width: '100%', padding: '17px 24px', borderRadius: 4, background: 'transparent', color: 'rgba(245,239,228,0.8)', border: '1px solid rgba(245,239,228,0.18)', fontSize: 16, fontWeight: 500, textDecoration: 'none', textAlign: 'center', marginTop: 12 },
     btns: { width: '100%', maxWidth: 340 },
     patientNote: { fontSize: 13, lineHeight: 1.6, color: 'rgba(245,239,228,0.45)', marginTop: 26, maxWidth: '36ch' },
-    footer: { fontSize: 12, color: 'rgba(245,239,228,0.3)', marginTop: 40, fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
+    // lineHeight is stated on BOTH footer lines and is load-bearing. body sets
+    // line-height to an absolute 26.1px (1.45 x its own 18px), and an absolute
+    // value INHERITS as-is, so these 12px lines were getting a 2.17 ratio and
+    // sat ~32px apart. Stating 1.5 makes the leading scale to their own size.
+    footer: { fontSize: 12, lineHeight: 1.5, color: 'rgba(245,239,228,0.3)', marginTop: 40, fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
     // Matches the byline's face on purpose: these two lines read as one footer
     // block, so an upright sans line under an italic serif one would look like
     // a mistake rather than a distinction. (This is the opposite call to
     // ui.fine, which went upright because it sits among sans form copy.)
-    footerLegal: { fontSize: 12, color: 'rgba(245,239,228,0.3)', marginTop: 6, fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
+    footerLegal: { fontSize: 12, lineHeight: 1.5, color: 'rgba(245,239,228,0.3)', marginTop: 4, fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
     moreInfo: { background: 'none', border: 'none', font: 'inherit', fontSize: 14, fontWeight: 500, color: BRAND, textDecoration: 'underline', cursor: 'pointer', padding: 0, marginTop: 20 },
     overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 200 },
     modal: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, position: 'relative', padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left', outline: 'none' },
