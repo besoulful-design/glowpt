@@ -191,6 +191,16 @@ create table public.access_log (
 create index access_log_clinic_idx on public.access_log (clinic_id, created_at desc);
 
 -- ---- public.staff_invites (staff, not PHI) ----
+--
+-- 256 bits of randomness, hex, from two v4 uuids. gen_random_uuid() is built in
+-- from PG13, so this needs no extension. Defined above the table because a
+-- column DEFAULT is parsed at CREATE TABLE time and the function must exist.
+create or replace function public.new_invite_token() returns text
+  language sql volatile
+as $$
+  select replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '')
+$$;
+
 create table public.staff_invites (
   id         uuid primary key default gen_random_uuid(),
   clinic_id  uuid not null references public.clinics(id) on delete cascade,
@@ -200,9 +210,21 @@ create table public.staff_invites (
   invited_by uuid references public.users(id) on delete set null,
   created_at timestamptz not null default now(),
   consumed_at timestamptz,
+  -- The invite LINK the manager sends. ⚠️ The token says WHICH invite; it does
+  -- NOT grant the role. accept_staff_invite additionally requires the signed-in
+  -- user's verified email to equal this row's email, so a forwarded link is
+  -- useless to anyone else. Re-inviting mints a fresh token, which is what
+  -- invalidates a link that was sent to the wrong place.
+  token      text not null default public.new_invite_token(),
+  expires_at timestamptz not null default now() + interval '14 days',
   unique (clinic_id, email)
 );
 create index staff_invites_email_idx on public.staff_invites (email) where (consumed_at is null);
+-- A unique INDEX rather than an inline unique CONSTRAINT so that a database
+-- built fresh from this file and one migrated by db/patches/2026-09-04_staff_
+-- invite_tokens.sql end up byte-identical: a patch cannot add a constraint
+-- idempotently, but `create unique index if not exists` is re-runnable.
+create unique index staff_invites_token_key on public.staff_invites (token);
 
 
 -- ============================ IDENTITY: current_user_id() ============================
@@ -353,7 +375,19 @@ begin
   return v_clinic;
 end $$;
 
-create or replace function public.accept_staff_invite()
+-- Claim a staff invite and become therapist/manager of its clinic.
+--
+-- ⚠️ THE TOKEN IS NOT THE CREDENTIAL. It says WHICH invite is being claimed; the
+-- gate is that the signed-in user's VERIFIED email must equal the invited email.
+-- So a forwarded or leaked invite link grants nothing: the wrong person signing
+-- up with it is refused here, in the database, whatever the frontend does. The
+-- role likewise comes off the invite row, never from anything the caller sends.
+--
+-- p_token null is the FRONTEND SAFETY NET (auth.jsx re-runs this blind on first
+-- sign-in when the post-confirmation Lambda may have missed). That path matches
+-- on email alone and returns null rather than raising, because it is a
+-- speculative retry for a user who usually has no invite at all.
+create or replace function public.accept_staff_invite(p_token text default null)
   returns uuid
   language plpgsql security definer
   set search_path = public set row_security = off
@@ -362,10 +396,24 @@ declare v_email text; v_inv record;
 begin
   if public.current_user_id() is null then raise exception 'Not authenticated'; end if;
   select email from public.users where id = public.current_user_id() into v_email;
-  select * from public.staff_invites
-    where email = lower(v_email) and consumed_at is null
-    order by created_at desc limit 1 into v_inv;
-  if v_inv.id is null then return null; end if;
+
+  if p_token is not null then
+    select * from public.staff_invites
+      where token = p_token and consumed_at is null and expires_at > now()
+      into v_inv;
+    -- Loud, because someone followed a link and deserves to know why it failed.
+    if v_inv.id is null then
+      raise exception 'This invite link is no longer valid' using errcode = 'P0001';
+    end if;
+    if lower(v_inv.email) <> lower(v_email) then
+      raise exception 'This invite is for a different email address' using errcode = 'P0001';
+    end if;
+  else
+    select * from public.staff_invites
+      where email = lower(v_email) and consumed_at is null and expires_at > now()
+      order by created_at desc limit 1 into v_inv;
+    if v_inv.id is null then return null; end if;
+  end if;
   insert into public.profiles (id, clinic_id, role, full_name)
     values (public.current_user_id(), v_inv.clinic_id, v_inv.role, v_inv.full_name)
     on conflict (id) do update
@@ -375,13 +423,16 @@ begin
   return v_inv.clinic_id;
 end $$;
 
+-- Returns the invite TOKEN so the caller can build the link to send. Re-inviting
+-- the same address mints a FRESH token and a fresh expiry and clears consumed_at
+-- — that is deliberately how a link sent to the wrong place gets invalidated.
 create or replace function public.invite_staff(
     p_email text, p_full_name text, p_role text default 'therapist')
-  returns void
+  returns text
   language plpgsql security definer
   set search_path = public set row_security = off
 as $$
-declare v_clinic uuid;
+declare v_clinic uuid; v_token text;
 begin
   select clinic_id from public.profiles where id = public.current_user_id() and role = 'manager' into v_clinic;
   if v_clinic is null then raise exception 'Only a clinic manager can invite staff'; end if;
@@ -390,8 +441,30 @@ begin
   values (v_clinic, lower(trim(p_email)), nullif(trim(p_full_name), ''), p_role, public.current_user_id())
   on conflict (clinic_id, email) do update
     set full_name = excluded.full_name, role = excluded.role,
-        invited_by = excluded.invited_by, created_at = now(), consumed_at = null;
+        invited_by = excluded.invited_by, created_at = now(), consumed_at = null,
+        token = public.new_invite_token(), expires_at = now() + interval '14 days'
+  returning token into v_token;
+  return v_token;
 end $$;
+
+-- Read an invite by its token, WITHOUT being signed in, so the staff sign-up
+-- screen can say which clinic and which role before the person has an account.
+-- Same unauthenticated shape as get_clinic_by_slug. It reveals the invited email
+-- to whoever holds the token, which is the point of an invite link; the token is
+-- the secret, and holding it still does not let the wrong person claim the role.
+-- An unknown, expired or already-used token returns zero rows.
+create or replace function public.get_staff_invite(p_token text)
+  returns table (clinic_name text, clinic_slug text, email text, full_name text, role text)
+  language sql stable security definer
+  set search_path = public set row_security = off
+as $$
+  select c.name, c.slug, i.email, i.full_name, i.role
+    from public.staff_invites i
+    join public.clinics c on c.id = i.clinic_id
+   where i.token = p_token
+     and i.consumed_at is null
+     and i.expires_at > now()
+$$;
 
 create or replace function public.assign_therapist(p_patient uuid, p_therapist uuid)
   returns void
@@ -787,7 +860,8 @@ grant execute on function
   public.get_clinic_by_slug(text),
   public.provision_clinic(text, text),
   public.join_clinic(text, text, text),
-  public.accept_staff_invite(),
+  public.accept_staff_invite(text),
+  public.get_staff_invite(text),
   public.invite_staff(text, text, text),
   public.assign_therapist(uuid, uuid),
   public.discharge_patient(uuid),
@@ -809,7 +883,7 @@ grant execute on function
   public.register_user(uuid, citext, text),
   public.provision_clinic(text, text),
   public.join_clinic(text, text, text),
-  public.accept_staff_invite()
+  public.accept_staff_invite(text)
 to glowpt_postconfirm;
 
 -- glowpt_weekly: the weekly-summary Lambda's role. It has NO table grants and can
@@ -849,8 +923,10 @@ alter function public.is_my_patient(uuid)                     owner to glowpt_au
 alter function public.get_clinic_by_slug(text)                owner to glowpt_auth;
 alter function public.provision_clinic(text, text)            owner to glowpt_auth;
 alter function public.join_clinic(text, text, text)           owner to glowpt_auth;
-alter function public.accept_staff_invite()                   owner to glowpt_auth;
+alter function public.accept_staff_invite(text)               owner to glowpt_auth;
 alter function public.invite_staff(text, text, text)          owner to glowpt_auth;
+alter function public.get_staff_invite(text)                  owner to glowpt_auth;
+alter function public.new_invite_token()                      owner to glowpt_auth;
 alter function public.assign_therapist(uuid, uuid)            owner to glowpt_auth;
 alter function public.discharge_patient(uuid)                 owner to glowpt_auth;
 alter function public.restore_patient(uuid)                   owner to glowpt_auth;

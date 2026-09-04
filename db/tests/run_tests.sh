@@ -40,4 +40,18 @@ echo "Running RLS tests (as glowpt_app) ..."
 "$PSQL" -U glowpt_app -d "$DB" -h "$HOST" -p "$PORT" -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/rls_tests.sql" 2>&1 | grep -E "PASS:|FAIL:" || true
 
+# One deliberately-expired invite, seeded as the schema owner. glowpt_app holds
+# only SELECT on staff_invites (which is what keeps a patient from minting one),
+# so it cannot backdate a row itself. Same owner-seeding pattern as the platform
+# admin above. Clinic A exists only after rls_tests.sql has run, hence the order.
+echo "Seeding an expired staff invite (as schema owner) ..."
+"$PSQL" -d "$DB" -h "$HOST" -p "$PORT" -q -v ON_ERROR_STOP=1 -c \
+  "insert into public.staff_invites (clinic_id, email, full_name, role, expires_at)
+   select id, 'expired@a.com', 'Expired Invitee', 'therapist', now() - interval '1 day'
+     from public.clinics where slug = 'clinic-a';"
+
+echo "Running staff-invite tests (as glowpt_app) ..."
+"$PSQL" -U glowpt_app -d "$DB" -h "$HOST" -p "$PORT" -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/invite_tests.sql" 2>&1 | grep -E "PASS:|FAIL:" || true
+
 echo "Done. (Any FAIL: line above is a real failure.)"

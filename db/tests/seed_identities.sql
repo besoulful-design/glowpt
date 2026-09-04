@@ -19,6 +19,11 @@ select register_user('66666666-6666-6666-6666-666666666666','patb1@b.com','Pat B
 select register_user('77777777-7777-7777-7777-777777777777','admin@glowpt.app','Platform Admin');
 select register_user('88888888-8888-8888-8888-888888888888','mgrc@c.com','Mgr C');
 select register_user('99999999-9999-9999-9999-999999999999','patc1@c.com','Pat C1');
+-- Staff-invite-link identities (invite_tests.sql): the properly invited person,
+-- someone who merely holds the link, and the target of an expired invite.
+select register_user('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','newstaff@a.com','New Staff');
+select register_user('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','wrongperson@a.com','Wrong Person');
+select register_user('cccccccc-cccc-cccc-cccc-cccccccccccc','expired@a.com','Expired Invitee');
 
 \set QUIET off
 do $$
@@ -28,6 +33,6 @@ begin
   -- dispatch to after register_user (join / onboard / staff paths).
   ok := has_function_privilege('glowpt_postconfirm','public.join_clinic(text,text,text)','execute')
     and has_function_privilege('glowpt_postconfirm','public.provision_clinic(text,text)','execute')
-    and has_function_privilege('glowpt_postconfirm','public.accept_staff_invite()','execute');
+    and has_function_privilege('glowpt_postconfirm','public.accept_staff_invite(text)','execute');
   raise notice '% T16 postconfirm can execute the three attach RPCs', case when ok then 'PASS:' else 'FAIL:' end;
 end $$;
