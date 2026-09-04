@@ -196,7 +196,7 @@ Their check-in today:
 - Movement: ${movementText}${isPlanningTo ? ' (note: they are planning to do their exercises later today, not done yet)' : ''}
 - Their note: "${noteText}"
 
-Respond directly to ${firstName} in second person. Reference what they actually shared. End with one gentle encouragement. Do not use em dashes in your response.`
+Respond directly to ${firstName} in second person. Reference what they actually shared. End with one gentle encouragement. Never join two clauses with a dash of any kind, not an em dash, an en dash or a hyphen. Use a period or a comma instead. Hyphens inside words like check-in are fine.`
 
       // The reflection now comes from POST /ai-response (behind the Cognito
       // authorizer). Falls back gracefully on any error.
@@ -489,12 +489,12 @@ Respond directly to ${firstName} in second person. Reference what they actually 
                 <div style={styles.statCard}>
                   <div style={styles.statLabel}>This Week</div>
                   <div style={styles.statValue}>{weekCount}</div>
-                  <div style={styles.statSub}>days checked in</div>
+                  <div style={styles.statSub}>{weekCount === 1 ? 'day' : 'days'} checked in</div>
                 </div>
                 <div style={styles.statCard}>
                   <div style={styles.statLabel}>All Time</div>
                   <div style={styles.statValue}>{totalCheckins}</div>
-                  <div style={styles.statSub}>check-ins</div>
+                  <div style={styles.statSub}>check-in{totalCheckins === 1 ? '' : 's'}</div>
                 </div>
               </div>
 
@@ -569,7 +569,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
                 <div style={styles.statCard}>
                   <div style={styles.statLabel}>This Week</div>
                   <div style={styles.statValue}>{weekCount}</div>
-                  <div style={styles.statSub}>days checked in</div>
+                  <div style={styles.statSub}>{weekCount === 1 ? 'day' : 'days'} checked in</div>
                 </div>
               </div>
 
