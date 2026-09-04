@@ -71,8 +71,16 @@ export const joinClinic = (slug, fullName, consentVersion) =>
     method: 'POST',
     body: { slug, full_name: fullName, consent_version: consentVersion },
   });
-export const acceptStaffInvite = () =>
-  request('/rpc/accept-staff-invite', { method: 'POST' });
+// Public, like getClinicBySlug: read before the person has an account, so the
+// staff sign-up page can name the clinic and role. The token in the URL is the
+// invite's own identifier, not an identifier for a person.
+export const getStaffInvite = (token) =>
+  request(`/staff-invites/${encodeURIComponent(token)}`, { auth: false });
+// token is optional. With one, this is someone following an invite link; without
+// one, it is auth.jsx's blind safety net. Either way the database requires the
+// caller's verified email to match the invite, so the token alone grants nothing.
+export const acceptStaffInvite = (token = null) =>
+  request('/rpc/accept-staff-invite', { method: 'POST', body: { token } });
 export const inviteStaff = (email, fullName, role = 'therapist') =>
   request('/rpc/invite-staff', {
     method: 'POST',

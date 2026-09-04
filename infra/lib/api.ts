@@ -9,6 +9,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { HttpUserPoolAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
 
 export interface ApiProps {
@@ -24,6 +25,10 @@ export interface ApiProps {
   dbName?: string;
   /** Browser origins allowed to call the API (CORS). Never '*'. */
   allowOrigins?: string[];
+  /** SES config set (TLS Require) used for the staff invite email. */
+  configurationSetName: string;
+  /** Public app origin, used to build the invite link inside that email. */
+  appUrl?: string;
 }
 
 /**
@@ -46,6 +51,12 @@ export class Api extends Construct {
   public readonly httpApi: apigwv2.HttpApi;
   /** The Cognito JWT authorizer, exposed so sibling routes (ai-response) reuse it. */
   public readonly authorizer: HttpUserPoolAuthorizer;
+  /**
+   * This Lambda's security group. Exposed so the stack can open the SES API
+   * interface endpoint to it: the staff invite email is sent from HERE, and
+   * these subnets have no NAT, so the endpoint is the only route to SES.
+   */
+  public readonly lambdaSg: ec2.SecurityGroup;
 
   constructor(scope: Construct, id: string, props: ApiProps) {
     super(scope, id);
@@ -97,17 +108,35 @@ export class Api extends Construct {
         DB_USER: dbUser,
         DB_NAME: dbName,
         DB_PORT: '5432',
+        SES_CONFIG_SET: props.configurationSetName,
+        APP_URL: props.appUrl ?? 'https://glowpt.app',
+        FROM_EMAIL: 'GlowPT <no-reply@glowpt.app>',
       },
       bundling: {
         // pg + rds-signer as real node modules (pg's dynamic requires), the rest
         // esbuild-bundled. Same recipe proven by the post-confirmation Lambda.
-        nodeModules: ['pg', '@aws-sdk/rds-signer'],
+        nodeModules: ['pg', '@aws-sdk/rds-signer', '@aws-sdk/client-sesv2'],
         target: 'node22',
       },
     });
 
+    this.lambdaSg = lambdaSg;
+
     // Mint an IAM auth token for exactly the glowpt_app DB user on this proxy.
     props.proxy.grantConnect(this.fn, dbUser);
+
+    // Send the staff invite email. Scoped to the one verified identity and the
+    // one TLS-required config set, never a blanket ses:SendEmail on '*'.
+    const stack = cdk.Stack.of(this);
+    this.fn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+        resources: [
+          `arn:aws:ses:${stack.region}:${stack.account}:identity/glowpt.app`,
+          `arn:aws:ses:${stack.region}:${stack.account}:configuration-set/${props.configurationSetName}`,
+        ],
+      }),
+    );
 
     const integration = new HttpLambdaIntegration('ApiIntegration', this.fn);
 
@@ -166,15 +195,21 @@ export class Api extends Construct {
       this.httpApi.addRoutes({ path: routePath, methods: [method], integration });
     }
 
-    // The ONLY unauthenticated route: resolve a clinic by slug for /join. Opt out
-    // of the default authorizer. The handler routes it to get_clinic_by_slug,
-    // which returns one clinic's public fields (never the whole customer list).
-    this.httpApi.addRoutes({
-      path: '/clinics/by-slug/{slug}',
-      methods: [apigwv2.HttpMethod.GET],
-      integration,
-      authorizer: new apigwv2.HttpNoneAuthorizer(),
-    });
+    // The TWO unauthenticated routes, and the only ones. Both opt out of the
+    // default authorizer because they are read by someone who does not have an
+    // account yet, which is the whole point of a sign-up page.
+    //   * by-slug   -> get_clinic_by_slug, one clinic's public fields for /join.
+    //   * staff-invites -> get_staff_invite, so /staff/<token> can name the
+    //     clinic and role. Holding the token still does not confer the role:
+    //     accept_staff_invite requires the verified email to match.
+    for (const publicPath of ['/clinics/by-slug/{slug}', '/staff-invites/{token}']) {
+      this.httpApi.addRoutes({
+        path: publicPath,
+        methods: [apigwv2.HttpMethod.GET],
+        integration,
+        authorizer: new apigwv2.HttpNoneAuthorizer(),
+      });
+    }
 
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: this.httpApi.apiEndpoint,

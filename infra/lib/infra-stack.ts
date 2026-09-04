@@ -60,6 +60,7 @@ export class InfraStack extends cdk.Stack {
       proxySecurityGroup: network.proxySecurityGroup,
       userPool: auth.userPool,
       userPoolClient: auth.userPoolClient,
+      configurationSetName: email.configurationSet.configurationSetName,
     });
 
     // Phase 4: the ai-response function. A separate, non-VPC Lambda (it needs the
@@ -73,12 +74,23 @@ export class InfraStack extends cdk.Stack {
     // Phase 4: the weekly-summary function. A VPC Lambda (it needs the private
     // database) that reaches SES through an interface VPC endpoint and fires from
     // an EventBridge rule every Monday at 8am ET. PHI-minimised nudge emails.
-    new WeeklySummary(this, 'WeeklySummary', {
+    const weekly = new WeeklySummary(this, 'WeeklySummary', {
       vpc: network.vpc,
       proxy: database.proxy,
       proxySecurityGroup: network.proxySecurityGroup,
       configurationSetName: email.configurationSet.configurationSetName,
     });
+
+    // The data API sends the staff invite email, so it needs 443 to the SES
+    // interface endpoint that WeeklySummary owns. Both Lambdas sit in isolated
+    // subnets with no NAT, so that endpoint is the only route to SES. Opened
+    // here rather than inside either construct because Api is built first and
+    // cannot reference a security group that does not exist yet.
+    weekly.sesEndpointSg.addIngressRule(
+      api.lambdaSg,
+      ec2.Port.tcp(443),
+      'HTTPS to the SES API from the data API Lambda (staff invite email)',
+    );
 
     // SSM jump-host for one-off DB admin, and the firewall openings that let it
     // reach the database and the proxy on Postgres port 5432.

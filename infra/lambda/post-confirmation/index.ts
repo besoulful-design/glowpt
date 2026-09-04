@@ -112,7 +112,10 @@ export const handler = async (
         ]);
         break;
       case 'staff':
-        await client.query('select accept_staff_invite()');
+        // The token identifies which invite. It is not a credential: the
+        // function still requires this user's verified email to match the
+        // invited address. Null (an older link) falls back to email matching.
+        await client.query('select accept_staff_invite($1)', [meta.staff_token ?? null]);
         break;
       default:
         // No/unknown flow: the identity row still exists; the frontend NoClinic

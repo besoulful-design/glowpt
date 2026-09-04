@@ -1,5 +1,6 @@
 import { Signer } from '@aws-sdk/rds-signer';
 import { Client } from 'pg';
+import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 import type {
   APIGatewayProxyEventV2WithJWTAuthorizer,
   APIGatewayProxyResultV2,
@@ -148,6 +149,36 @@ function requireSub(event: APIGatewayProxyEventV2WithJWTAuthorizer): string {
   const sub = event.requestContext?.authorizer?.jwt?.claims?.sub;
   if (!sub || typeof sub !== 'string') throw new HttpError(401, 'unauthenticated');
   return sub;
+}
+
+// ---------------------------------------------------------------------------
+// The staff invite email. Reaches SES through the interface VPC endpoint that
+// weekly-summary created (this Lambda has no NAT and no internet route), so the
+// SDK needs no endpoint override: private DNS resolves email.<region> to it.
+//
+// The copy follows the house rules: no em dashes, no emoji, statements end in a
+// period. The shell matches the weekly email deliberately, down to the wordmark
+// under the logo, which is the fallback for the many clients that block remote
+// images until the reader allows them.
+// ---------------------------------------------------------------------------
+const ses = new SESv2Client({ region: process.env.AWS_REGION || 'us-east-1' });
+const APP_URL = process.env.APP_URL || 'https://glowpt.app';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'GlowPT <no-reply@glowpt.app>';
+const SES_CONFIG_SET = process.env.SES_CONFIG_SET || '';
+
+function inviteEmail(clinicName: string, role: string, inviteUrl: string, fullName: string | null) {
+  const greeting = fullName ? `Hi ${fullName.trim().split(' ')[0]},` : 'Hello,';
+  const roleWord = role === 'manager' ? 'a manager' : 'a therapist';
+  return `<div style="font-family:-apple-system,Segoe UI,sans-serif;background:#0d1825;color:#f5efe4;padding:32px;border-radius:8px;max-width:480px;margin:auto">
+    <img src="${APP_URL}/apple-touch-icon.png" alt="GlowPT" width="56" height="56" style="display:block;width:56px;height:56px;border:0;border-radius:13px;margin-bottom:12px">
+    <div style="font-size:26px;font-weight:600;margin-bottom:18px">Glow<span style="color:#F5A81A">PT</span></div>
+    <p style="font-size:17px;line-height:1.5">${greeting}</p>
+    <p style="font-size:16px;line-height:1.6;color:rgba(245,239,228,0.8)">${clinicName} has invited you to join GlowPT as ${roleWord}.</p>
+    <p style="font-size:15px;line-height:1.6;color:rgba(245,239,228,0.6)">GlowPT is a daily check-in your patients use between visits. You will see how they are doing, without any extra work.</p>
+    <a href="${inviteUrl}" style="display:inline-block;margin-top:14px;background:#F5A81A;color:#0d1825;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:4px">Accept the invitation →</a>
+    <p style="font-size:13px;line-height:1.6;color:rgba(245,239,228,0.5);margin-top:22px">This link works only for this email address and expires in 14 days. No password is needed. We will email you a code.</p>
+    <p style="font-size:13px;color:rgba(245,239,228,0.35);margin-top:18px">One good day at a time.</p>
+  </div>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -401,8 +432,15 @@ async function rpcAcceptStaffInvite(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
 ) {
   const sub = requireSub(event);
+  // The token is optional: with one, this is someone following an invite link
+  // and a bad token raises; without one, this is auth.jsx's blind safety net,
+  // which returns null when the caller simply has no invite. Either way the DB
+  // requires the caller's VERIFIED email to match the invite, so the token
+  // never grants the role by itself.
+  const b = parseBody(event);
+  const token = typeof b.token === 'string' && b.token ? b.token : null;
   const clinicId = await withUser(client, sub, async (c) => {
-    const { rows } = await c.query('select public.accept_staff_invite() as clinic_id');
+    const { rows } = await c.query('select public.accept_staff_invite($1) as clinic_id', [token]);
     return rows[0].clinic_id as string | null;
   });
   return json(200, { clinic_id: clinicId });
@@ -415,10 +453,65 @@ async function rpcInviteStaff(client: Client, event: APIGatewayProxyEventV2WithJ
   if (!email) throw new HttpError(400, 'email_required');
   const fullName = typeof b.full_name === 'string' ? b.full_name : null;
   const role = typeof b.role === 'string' && b.role ? b.role : 'therapist';
-  await withUser(client, sub, async (c) => {
-    await c.query('select public.invite_staff($1, $2, $3)', [email, fullName, role]);
+
+  const { token, clinicName } = await withUser(client, sub, async (c) => {
+    const { rows } = await c.query('select public.invite_staff($1, $2, $3) as token', [
+      email,
+      fullName,
+      role,
+    ]);
+    const { rows: cl } = await c.query(
+      'select name from public.clinics where id = public.auth_clinic_id()',
+    );
+    return { token: rows[0].token as string, clinicName: (cl[0]?.name as string) || 'Your clinic' };
   });
-  return json(200, { ok: true });
+
+  const inviteUrl = `${APP_URL}/staff/${token}`;
+
+  // The invite row is already committed, so a failed send must NOT fail the
+  // request and throw the invite away. Report it instead: the manager always
+  // gets the link on screen and can send it themselves. Never a silent partial
+  // success -- email_sent is the honest answer either way.
+  let emailSent = false;
+  let emailError: string | null = null;
+  try {
+    await ses.send(
+      new SendEmailCommand({
+        FromEmailAddress: FROM_EMAIL,
+        Destination: { ToAddresses: [email] },
+        ...(SES_CONFIG_SET ? { ConfigurationSetName: SES_CONFIG_SET } : {}),
+        Content: {
+          Simple: {
+            Subject: { Data: `${clinicName} invited you to GlowPT` },
+            Body: { Html: { Data: inviteEmail(clinicName, role, inviteUrl, fullName) } },
+          },
+        },
+      }),
+    );
+    emailSent = true;
+  } catch (err) {
+    emailError = err instanceof Error ? err.message : String(err);
+    console.error(JSON.stringify({ msg: 'invite email failed', role, emailError }));
+  }
+
+  return json(200, { ok: true, invite_url: inviteUrl, email_sent: emailSent, email_error: emailError });
+}
+
+// -- Public: read a staff invite by its token so the sign-up screen can name the
+//    clinic and the role before the person has an account. The SECOND and last
+//    unauthenticated route. It reveals the invited email to whoever holds the
+//    token, which is what an invite link is; the token is the secret, and it
+//    still does not let the wrong person claim the role (accept_staff_invite
+//    checks the verified email). Unknown, expired and used tokens all 404.
+async function getStaffInvite(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const token = event.pathParameters?.token;
+  if (!token) throw new HttpError(400, 'token_required');
+  const { rows } = await client.query(
+    'select clinic_name, clinic_slug, email, full_name, role from public.get_staff_invite($1)',
+    [token],
+  );
+  if (!rows[0]) throw new HttpError(404, 'invite_not_found');
+  return json(200, rows[0]);
 }
 
 async function rpcAssignTherapist(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
@@ -524,6 +617,7 @@ const ROUTES: Record<string, Route> = {
   'GET /clinic/roster': getRoster,
   'GET /clinic/therapists': getTherapists,
   'GET /clinic/invites': getInvites,
+  'GET /staff-invites/{token}': getStaffInvite,
   'POST /rpc/provision-clinic': rpcProvisionClinic,
   'POST /rpc/join-clinic': rpcJoinClinic,
   'POST /rpc/accept-staff-invite': rpcAcceptStaffInvite,

@@ -57,6 +57,11 @@ const s = {
   inviteBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '9px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   pending: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', marginTop: 12, lineHeight: 1.6 },
   notice: { fontSize: 13, color: '#9bb06a', marginTop: 12 },
+  inviteResult: { marginTop: 14, padding: '14px 16px', background: 'rgba(245,168,26,0.07)', border: '1px solid rgba(245,168,26,0.3)', borderRadius: 6 },
+  inviteResultHead: { fontSize: 14, lineHeight: 1.5, fontWeight: 600, color: '#f5efe4', marginBottom: 4 },
+  inviteResultBody: { fontSize: 13, lineHeight: 1.6, color: 'rgba(245,239,228,0.65)', marginBottom: 10 },
+  inviteLinkRow: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' },
+  inviteLinkText: { flex: '1 1 220px', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.8)', wordBreak: 'break-all' },
   emptyTeam: { fontSize: 13.5, color: 'rgba(245,239,228,0.5)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   greet: { fontSize: 14.5, color: '#FBC02D', fontWeight: 500, marginBottom: 6 },
   sel: { background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '6px 8px', color: '#f5efe4', fontSize: 13, fontFamily: 'inherit', maxWidth: '100%' },
@@ -144,6 +149,7 @@ export default function Dashboard() {
   const [tName, setTName] = useState('')
   const [tEmail, setTEmail] = useState('')
   const [notice, setNotice] = useState('')
+  const [inviteLink, setInviteLink] = useState(null) // { url, email, name, sent }
 
   const isManager = profile?.role === 'manager'
   const staffName = greetingName(profile?.full_name)
@@ -288,13 +294,18 @@ export default function Dashboard() {
     const name = tName.trim(), email = tEmail.trim()
     if (!name) return setNotice('Enter the therapist’s name.')
     if (!email) return setNotice('Enter the therapist’s email.')
+    let res
     try {
-      await inviteTherapist(email, name)
+      res = await inviteTherapist(email, name)
     } catch (err) {
       return setNotice(`Couldn’t send invite: ${err.message}`)
     }
     setTName(''); setTEmail('')
-    setNotice(`Invited ${name}. They’ll appear as a therapist once they sign in at the login page with ${email}.`)
+    // The link is shown whether or not the email went. The send can fail for
+    // reasons that have nothing to do with the invite, which is already saved,
+    // and a manager who can see the link is never stuck.
+    setInviteLink({ url: res.invite_url, email, name, sent: !!res.email_sent })
+    setNotice('')
     setInvites(await fetchPendingInvites())
   }
 
@@ -413,6 +424,27 @@ export default function Dashboard() {
                 <button style={s.inviteBtn} type="submit">Invite Therapist →</button>
               </form>
               {notice && <div style={s.notice}>{notice}</div>}
+              {inviteLink && (
+                <div style={s.inviteResult}>
+                  <div style={s.inviteResultHead}>
+                    {inviteLink.sent
+                      ? `Invite emailed to ${inviteLink.email}.`
+                      : `Invite created, but the email didn’t send.`}
+                  </div>
+                  <div style={s.inviteResultBody}>
+                    {inviteLink.sent
+                      ? `You can also send ${inviteLink.name} this link. It works only for their email address and expires in 14 days.`
+                      : `Send ${inviteLink.name} this link instead. It works only for their email address and expires in 14 days.`}
+                  </div>
+                  <div style={s.inviteLinkRow}>
+                    <div style={s.inviteLinkText}>{inviteLink.url}</div>
+                    <button type="button" style={s.copyBtn}
+                      onClick={() => { navigator.clipboard?.writeText(inviteLink.url); setNotice('Invite link copied.') }}>
+                      Copy link
+                    </button>
+                  </div>
+                </div>
+              )}
               {invites.length > 0 && (
                 <div style={s.pending}>
                   <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Pending (Waiting for First Sign-In):</strong><br />

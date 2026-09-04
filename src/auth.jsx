@@ -12,9 +12,14 @@ const AuthContext = createContext(null)
 
 const PENDING_JOIN_KEY = 'glowpt.pendingJoin'       // patient: { slug, fullName, consentVersion }
 const PENDING_ONBOARD_KEY = 'glowpt.pendingOnboard' // clinic: { clinicName, slug, fullName }
+const PENDING_STAFF_KEY = 'glowpt.pendingStaff'     // staff: the invite token
 
 export function savePendingJoin(slug, fullName, consentVersion) {
   localStorage.setItem(PENDING_JOIN_KEY, JSON.stringify({ slug, fullName, consentVersion }))
+}
+
+export function savePendingStaff(token) {
+  localStorage.setItem(PENDING_STAFF_KEY, token)
 }
 
 export function savePendingOnboard(clinicName, slug, fullName) {
@@ -40,8 +45,10 @@ export function AuthProvider({ children }) {
     if (!prof?.clinic_id) {
       const onboardRaw = localStorage.getItem(PENDING_ONBOARD_KEY)
       const joinRaw = localStorage.getItem(PENDING_JOIN_KEY)
+      const staffToken = localStorage.getItem(PENDING_STAFF_KEY)
       localStorage.removeItem(PENDING_ONBOARD_KEY)
       localStorage.removeItem(PENDING_JOIN_KEY)
+      localStorage.removeItem(PENDING_STAFF_KEY)
 
       try {
         if (onboardRaw) {
@@ -53,8 +60,10 @@ export function AuthProvider({ children }) {
           // join_clinic upserts the profile (role pinned to patient) + records consent.
           await api.joinClinic(j.slug, j.fullName || null, j.consentVersion || null)
         } else {
-          // Might be invited staff attaching on first sign-in (matched by email).
-          await api.acceptStaffInvite()
+          // Invited staff. With a token this is a retry of the link they
+          // followed; without one it is the blind email-matched net, which
+          // simply returns null for the many users who have no invite at all.
+          await api.acceptStaffInvite(staffToken)
         }
       } catch (err) {
         console.log('Profile re-attach failed:', err.message)

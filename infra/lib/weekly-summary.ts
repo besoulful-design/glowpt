@@ -39,6 +39,14 @@ export interface WeeklySummaryProps {
  */
 export class WeeklySummary extends Construct {
   public readonly fn: lambdaNode.NodejsFunction;
+  /**
+   * The SES API interface endpoint's security group. Exposed because the data
+   * API Lambda also sends mail (the staff invite) and needs 443 to this
+   * endpoint. The endpoint lives in THIS construct only because it was built
+   * here first; moving it would change its logical id and force a replacement,
+   * so the stack opens it to the other Lambda instead. Shared infra, one owner.
+   */
+  public readonly sesEndpointSg: ec2.SecurityGroup;
 
   constructor(scope: Construct, id: string, props: WeeklySummaryProps) {
     super(scope, id);
@@ -74,6 +82,7 @@ export class WeeklySummary extends Construct {
       ec2.Port.tcp(443),
       'HTTPS to the SES API from the weekly-summary Lambda',
     );
+    this.sesEndpointSg = endpointSg;
     props.vpc.addInterfaceEndpoint('SesApiEndpoint', {
       service: ec2.InterfaceVpcEndpointAwsService.EMAIL,
       subnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
