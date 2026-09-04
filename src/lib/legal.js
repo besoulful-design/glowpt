@@ -6,11 +6,18 @@
 // person actually agreed to. If you materially change PATIENT_PRIVACY_NOTICE
 // below, you MUST bump PRIVACY_NOTICE_VERSION in the same commit, or the
 // consent rows will claim agreement to words the patient never saw.
-//
-// v2 -> v3 (2026-08-23): the AI reflection moved from Anthropic's own API to
-// Amazon Bedrock, so the notice no longer names Anthropic as a recipient. That
-// is a material change to who receives PHI, hence a new version.
 
+// v2 -> v3 (2026-09-04): the AI reflection moves from Anthropic's own API to
+// Amazon Bedrock, so the notice no longer names Anthropic as a recipient. WHO
+// RECEIVES PHI is the most material change this notice can carry, which is
+// exactly what the version exists to record.
+//
+// ⚠️ THE COPY IS AHEAD OF THE CODE UNTIL `bedrock-ai-response` MERGES, and that
+// is a deliberate, bounded call by David: production still calls
+// api.anthropic.com today. It is safe because a REAL patient cannot use GlowPT
+// before Bedrock lands anyway (it is one of the two go-live gates), so the only
+// people who read this notice for real read it after the switch. **If Bedrock
+// is ever abandoned rather than merged, this text must be reverted with it.**
 export const PRIVACY_NOTICE_VERSION = 'v3'
 
 // Patient-facing privacy notice, shown at /join before the consent checkbox.
@@ -30,11 +37,11 @@ export function patientPrivacyNotice(clinicName) {
     },
     {
       heading: 'Who can see it',
-      body: `Your care team at ${clinic} — your assigned therapist and the practice manager. Every time a staff member opens patient information, that access is recorded. No other clinic using GlowPT can see anything about you.`,
+      body: `Your care team at ${clinic}: your assigned therapist and the practice manager. Every time a staff member opens patient information, that access is recorded. No other clinic using GlowPT can see anything about you.`,
     },
     {
       heading: 'How the daily reflection is written',
-      body: `The short message you get back after each check-in is written by an AI model. To write it, we send that one check-in — your first name, your feeling score, your movement, and your note — to Amazon Bedrock, the AI service running inside our own protected Amazon Web Services account. Your email address, your last name, and your history are not sent. Your words never leave that protected environment, are not sent to an outside AI company, and are not used to train anyone's models.`,
+      body: `The short message you get back after each check-in is written by an AI model. To write it, we send that one check-in (your first name, your feeling score, your movement, and your note) to Amazon Bedrock, the AI service that runs inside our own protected Amazon Web Services account. Your email address, your last name, and your history are not sent. Your words stay inside that protected environment, are not sent to an outside AI company, and are not used to train anyone's models.`,
     },
     {
       heading: 'The weekly email',
@@ -50,7 +57,7 @@ export function patientPrivacyNotice(clinicName) {
     },
     {
       heading: 'Your choices',
-      body: `Your health record belongs to ${clinic}, so requests to see, correct, or delete your information go to them directly, and they can answer questions about how it is handled. You can stop using GlowPT whenever you like — ask ${clinic} to close your account. Choosing not to use GlowPT does not affect the care you receive.`,
+      body: `Your health record belongs to ${clinic}, so requests to see, correct, or delete your information go to them directly, and they can answer questions about how it is handled. You can stop using GlowPT whenever you like. Ask ${clinic} to close your account. Choosing not to use GlowPT does not affect the care you receive.`,
     },
   ]
 }
@@ -99,7 +106,7 @@ export const BAA_SUMMARY = [
   },
   {
     heading: 'Subcontractors',
-    body: 'Any vendor that handles patient information on our behalf is bound by the same obligations in writing. Today that is Amazon Web Services alone — hosting, database, email, and the Bedrock service that runs the AI reflection — all under one executed AWS business associate addendum.',
+    body: 'Any vendor that handles patient information on our behalf is bound by the same obligations in writing. Today that is Amazon Web Services alone, covering hosting, database, email, and the Bedrock service that runs the AI reflection, all under one executed AWS business associate addendum.',
   },
   {
     heading: 'If something goes wrong',
