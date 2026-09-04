@@ -122,7 +122,20 @@ create table public.clinics (
   baa_version   text,
   activated_at  timestamptz,                      -- null = closed, no PHI accepted
   activated_by  uuid references public.users(id),
-  created_at    timestamptz not null default now()
+  created_at    timestamptz not null default now(),
+  -- How patients get in. FALSE (the default, so a new clinic is never exposed
+  -- by accident) means invite only: the /join/<slug> link and its QR refuse
+  -- everyone, and a patient arrives solely through a manager's invite link.
+  -- TRUE restores the self-serve walk-in path, for a clinic that genuinely
+  -- wants a code on the front desk.
+  --
+  -- ⚠️ This is a THIRD, separate flag from activated_at and baa_signed_at, and
+  -- deliberately so: activation is "may this clinic operate at all", this is
+  -- "how does it enrol", and they move for entirely different reasons.
+  --
+  -- Declared LAST on purpose: a patch can only append a column, so keeping it
+  -- last here is what makes a migrated database and a fresh one identical.
+  open_signup   boolean not null default false
 );
 
 -- ---- public.profiles (PHI: names a person as a patient of a clinic) ----
@@ -190,7 +203,12 @@ create table public.access_log (
 );
 create index access_log_clinic_idx on public.access_log (clinic_id, created_at desc);
 
--- ---- public.staff_invites (staff, not PHI) ----
+-- ---- public.staff_invites (invites; the name is historical) ----
+-- ⚠️ THIS TABLE NOW HOLDS PATIENT INVITES TOO, so it is no longer PHI-free: a
+-- patient row names a person as a patient of a named clinic, which is exactly
+-- what makes public.profiles PHI. It was already RLS-scoped to the clinic's own
+-- manager, which is the right scoping either way. The table keeps its name
+-- because renaming it would churn every policy, grant and function for no gain.
 --
 -- 256 bits of randomness, hex, from two v4 uuids. gen_random_uuid() is built in
 -- from PG13, so this needs no extension. Defined above the table because a
@@ -206,7 +224,7 @@ create table public.staff_invites (
   clinic_id  uuid not null references public.clinics(id) on delete cascade,
   email      text not null,
   full_name  text,
-  role       text not null default 'therapist' check (role in ('therapist','manager')),
+  role       text not null default 'therapist' check (role in ('patient','therapist','manager')),
   invited_by uuid references public.users(id) on delete set null,
   created_at timestamptz not null default now(),
   consumed_at timestamptz,
@@ -307,12 +325,12 @@ end $$;
 -- is_active lets the public /join page tell "no such clinic" apart from "not
 -- open yet", so a patient reads a sentence instead of hitting a thrown error.
 create or replace function public.get_clinic_by_slug(p_slug text)
-  returns table (id uuid, name text, slug text, is_active boolean)
+  returns table (id uuid, name text, slug text, is_active boolean, open_signup boolean)
   language sql stable security definer
   set search_path = public set row_security = off
 as $$
-  select c.id, c.name, c.slug, (c.activated_at is not null) as is_active
-  from public.clinics c
+  select c.id, c.name, c.slug, (c.activated_at is not null) as is_active, c.open_signup
+    from public.clinics c
   where c.slug = lower(trim(p_slug))
 $$;
 
@@ -351,6 +369,14 @@ begin
   -- of what the frontend does or whether the frontend is the caller at all.
   if not public.clinic_is_active(v_clinic) then
     raise exception 'Clinic is not open for sign-ups yet' using errcode = 'P0001';
+  end if;
+
+  -- The self-serve gate. This function IS the open /join/<slug> path, so a
+  -- clinic that has not asked for a walk-in QR refuses strangers here, in the
+  -- database. An INVITED patient never reaches this function: they arrive
+  -- through accept_patient_invite, which is matched to their own address.
+  if not (select open_signup from public.clinics where id = v_clinic) then
+    raise exception 'This clinic is invite only' using errcode = 'P0001';
   end if;
 
   if exists (select 1 from public.profiles
@@ -408,9 +434,19 @@ begin
     if lower(v_inv.email) <> lower(v_email) then
       raise exception 'This invite is for a different email address' using errcode = 'P0001';
     end if;
+    -- ⚠️ A patient invite must NOT be claimed here: this function records no
+    -- consent, and a patient attached without a consents row is exactly the
+    -- gap the privacy notice exists to close. accept_patient_invite is the
+    -- only door for those.
+    if v_inv.role = 'patient' then
+      raise exception 'Use the patient invite flow for this invite' using errcode = 'P0001';
+    end if;
   else
+    -- The blind safety net. Staff roles only, for the same consent reason: a
+    -- patient invite is never claimed by a speculative retry.
     select * from public.staff_invites
       where email = lower(v_email) and consumed_at is null and expires_at > now()
+        and role <> 'patient'
       order by created_at desc limit 1 into v_inv;
     if v_inv.id is null then return null; end if;
   end if;
@@ -447,8 +483,9 @@ begin
   return v_token;
 end $$;
 
--- Read an invite by its token, WITHOUT being signed in, so the staff sign-up
--- screen can say which clinic and which role before the person has an account.
+-- Read an invite by its token, WITHOUT being signed in, so the sign-up screen
+-- can say which clinic and which role before the person has an account. Serves
+-- patient AND staff invites; the caller branches on the role it returns.
 -- Same unauthenticated shape as get_clinic_by_slug. It reveals the invited email
 -- to whoever holds the token, which is the point of an invite link; the token is
 -- the secret, and holding it still does not let the wrong person claim the role.
@@ -465,6 +502,100 @@ as $$
      and i.consumed_at is null
      and i.expires_at > now()
 $$;
+
+-- Invite a PATIENT by email. Same token machinery as invite_staff and the same
+-- guarantee: the token says which invite, the verified email is the gate. Split
+-- from invite_staff rather than folded into it so a patient form can never be
+-- coaxed into minting a therapist or manager invite by passing a role.
+create or replace function public.invite_patient(p_email text, p_full_name text)
+  returns text
+  language plpgsql security definer
+  set search_path = public set row_security = off
+as $$
+declare v_clinic uuid; v_token text;
+begin
+  select clinic_id from public.profiles where id = public.current_user_id() and role = 'manager' into v_clinic;
+  if v_clinic is null then raise exception 'Only a clinic manager can invite patients'; end if;
+  insert into public.staff_invites (clinic_id, email, full_name, role, invited_by)
+  values (v_clinic, lower(trim(p_email)), nullif(trim(p_full_name), ''), 'patient', public.current_user_id())
+  on conflict (clinic_id, email) do update
+    set full_name = excluded.full_name, role = 'patient',
+        invited_by = excluded.invited_by, created_at = now(), consumed_at = null,
+        token = public.new_invite_token(), expires_at = now() + interval '14 days'
+  returning token into v_token;
+  return v_token;
+end $$;
+
+-- Claim a PATIENT invite. The twin of accept_staff_invite, plus the one thing
+-- that door cannot do: record consent, in the same transaction as the attach.
+-- Role is pinned to 'patient' here rather than read off the invite, so even a
+-- tampered invite row cannot mint staff through the patient screen.
+create or replace function public.accept_patient_invite(p_token text, p_consent_version text)
+  returns uuid
+  language plpgsql security definer
+  set search_path = public set row_security = off
+as $$
+declare v_email text; v_inv record;
+begin
+  if public.current_user_id() is null then raise exception 'Not authenticated'; end if;
+  select email from public.users where id = public.current_user_id() into v_email;
+
+  select * from public.staff_invites
+    where token = p_token and consumed_at is null and expires_at > now()
+    into v_inv;
+  if v_inv.id is null then
+    raise exception 'This invite link is no longer valid' using errcode = 'P0001';
+  end if;
+  if lower(v_inv.email) <> lower(v_email) then
+    raise exception 'This invite is for a different email address' using errcode = 'P0001';
+  end if;
+  if v_inv.role <> 'patient' then
+    raise exception 'Use the staff invite flow for this invite' using errcode = 'P0001';
+  end if;
+
+  -- An invited patient is enrolling in a clinic, so the activation gate applies
+  -- exactly as it does on the open path. An invite is not a way around it.
+  if not public.clinic_is_active(v_inv.clinic_id) then
+    raise exception 'Clinic is not open for sign-ups yet' using errcode = 'P0001';
+  end if;
+
+  if exists (select 1 from public.profiles
+             where id = public.current_user_id()
+               and role <> 'patient'
+               and clinic_id is not null) then
+    raise exception 'Staff account cannot join as a patient';
+  end if;
+
+  insert into public.profiles (id, clinic_id, role, full_name)
+    values (public.current_user_id(), v_inv.clinic_id, 'patient', v_inv.full_name)
+    on conflict (id) do update
+      set clinic_id = v_inv.clinic_id, role = 'patient',
+          full_name = coalesce(public.profiles.full_name, v_inv.full_name);
+
+  if p_consent_version is not null then
+    insert into public.consents (user_id, clinic_id, type, version)
+    values (public.current_user_id(), v_inv.clinic_id, 'hipaa_patient_ack', p_consent_version);
+  end if;
+
+  update public.staff_invites set consumed_at = now() where id = v_inv.id;
+  return v_inv.clinic_id;
+end $$;
+
+-- The manager's own switch: does this clinic take walk-ins, or invites only.
+-- Theirs rather than the platform admin's, because only they know whether they
+-- want a code on the front desk.
+create or replace function public.set_clinic_open_signup(p_open boolean)
+  returns boolean
+  language plpgsql security definer
+  set search_path = public set row_security = off
+as $$
+declare v_clinic uuid;
+begin
+  select clinic_id from public.profiles where id = public.current_user_id() and role = 'manager' into v_clinic;
+  if v_clinic is null then raise exception 'Only a clinic manager can change patient sign-up'; end if;
+  update public.clinics set open_signup = p_open where id = v_clinic;
+  return p_open;
+end $$;
 
 create or replace function public.assign_therapist(p_patient uuid, p_therapist uuid)
   returns void
@@ -863,6 +994,9 @@ grant execute on function
   public.accept_staff_invite(text),
   public.get_staff_invite(text),
   public.invite_staff(text, text, text),
+  public.invite_patient(text, text),
+  public.accept_patient_invite(text, text),
+  public.set_clinic_open_signup(boolean),
   public.assign_therapist(uuid, uuid),
   public.discharge_patient(uuid),
   public.restore_patient(uuid),
@@ -883,7 +1017,8 @@ grant execute on function
   public.register_user(uuid, citext, text),
   public.provision_clinic(text, text),
   public.join_clinic(text, text, text),
-  public.accept_staff_invite(text)
+  public.accept_staff_invite(text),
+  public.accept_patient_invite(text, text)
 to glowpt_postconfirm;
 
 -- glowpt_weekly: the weekly-summary Lambda's role. It has NO table grants and can
@@ -925,7 +1060,10 @@ alter function public.provision_clinic(text, text)            owner to glowpt_au
 alter function public.join_clinic(text, text, text)           owner to glowpt_auth;
 alter function public.accept_staff_invite(text)               owner to glowpt_auth;
 alter function public.invite_staff(text, text, text)          owner to glowpt_auth;
-alter function public.get_staff_invite(text)                  owner to glowpt_auth;
+alter function public.invite_patient(text, text)              owner to glowpt_auth;
+alter function public.accept_patient_invite(text, text)       owner to glowpt_auth;
+alter function public.set_clinic_open_signup(boolean)         owner to glowpt_auth;
+alter function public.get_staff_invite(text)                         owner to glowpt_auth;
 alter function public.new_invite_token()                      owner to glowpt_auth;
 alter function public.assign_therapist(uuid, uuid)            owner to glowpt_auth;
 alter function public.discharge_patient(uuid)                 owner to glowpt_auth;

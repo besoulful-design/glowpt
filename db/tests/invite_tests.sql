@@ -17,6 +17,8 @@ declare
   newst  constant uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   wrongp constant uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
   expird constant uuid := 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  newpat constant uuid := 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+  ptok text; clinic_a uuid;
   tok text; tok2 text; expired_tok text;
   denied boolean; n int; r record; clinic uuid;
 begin
@@ -129,5 +131,96 @@ begin
     perform invite_staff('anyone@a.com','Anyone','manager');
   exception when others then denied := (sqlerrm like '%Only a clinic manager%'); end;
   raise notice '% T35 a patient cannot create a staff invite',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- =================== PATIENT INVITES ===================
+  perform set_config('app.user_id', mgr_a::text, true);
+  select invite_patient('newpat@a.com','New Patient') into ptok;
+  select id from clinics where slug = 'clinic-a' into clinic_a;
+
+  perform set_config('app.user_id', '', true);
+  select * from get_staff_invite(ptok) into r;
+  raise notice '% T36 a patient invite reads back as a patient invite -> %',
+    case when r.role = 'patient' and r.email = 'newpat@a.com' then 'PASS:' else 'FAIL:' end,
+    coalesce(r.role,'(none)');
+
+  -- T37 THE CONSENT GUARD. accept_staff_invite records no consent, so it must
+  -- refuse a patient invite outright rather than attach someone who never
+  -- agreed to the privacy notice.
+  perform set_config('app.user_id', newpat::text, true);
+  denied := false;
+  begin
+    perform accept_staff_invite(ptok);
+  exception when others then denied := (sqlerrm like '%patient invite flow%'); end;
+  raise notice '% T37 the staff door refuses a patient invite',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T37b And the blind safety net skips it too, so a patient invite is never
+  -- claimed by a speculative retry on some later sign-in.
+  select accept_staff_invite() into clinic;
+  select count(*) into n from profiles where id = newpat and clinic_id is not null;
+  raise notice '% T37b the no-token safety net skips patient invites -> % rows',
+    case when clinic is null and n = 0 then 'PASS:' else 'FAIL:' end, n;
+
+  -- T38 Wrong holder, same rule as staff: the verified email is the gate.
+  perform set_config('app.user_id', wrongp::text, true);
+  denied := false;
+  begin
+    perform accept_patient_invite(ptok, 'v1');
+  exception when others then denied := (sqlerrm like '%different email address%'); end;
+  raise notice '% T38 a link holder with the wrong email cannot claim a patient invite',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T39 The patient door refuses a STAFF invite, the mirror of T37, so neither
+  -- screen can be used to claim the other kind of account.
+  perform set_config('app.user_id', newst::text, true);
+  denied := false;
+  begin
+    perform accept_patient_invite(tok2, 'v1');
+  exception when others then denied := (sqlerrm like '%staff invite flow%'); end;
+  raise notice '% T39 the patient door refuses a staff invite',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T40 An invite is NOT a way around the activation gate.
+  perform set_config('app.user_id', '77777777-7777-7777-7777-777777777777', true);
+  perform admin_set_clinic_active(clinic_a, false);
+  perform set_config('app.user_id', newpat::text, true);
+  denied := false;
+  begin
+    perform accept_patient_invite(ptok, 'v1');
+  exception when others then denied := (sqlerrm like '%not open for sign-ups%'); end;
+  raise notice '% T40 an invited patient is still refused while the clinic is off',
+    case when denied then 'PASS:' else 'FAIL:' end;
+  perform set_config('app.user_id', '77777777-7777-7777-7777-777777777777', true);
+  perform admin_set_clinic_active(clinic_a, true);
+
+  -- T41 LEGIT: the invited patient joins, as a patient, WITH a consent row.
+  perform set_config('app.user_id', newpat::text, true);
+  select accept_patient_invite(ptok, 'v9-test') into clinic;
+  select count(*) into n from profiles
+    where id = newpat and role = 'patient' and clinic_id = clinic_a;
+  raise notice '% T41 the invited patient is attached as a patient -> % rows',
+    case when n = 1 and clinic is not null then 'PASS:' else 'FAIL:' end, n;
+
+  select count(*) into n from consents
+    where user_id = newpat and clinic_id = clinic_a and version = 'v9-test';
+  raise notice '% T41b and their consent was recorded in the same breath -> % rows',
+    case when n = 1 then 'PASS:' else 'FAIL:' end, n;
+
+  -- T42 AUTHZ: a patient cannot invite patients either.
+  perform set_config('app.user_id', newpat::text, true);
+  denied := false;
+  begin
+    perform invite_patient('someone@a.com','Someone');
+  exception when others then denied := (sqlerrm like '%Only a clinic manager%'); end;
+  raise notice '% T42 a patient cannot invite patients',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T43 AUTHZ: nor flip their clinic back to open walk-ins.
+  denied := false;
+  begin
+    perform set_clinic_open_signup(true);
+  exception when others then denied := (sqlerrm like '%Only a clinic manager%'); end;
+  raise notice '% T43 a patient cannot open their clinic to walk-ins',
     case when denied then 'PASS:' else 'FAIL:' end;
 end $$;

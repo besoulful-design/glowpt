@@ -18,6 +18,11 @@ begin; select set_config('app.user_id','11111111-1111-1111-1111-111111111111',tr
   select provision_clinic('Clinic A','clinic-a'); commit;
 begin; select set_config('app.user_id','77777777-7777-7777-7777-777777777777',true);
   select admin_set_clinic_active((select id from admin_list_clinics() where slug='clinic-a'), true); commit;
+-- A new clinic is invite-only, so the seed's self-serve joins below would be
+-- refused. The manager opts into walk-ins first, which is the real RPC and is
+-- asserted directly in T36/T37.
+begin; select set_config('app.user_id','11111111-1111-1111-1111-111111111111',true);
+  select set_clinic_open_signup(true); commit;
 begin; select set_config('app.user_id','22222222-2222-2222-2222-222222222222',true);
   select join_clinic('clinic-a','Pat A1','v1'); commit;
 begin; select set_config('app.user_id','33333333-3333-3333-3333-333333333333',true);
@@ -35,6 +40,8 @@ begin; select set_config('app.user_id','55555555-5555-5555-5555-555555555555',tr
   select provision_clinic('Clinic B','clinic-b'); commit;
 begin; select set_config('app.user_id','77777777-7777-7777-7777-777777777777',true);
   select admin_set_clinic_active((select id from admin_list_clinics() where slug='clinic-b'), true); commit;
+begin; select set_config('app.user_id','55555555-5555-5555-5555-555555555555',true);
+  select set_clinic_open_signup(true); commit;
 begin; select set_config('app.user_id','66666666-6666-6666-6666-666666666666',true);
   select join_clinic('clinic-b','Pat B1','v1'); commit;
 
@@ -182,13 +189,27 @@ begin
   exception when others then denied := (sqlerrm like '%not open for sign-ups%'); end;
   raise notice '% T17 join refused while clinic is closed', case when denied then 'PASS:' else 'FAIL:' end;
 
-  -- T18 SWITCH ON: the admin opens clinic C, and the same join now succeeds.
+  -- T17b THE TWO GATES ARE INDEPENDENT. The admin switches clinic C on, and the
+  -- self-serve join is STILL refused, because a new clinic is invite-only until
+  -- its manager asks for walk-ins. Activation is "may this clinic operate";
+  -- open_signup is "how does it enrol". Different questions, different answers.
   perform set_config('app.user_id', admin_id::text, true);
   perform public.admin_set_clinic_active(clinic_c, true);
   perform set_config('app.user_id', pat_c1::text, true);
+  denied := false;
+  begin
+    perform public.join_clinic('clinic-c','Pat C1','v1');
+  exception when others then denied := (sqlerrm like '%invite only%'); end;
+  raise notice '% T17b an active clinic still refuses walk-ins while invite-only',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T18 SWITCH ON: the manager opens walk-ins, and the same join now succeeds.
+  perform set_config('app.user_id', '88888888-8888-8888-8888-888888888888', true);
+  perform public.set_clinic_open_signup(true);
+  perform set_config('app.user_id', pat_c1::text, true);
   perform public.join_clinic('clinic-c','Pat C1','v1');
   select count(*) into n from public.profiles where id = pat_c1 and clinic_id = clinic_c;
-  raise notice '% T18 join succeeds once the admin switches the clinic on', case when n=1 then 'PASS:' else 'FAIL:' end;
+  raise notice '% T18 join succeeds once both gates are open', case when n=1 then 'PASS:' else 'FAIL:' end;
 
   -- T19 SWITCH OFF: an ALREADY-ATTACHED patient cannot write PHI to a clinic
   -- that has been switched back off. Gating only the join would miss this.

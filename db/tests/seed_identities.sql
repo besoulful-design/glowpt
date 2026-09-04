@@ -24,6 +24,7 @@ select register_user('99999999-9999-9999-9999-999999999999','patc1@c.com','Pat C
 select register_user('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','newstaff@a.com','New Staff');
 select register_user('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','wrongperson@a.com','Wrong Person');
 select register_user('cccccccc-cccc-cccc-cccc-cccccccccccc','expired@a.com','Expired Invitee');
+select register_user('dddddddd-dddd-dddd-dddd-dddddddddddd','newpat@a.com','New Patient');
 
 \set QUIET off
 do $$
