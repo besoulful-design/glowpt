@@ -35,7 +35,10 @@ export default function Landing() {
     // block, so an upright sans line under an italic serif one would look like
     // a mistake rather than a distinction. (This is the opposite call to
     // ui.fine, which went upright because it sits among sans form copy.)
-    footerLegal: { fontSize: 12, lineHeight: 1.5, color: 'rgba(245,239,228,0.3)', marginTop: 4, fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
+    // marginTop is 0 on purpose: with the leading fixed the two lines sit
+    // exactly one line-height apart, so they read as consecutive lines of one
+    // block rather than two lines with a gap chosen by hand.
+    footerLegal: { fontSize: 12, lineHeight: 1.5, color: 'rgba(245,239,228,0.3)', marginTop: 0, fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
     moreInfo: { background: 'none', border: 'none', font: 'inherit', fontSize: 14, fontWeight: 500, color: BRAND, textDecoration: 'underline', cursor: 'pointer', padding: 0, marginTop: 20 },
     overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 200 },
     modal: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, position: 'relative', padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left', outline: 'none' },
