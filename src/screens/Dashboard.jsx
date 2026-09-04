@@ -46,7 +46,7 @@ const s = {
   qrImg: { width: 104, height: 104, borderRadius: 6, background: '#fff', padding: 6, flexShrink: 0 },
   qrLabel: { fontSize: SECTION_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
   qrHint: { fontSize: 13.5, color: 'rgba(245,239,228,0.65)', lineHeight: 1.55, marginBottom: 12, maxWidth: '46ch' },
-  qrDownload: { display: 'inline-block', background: '#F5A81A', color: '#0d1825', textDecoration: 'none', fontWeight: 600, fontSize: 14, padding: '10px 18px', borderRadius: 4 },
+  qrDownload: { display: 'inline-block', background: '#F5A81A', color: '#0d1825', border: 'none', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 600, fontSize: 14, padding: '10px 18px', borderRadius: 4 },
   // Care team (manager)
   care: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.18)', borderRadius: 6, padding: '18px 20px', marginBottom: 28 },
   careHead: { fontSize: SECTION_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 14 },
@@ -189,6 +189,47 @@ export default function Dashboard() {
     QRCode.toDataURL(url, { width: 320, margin: 2, color: { dark: '#0d1825', light: '#ffffff' } })
       .then(setQrUrl).catch(() => setQrUrl(''))
   }, [clinic])
+
+  // Save the QR to the device.
+  //
+  // ⚠️ This was an <a href={dataUrl} download> until 2026-09-04 and it did
+  // NOTHING ON AN IPHONE. iOS Safari ignores the `download` attribute on a
+  // data: URL and also refuses to navigate to one, so the tap was inert — and
+  // silently so, which is why it survived: it works on desktop, which is the
+  // only place it had ever been tried.
+  //
+  // Two paths, chosen by capability rather than by sniffing the user agent:
+  // where the browser can share a FILE (iOS Safari, Android Chrome) we open the
+  // native share sheet, which is how you actually get a file onto a phone —
+  // Save to Files, Add to Photos, AirDrop, Print. Everywhere else we click a
+  // blob: URL, which desktop browsers download properly. A blob is used rather
+  // than the data: URL in both paths; some browsers choke on very long ones.
+  const saveQr = useCallback(async () => {
+    if (!qrUrl) return
+    const name = `glowpt-${clinic?.slug || 'clinic'}-qr.png`
+    const blob = await (await fetch(qrUrl)).blob()
+
+    const file = new File([blob], name, { type: 'image/png' })
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Patient sign-up QR' })
+        return
+      } catch (err) {
+        // The reader dismissed the sheet: that is a choice, not a failure.
+        if (err?.name === 'AbortError') return
+        // Anything else (no handler, share refused) falls through to download.
+      }
+    }
+
+    const href = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = href
+    a.download = name
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(href)
+  }, [qrUrl, clinic])
 
   // Ask once whether this staff member is also a platform admin. A plain false
   // on any failure: the link is a convenience, and /admin enforces access itself.
@@ -345,7 +386,7 @@ export default function Dashboard() {
                 <div style={{ flex: 1, minWidth: 130 }}>
                   <div style={s.qrLabel}>Patient Sign-Up QR</div>
                   <div style={s.qrHint}>Print this for your front desk and treatment areas. Patients scan it with their phone camera to join. No links to send.</div>
-                  <a href={qrUrl} download={`glowpt-${clinic?.slug || 'clinic'}-qr.png`} style={s.qrDownload}>Download QR ↓</a>
+                  <button type="button" onClick={saveQr} style={s.qrDownload}>Save QR ↓</button>
                 </div>
               </div>
             )}
