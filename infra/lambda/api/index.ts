@@ -168,14 +168,22 @@ const SES_CONFIG_SET = process.env.SES_CONFIG_SET || '';
 
 function inviteEmail(clinicName: string, role: string, inviteUrl: string, fullName: string | null) {
   const greeting = fullName ? `Hi ${fullName.trim().split(' ')[0]},` : 'Hello,';
-  const roleWord = role === 'manager' ? 'a manager' : 'a therapist';
+  const isPatient = role === 'patient';
+  const roleWord = role === 'manager' ? 'a manager' : role === 'patient' ? 'a patient' : 'a therapist';
+  // Two audiences, one shell. A patient is being asked to use the app daily; a
+  // clinician is being asked to watch a roster. Saying the same thing to both
+  // would sell neither.
+  const pitch = isPatient
+    ? `GlowPT is a 30-second check-in you do each day between visits. It takes a moment, and your care team can see how you are getting on.`
+    : `GlowPT is a daily check-in your patients use between visits. You will see how they are doing, without any extra work.`;
+  const cta = isPatient ? 'Start checking in →' : 'Accept the invitation →';
   return `<div style="font-family:-apple-system,Segoe UI,sans-serif;background:#0d1825;color:#f5efe4;padding:32px;border-radius:8px;max-width:480px;margin:auto">
     <img src="${APP_URL}/apple-touch-icon.png" alt="GlowPT" width="56" height="56" style="display:block;width:56px;height:56px;border:0;border-radius:13px;margin-bottom:12px">
     <div style="font-size:26px;font-weight:600;margin-bottom:18px">Glow<span style="color:#F5A81A">PT</span></div>
     <p style="font-size:17px;line-height:1.5">${greeting}</p>
     <p style="font-size:16px;line-height:1.6;color:rgba(245,239,228,0.8)">${clinicName} has invited you to join GlowPT as ${roleWord}.</p>
-    <p style="font-size:15px;line-height:1.6;color:rgba(245,239,228,0.6)">GlowPT is a daily check-in your patients use between visits. You will see how they are doing, without any extra work.</p>
-    <a href="${inviteUrl}" style="display:inline-block;margin-top:14px;background:#F5A81A;color:#0d1825;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:4px">Accept the invitation →</a>
+    <p style="font-size:15px;line-height:1.6;color:rgba(245,239,228,0.6)">${pitch}</p>
+    <a href="${inviteUrl}" style="display:inline-block;margin-top:14px;background:#F5A81A;color:#0d1825;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:4px">${cta}</a>
     <p style="font-size:13px;line-height:1.6;color:rgba(245,239,228,0.5);margin-top:22px">This link works only for this email address and expires in 14 days. No password is needed. We will email you a code.</p>
     <p style="font-size:13px;color:rgba(245,239,228,0.35);margin-top:18px">One good day at a time.</p>
   </div>`;
@@ -194,7 +202,7 @@ async function getClinicBySlug(client: Client, event: APIGatewayProxyEventV2With
   const slug = event.pathParameters?.slug;
   if (!slug) throw new HttpError(400, 'slug_required');
   const { rows } = await client.query(
-    'select id, name, slug, is_active from public.get_clinic_by_slug($1)',
+    'select id, name, slug, is_active, open_signup from public.get_clinic_by_slug($1)',
     [slug],
   );
   if (!rows[0]) throw new HttpError(404, 'clinic_not_found');
@@ -320,7 +328,7 @@ async function getClinic(client: Client, event: APIGatewayProxyEventV2WithJWTAut
   const sub = requireSub(event);
   const row = await withUser(client, sub, async (c) => {
     const { rows } = await c.query(
-      'select id, name, slug, activated_at from public.clinics where id = public.auth_clinic_id()',
+      'select id, name, slug, activated_at, open_signup from public.clinics where id = public.auth_clinic_id()',
     );
     return rows[0];
   });
@@ -466,12 +474,27 @@ async function rpcInviteStaff(client: Client, event: APIGatewayProxyEventV2WithJ
     return { token: rows[0].token as string, clinicName: (cl[0]?.name as string) || 'Your clinic' };
   });
 
-  const inviteUrl = `${APP_URL}/staff/${token}`;
+  return json(200, await sendInvite(clinicName, role, token, email, fullName));
+}
 
-  // The invite row is already committed, so a failed send must NOT fail the
-  // request and throw the invite away. Report it instead: the manager always
-  // gets the link on screen and can send it themselves. Never a silent partial
-  // success -- email_sent is the honest answer either way.
+/**
+ * Mail an invite and report honestly whether it went.
+ *
+ * The invite row is already committed by the time this runs, so a failed send
+ * must NOT fail the request and throw the invite away. The manager always gets
+ * the link on screen and can send it themselves. Never a silent partial
+ * success: email_sent is the answer either way.
+ *
+ * Shared by the staff and patient handlers so the two cannot drift.
+ */
+async function sendInvite(
+  clinicName: string,
+  role: string,
+  token: string,
+  email: string,
+  fullName: string | null,
+) {
+  const inviteUrl = `${APP_URL}/invite/${token}`;
   let emailSent = false;
   let emailError: string | null = null;
   try {
@@ -493,8 +516,57 @@ async function rpcInviteStaff(client: Client, event: APIGatewayProxyEventV2WithJ
     emailError = err instanceof Error ? err.message : String(err);
     console.error(JSON.stringify({ msg: 'invite email failed', role, emailError }));
   }
+  return { ok: true, invite_url: inviteUrl, email_sent: emailSent, email_error: emailError };
+}
 
-  return json(200, { ok: true, invite_url: inviteUrl, email_sent: emailSent, email_error: emailError });
+async function rpcInvitePatient(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const sub = requireSub(event);
+  const b = parseBody(event);
+  const email = typeof b.email === 'string' ? b.email.trim() : '';
+  if (!email) throw new HttpError(400, 'email_required');
+  const fullName = typeof b.full_name === 'string' ? b.full_name : null;
+
+  const { token, clinicName } = await withUser(client, sub, async (c) => {
+    const { rows } = await c.query('select public.invite_patient($1, $2) as token', [email, fullName]);
+    const { rows: cl } = await c.query(
+      'select name from public.clinics where id = public.auth_clinic_id()',
+    );
+    return { token: rows[0].token as string, clinicName: (cl[0]?.name as string) || 'Your clinic' };
+  });
+
+  return json(200, await sendInvite(clinicName, 'patient', token, email, fullName));
+}
+
+async function rpcAcceptPatientInvite(
+  client: Client,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+) {
+  const sub = requireSub(event);
+  const b = parseBody(event);
+  const token = typeof b.token === 'string' ? b.token : '';
+  if (!token) throw new HttpError(400, 'token_required');
+  const consentVersion = typeof b.consent_version === 'string' ? b.consent_version : null;
+  const clinicId = await withUser(client, sub, async (c) => {
+    const { rows } = await c.query('select public.accept_patient_invite($1, $2) as clinic_id', [
+      token,
+      consentVersion,
+    ]);
+    return rows[0].clinic_id as string | null;
+  });
+  return json(200, { clinic_id: clinicId });
+}
+
+// The manager's own switch: walk-ins, or invite only. Not a platform-admin
+// call; the DB refuses anyone who is not a manager of the clinic.
+async function rpcSetOpenSignup(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const sub = requireSub(event);
+  const b = parseBody(event);
+  const open = b.open === true;
+  const value = await withUser(client, sub, async (c) => {
+    const { rows } = await c.query('select public.set_clinic_open_signup($1) as open_signup', [open]);
+    return rows[0].open_signup as boolean;
+  });
+  return json(200, { open_signup: value });
 }
 
 // -- Public: read a staff invite by its token so the sign-up screen can name the
@@ -622,6 +694,9 @@ const ROUTES: Record<string, Route> = {
   'POST /rpc/join-clinic': rpcJoinClinic,
   'POST /rpc/accept-staff-invite': rpcAcceptStaffInvite,
   'POST /rpc/invite-staff': rpcInviteStaff,
+  'POST /rpc/invite-patient': rpcInvitePatient,
+  'POST /rpc/accept-patient-invite': rpcAcceptPatientInvite,
+  'POST /rpc/set-open-signup': rpcSetOpenSignup,
   'POST /rpc/assign-therapist': rpcAssignTherapist,
   'POST /rpc/discharge-patient': rpcDischargePatient,
   'POST /rpc/restore-patient': rpcRestorePatient,

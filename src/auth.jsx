@@ -13,6 +13,7 @@ const AuthContext = createContext(null)
 const PENDING_JOIN_KEY = 'glowpt.pendingJoin'       // patient: { slug, fullName, consentVersion }
 const PENDING_ONBOARD_KEY = 'glowpt.pendingOnboard' // clinic: { clinicName, slug, fullName }
 const PENDING_STAFF_KEY = 'glowpt.pendingStaff'     // staff: the invite token
+const PENDING_PATIENT_INVITE_KEY = 'glowpt.pendingPatientInvite' // { token, consentVersion }
 
 export function savePendingJoin(slug, fullName, consentVersion) {
   localStorage.setItem(PENDING_JOIN_KEY, JSON.stringify({ slug, fullName, consentVersion }))
@@ -20,6 +21,10 @@ export function savePendingJoin(slug, fullName, consentVersion) {
 
 export function savePendingStaff(token) {
   localStorage.setItem(PENDING_STAFF_KEY, token)
+}
+
+export function savePendingPatientInvite(token, consentVersion) {
+  localStorage.setItem(PENDING_PATIENT_INVITE_KEY, JSON.stringify({ token, consentVersion }))
 }
 
 export function savePendingOnboard(clinicName, slug, fullName) {
@@ -46,15 +51,22 @@ export function AuthProvider({ children }) {
       const onboardRaw = localStorage.getItem(PENDING_ONBOARD_KEY)
       const joinRaw = localStorage.getItem(PENDING_JOIN_KEY)
       const staffToken = localStorage.getItem(PENDING_STAFF_KEY)
+      const patInviteRaw = localStorage.getItem(PENDING_PATIENT_INVITE_KEY)
       localStorage.removeItem(PENDING_ONBOARD_KEY)
       localStorage.removeItem(PENDING_JOIN_KEY)
       localStorage.removeItem(PENDING_STAFF_KEY)
+      localStorage.removeItem(PENDING_PATIENT_INVITE_KEY)
 
       try {
         if (onboardRaw) {
           const o = JSON.parse(onboardRaw)
           await api.provisionClinic(o.clinicName, o.slug)
           if (o.fullName) await api.updateMe(o.fullName)
+        } else if (patInviteRaw) {
+          // An invited patient. Carries its own consent version, because this
+          // path writes a consents row and the staff path never does.
+          const pi = JSON.parse(patInviteRaw)
+          await api.acceptPatientInvite(pi.token, pi.consentVersion || null)
         } else if (joinRaw) {
           const j = JSON.parse(joinRaw)
           // join_clinic upserts the profile (role pinned to patient) + records consent.

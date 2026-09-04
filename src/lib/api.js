@@ -81,6 +81,17 @@ export const getStaffInvite = (token) =>
 // caller's verified email to match the invite, so the token alone grants nothing.
 export const acceptStaffInvite = (token = null) =>
   request('/rpc/accept-staff-invite', { method: 'POST', body: { token } });
+export const invitePatient = (email, fullName) =>
+  request('/rpc/invite-patient', { method: 'POST', body: { email, full_name: fullName } });
+// Separate from acceptStaffInvite because this door records consent and that
+// one deliberately cannot; the database refuses each the other's invites.
+export const acceptPatientInvite = (token, consentVersion) =>
+  request('/rpc/accept-patient-invite', {
+    method: 'POST',
+    body: { token, consent_version: consentVersion },
+  });
+export const setOpenSignup = (open) =>
+  request('/rpc/set-open-signup', { method: 'POST', body: { open } });
 export const inviteStaff = (email, fullName, role = 'therapist') =>
   request('/rpc/invite-staff', {
     method: 'POST',

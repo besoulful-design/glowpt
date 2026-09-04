@@ -111,6 +111,14 @@ export const handler = async (
           meta.onboard_clinic_slug,
         ]);
         break;
+      case 'patient_invite':
+        // An invited patient. Separate from 'staff' because this door records
+        // consent, which the staff one deliberately cannot.
+        await client.query('select accept_patient_invite($1, $2)', [
+          meta.staff_token ?? null,
+          meta.consent_version ?? null,
+        ]);
+        break;
       case 'staff':
         // The token identifies which invite. It is not a credential: the
         // function still requires this user's verified email to match the

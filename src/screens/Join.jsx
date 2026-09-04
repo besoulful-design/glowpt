@@ -94,6 +94,23 @@ export default function Join() {
     )
   }
 
+  // The clinic is switched on but takes invites only, so there is no walk-in
+  // path here. Caught for a sentence rather than a thrown form; the actual
+  // refusal is server-side, in join_clinic.
+  if (clinic.open_signup === false) {
+    return (
+      <AuthShell>
+        <LogoMark size={116} />
+        <div style={ui.eyebrow}>{clinic.name}</div>
+        <div style={ui.title}>You’ll need an invite.</div>
+        <div style={ui.muted}>
+          <div>{clinic.name} adds patients to GlowPT one at a time.</div>
+          <div>Ask them to send you an invite and you’ll get a link by email.</div>
+        </div>
+      </AuthShell>
+    )
+  }
+
   if (pending) return <CodeVerify pending={pending} onResend={sendCode} onBack={() => setPending(null)} />
 
 

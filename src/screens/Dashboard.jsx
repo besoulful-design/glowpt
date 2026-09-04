@@ -57,6 +57,16 @@ const s = {
   inviteBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '9px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   pending: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', marginTop: 12, lineHeight: 1.6 },
   notice: { fontSize: 13, color: '#9bb06a', marginTop: 12 },
+  signupCard: { background: '#1a2840', border: '1px solid rgba(245,239,228,0.08)', borderRadius: 6, padding: 18, marginBottom: 20 },
+  signupRow: { display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 },
+  signupOpt: (on) => ({
+    flex: '1 1 220px', textAlign: 'left', cursor: 'pointer', borderRadius: 6, padding: '12px 14px',
+    fontFamily: 'inherit',
+    background: on ? 'rgba(245,168,26,0.12)' : 'transparent',
+    border: `1px solid ${on ? 'rgba(245,168,26,0.55)' : 'rgba(245,239,228,0.12)'}`,
+  }),
+  signupOptLabel: { fontSize: 14.5, fontWeight: 600, color: '#f5efe4', marginBottom: 3 },
+  signupOptHint: { fontSize: 12.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.5)' },
   inviteResult: { marginTop: 14, padding: '14px 16px', background: 'rgba(245,168,26,0.07)', border: '1px solid rgba(245,168,26,0.3)', borderRadius: 6 },
   inviteResultHead: { fontSize: 14, lineHeight: 1.5, fontWeight: 600, color: '#f5efe4', marginBottom: 4 },
   inviteResultBody: { fontSize: 13, lineHeight: 1.6, color: 'rgba(245,239,228,0.65)', marginBottom: 10 },
@@ -150,6 +160,9 @@ export default function Dashboard() {
   const [tEmail, setTEmail] = useState('')
   const [notice, setNotice] = useState('')
   const [inviteLink, setInviteLink] = useState(null) // { url, email, name, sent }
+  const [pName, setPName] = useState('')
+  const [pEmail, setPEmail] = useState('')
+  const [openSignup, setOpenSignup] = useState(null) // null until the clinic loads
 
   const isManager = profile?.role === 'manager'
   const staffName = greetingName(profile?.full_name)
@@ -187,6 +200,8 @@ export default function Dashboard() {
     })()
     return () => { active = false }
   }, [profile, isManager, loadRoster])
+
+  useEffect(() => { if (clinic) setOpenSignup(clinic.open_signup === true) }, [clinic])
 
   // Generate a printable QR code of the clinic's patient invite link.
   useEffect(() => {
@@ -288,6 +303,34 @@ export default function Dashboard() {
     }
   }
 
+  async function handlePatientInvite(e) {
+    e.preventDefault()
+    setNotice('')
+    const name = pName.trim(), email = pEmail.trim()
+    if (!name) return setNotice('Enter the patient’s name.')
+    if (!email) return setNotice('Enter the patient’s email.')
+    let res
+    try {
+      res = await api.invitePatient(email, name)
+    } catch (err) {
+      return setNotice(`Couldn’t send invite: ${err.message}`)
+    }
+    setPName(''); setPEmail('')
+    setInviteLink({ url: res.invite_url, email, name, sent: !!res.email_sent })
+  }
+
+  async function toggleOpenSignup(next) {
+    setNotice('')
+    const before = openSignup
+    setOpenSignup(next) // optimistic: the switch should not feel laggy
+    try {
+      await api.setOpenSignup(next)
+    } catch (err) {
+      setOpenSignup(before)
+      setNotice(`Couldn’t change patient sign-up: ${err.message}`)
+    }
+  }
+
   async function handleInvite(e) {
     e.preventDefault()
     setNotice('')
@@ -383,15 +426,51 @@ export default function Dashboard() {
               <div style={s.tile}><div style={s.tileLabel}>Need Attention</div><div style={{ ...s.tileValue, color: stats.atRisk ? '#FBC02D' : '#f5efe4' }}>{stats.atRisk}</div><div style={s.tileSub}>flagged</div></div>
             </div>
 
-            <div style={s.linkCard}>
-              <div>
-                <div style={s.linkLabel}>Your Patient Invite Link</div>
-                <div style={s.linkUrl}>{joinUrl}</div>
+            {/* How this clinic enrols patients. Invite-only is the default for a
+                new clinic, so nobody is exposed by a link they never asked for;
+                a clinic that wants a code on the front desk turns it back on
+                here. The DB enforces it either way (join_clinic), so the cards
+                below are hidden for tidiness, not for safety. */}
+            <div style={s.signupCard}>
+              <div style={s.linkLabel}>Patient Sign-Up</div>
+              <div style={s.signupRow}>
+                {[
+                  { v: false, label: 'Invite only', hint: 'You add each patient by email. Nobody else can join.' },
+                  { v: true, label: 'Open link + QR', hint: 'Anyone with your link or QR can join. Good for a front desk.' },
+                ].map(o => (
+                  <button key={String(o.v)} type="button" onClick={() => toggleOpenSignup(o.v)}
+                    style={s.signupOpt(openSignup === o.v)}>
+                    <div style={s.signupOptLabel}>{o.label}</div>
+                    <div style={s.signupOptHint}>{o.hint}</div>
+                  </button>
+                ))}
               </div>
-              <button style={s.copyBtn} onClick={copyLink}>{copied ? 'Copied ✓' : 'Copy link'}</button>
             </div>
 
-            {qrUrl && (
+            {openSignup && (
+              <div style={s.linkCard}>
+                <div>
+                  <div style={s.linkLabel}>Your Patient Invite Link</div>
+                  <div style={s.linkUrl}>{joinUrl}</div>
+                </div>
+                <button style={s.copyBtn} onClick={copyLink}>{copied ? 'Copied ✓' : 'Copy link'}</button>
+              </div>
+            )}
+
+            {/* Invites work whichever way the switch is set. */}
+            <div style={s.care}>
+              <div style={s.careHead}>Invite a Patient</div>
+              <form onSubmit={handlePatientInvite} style={s.inviteForm}>
+                <input style={s.inviteInput} placeholder="Patient name" value={pName}
+                  onChange={e => setPName(e.target.value)} autoComplete="name" />
+                <input style={s.inviteInput} placeholder="Patient email" type="email" value={pEmail}
+                  onChange={e => setPEmail(e.target.value)}
+                  autoComplete="off" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+                <button style={s.inviteBtn} type="submit">Invite Patient →</button>
+              </form>
+            </div>
+
+            {openSignup && qrUrl && (
               <div style={s.qrCard}>
                 <img src={qrUrl} alt="Patient sign-up QR code" style={s.qrImg} />
                 <div style={{ flex: 1, minWidth: 130 }}>

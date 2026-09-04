@@ -3,7 +3,7 @@ import { useAuth } from './auth'
 import { AuthShell, LogoMark, ui } from './screens/AuthShell'
 import Landing from './screens/Landing'
 import Join from './screens/Join'
-import StaffJoin from './screens/StaffJoin'
+import InviteJoin from './screens/InviteJoin'
 import Login from './screens/Login'
 import Onboard from './screens/Onboard'
 import PatientApp from './screens/PatientApp'
@@ -44,7 +44,10 @@ export default function App() {
   return (
     <Routes>
       <Route path="/join/:slug" element={<Join />} />
-      <Route path="/staff/:token" element={<StaffJoin />} />
+      <Route path="/invite/:token" element={<InviteJoin />} />
+      {/* The first staff invite links pointed here. They live 14 days, so this
+          alias stays until 2026-09-18, then it can go. */}
+      <Route path="/staff/:token" element={<InviteJoin />} />
       <Route path="/onboard" element={<Onboard />} />
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<StaffRoute />} />
