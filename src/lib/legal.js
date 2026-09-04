@@ -7,7 +7,18 @@
 // below, you MUST bump PRIVACY_NOTICE_VERSION in the same commit, or the
 // consent rows will claim agreement to words the patient never saw.
 
-export const PRIVACY_NOTICE_VERSION = 'v2'
+// v2 -> v3 (2026-09-04): the AI reflection moves from Anthropic's own API to
+// Amazon Bedrock, so the notice no longer names Anthropic as a recipient. WHO
+// RECEIVES PHI is the most material change this notice can carry, which is
+// exactly what the version exists to record.
+//
+// ⚠️ THE COPY IS AHEAD OF THE CODE UNTIL `bedrock-ai-response` MERGES, and that
+// is a deliberate, bounded call by David: production still calls
+// api.anthropic.com today. It is safe because a REAL patient cannot use GlowPT
+// before Bedrock lands anyway (it is one of the two go-live gates), so the only
+// people who read this notice for real read it after the switch. **If Bedrock
+// is ever abandoned rather than merged, this text must be reverted with it.**
+export const PRIVACY_NOTICE_VERSION = 'v3'
 
 // Patient-facing privacy notice, shown at /join before the consent checkbox.
 // Written to be true of the app as it actually behaves today:
@@ -30,7 +41,7 @@ export function patientPrivacyNotice(clinicName) {
     },
     {
       heading: 'How the daily reflection is written',
-      body: `The short message you get back after each check-in is written by an AI assistant. To write it, we send that one check-in (your first name, your feeling score, your movement, and your note) to our AI provider, Anthropic. Your email address, your last name, and your history are not sent. Anthropic works for us under a written agreement and does not use what you write to train its systems.`,
+      body: `The short message you get back after each check-in is written by an AI model. To write it, we send that one check-in (your first name, your feeling score, your movement, and your note) to Amazon Bedrock, the AI service that runs inside our own protected Amazon Web Services account. Your email address, your last name, and your history are not sent. Your words stay inside that protected environment, are not sent to an outside AI company, and are not used to train anyone's models.`,
     },
     {
       heading: 'The weekly email',
@@ -72,7 +83,7 @@ export function patientPrivacyNotice(clinicName) {
 
 export const BAA_IS_EXECUTED = false
 
-export const BAA_VERSION = 'summary-v2'
+export const BAA_VERSION = 'summary-v3'
 
 // Structured the same way as the patient notice so both modals render headings
 // and body text identically, and so neither depends on hand-wrapped line breaks
@@ -95,7 +106,7 @@ export const BAA_SUMMARY = [
   },
   {
     heading: 'Subcontractors',
-    body: 'Any vendor that handles patient information on our behalf is bound by the same obligations in writing. Today that means Amazon Web Services for hosting, database, and email, and Anthropic for the AI that writes the daily reflection.',
+    body: 'Any vendor that handles patient information on our behalf is bound by the same obligations in writing. Today that is Amazon Web Services alone, covering hosting, database, email, and the Bedrock service that runs the AI reflection, all under one executed AWS business associate addendum.',
   },
   {
     heading: 'If something goes wrong',
