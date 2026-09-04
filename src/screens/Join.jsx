@@ -102,7 +102,14 @@ export default function Join() {
       <LogoMark size={140} />
       <div style={ui.eyebrow}>{clinic.name}</div>
       <div style={ui.title}>Welcome to <Brand /></div>
-      <div style={ui.muted}>Your daily check-in, from {clinic.name}. One good day at a time.</div>
+      {/* Two sentences, two lines. As one string the wrap point was decided by
+          whatever measure the viewport gave, which broke it mid-sentence at
+          phone width ("One good day / at a time."). Same reasoning as the
+          stacked price line in lib/marketing.js — keep them as siblings. */}
+      <div style={ui.muted}>
+        <div>Your daily check-in, from {clinic.name}.</div>
+        <div>One good day at a time.</div>
+      </div>
       <form onSubmit={handleSubmit} style={ui.form}>
         <input style={ui.input} placeholder="Your name" value={fullName}
           onChange={e => setFullName(e.target.value)} autoComplete="name" />

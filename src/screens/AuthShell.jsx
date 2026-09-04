@@ -58,8 +58,36 @@ export function AuthShell({ children }) {
   )
 }
 
+// TWO sizes for the small-label family, which used to be 11.5 and 12 across the
+// board: two arbitrary values for one class of label, and small enough that a
+// clinic's own name was the tiniest text on its own sign-up screen.
+//
+// LABEL_SIZE is a section label standing on its own line — the clinic name under
+// the logo, "Today's Reflection", "Your Week · Tap Any Day", modal titles, the
+// dashboard section heads. Nothing beside it competes, so it can carry weight.
+//
+// SECTION_LABEL_SIZE is a section head above BODY copy — the dashboard cards
+// ("Your Patient Invite Link" over a 14px URL, "Care Team" over 14.5px rows)
+// and the journal's "Your Note" / "Today's Reflection" over 16-19px text.
+//
+// CARD_LABEL_SIZE is a label sitting inside a block, directly above the bigger
+// thing it names — a 28px stat value, a 32px dashboard tile figure, a 20px
+// check-in question.
+//
+// ⚠️ THE THREE TIERS ARE ONE RULE: a label must not outgrow what it introduces.
+// Do NOT "finish the job" by collapsing them. Verified by rendering all of it
+// on 2026-09-04: at 22 a stat label outgrows its own number and "Today's
+// Feeling" wraps to two lines in a half-width card at phone width, and a 22px
+// dashboard head dwarfs the 14px URL beneath it.
+//
+// Change a number here and every label of that tier follows; never retype a
+// literal at a call site. Same one-declaration rule as lib/feelings.js.
+export const LABEL_SIZE = 22
+export const SECTION_LABEL_SIZE = 18
+export const CARD_LABEL_SIZE = 15
+
 export const ui = {
-  eyebrow: { fontSize: 12, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 10 },
+  eyebrow: { fontSize: LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 10 },
   title: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: 34, lineHeight: 1.2, color: '#f5efe4', marginBottom: 14, letterSpacing: '-0.01em' },
   muted: { fontSize: 15, lineHeight: 1.6, color: 'rgba(245,239,228,0.55)', maxWidth: '34ch', marginBottom: 28 },
   form: { display: 'flex', flexDirection: 'column', gap: 12, width: '100%' },

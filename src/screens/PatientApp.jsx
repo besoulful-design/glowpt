@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import * as api from '../lib/api'
 import { useAuth } from '../auth'
 import { FEELINGS as feelingData } from '../lib/feelings'
-import { LogoMark, BRAND } from './AuthShell'
+import { LogoMark, BRAND, LABEL_SIZE, SECTION_LABEL_SIZE, CARD_LABEL_SIZE } from './AuthShell'
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] // Mon → Sun
 
@@ -263,12 +263,12 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     btnSecondary: { width: '100%', padding: '18px 24px', border: '1px solid rgba(245,239,228,0.15)', borderRadius: '4px', background: 'transparent', color: 'rgba(245,239,228,0.7)', fontFamily: "'DM Sans', sans-serif", fontSize: '16px', fontWeight: 500, cursor: 'pointer' },
     btnGhost: { width: '100%', padding: '12px', border: 'none', background: 'transparent', color: 'rgba(245,239,228,0.5)', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', cursor: 'pointer' },
     checkinHeader: { padding: '56px 28px 24px' },
-    checkinDate: { fontSize: '12px', letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '8px' },
+    checkinDate: { fontSize: LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '8px' },
     checkinTitle: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '32px', lineHeight: 1.15, color: '#f5efe4', letterSpacing: '-0.02em' },
     checkinTitleEm: { fontStyle: 'italic', color: '#FBC02D' },
     checkinBody: { padding: '8px 28px 40px', display: 'flex', flexDirection: 'column', gap: '28px' },
     qBlock: { display: 'flex', flexDirection: 'column', gap: '14px' },
-    qLabel: { fontSize: '12px', fontWeight: 600, color: 'rgba(245,239,228,0.7)', letterSpacing: '0.01em' },
+    qLabel: { fontSize: CARD_LABEL_SIZE, fontWeight: 600, color: 'rgba(245,239,228,0.7)', letterSpacing: '0.01em' },
     qQuestion: { fontFamily: "'Fraunces', serif", fontWeight: 400, fontSize: '20px', lineHeight: 1.3, color: '#f5efe4', letterSpacing: '-0.01em' },
     feelingScale: { display: 'flex', gap: '10px', justifyContent: 'space-between' },
     feelingBtn: (selected) => ({ flex: 1, border: `1px solid ${selected ? '#F5A81A' : 'rgba(245,239,228,0.12)'}`, borderRadius: '6px', background: selected ? '#F5A81A' : '#1a2840', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px 6px 10px', gap: '6px', transform: selected ? 'scale(1.06)' : 'scale(1)', transition: 'all 0.2s', boxShadow: selected ? '0 4px 18px rgba(245,168,26,0.4)' : 'none' }),
@@ -283,15 +283,15 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     responseWrap: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '56px 28px 48px', minHeight: '100vh' },
     responseTop: { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: '20px' },
     responseMark: { marginBottom: '32px', position: 'relative' },
-    responseEyebrow: { fontSize: '12px', letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '20px' },
+    responseEyebrow: { fontSize: LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '20px' },
     responseMessage: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '22px', lineHeight: 1.55, color: '#f5efe4', letterSpacing: '-0.01em', marginBottom: '32px', maxWidth: '34ch' },
     statsRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', width: '100%', marginBottom: '28px' },
     statCard: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.2)', borderRadius: '4px', padding: '16px', textAlign: 'left' },
-    statLabel: { fontSize: '11.5px', letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '6px' },
+    statLabel: { fontSize: CARD_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '6px' },
     statValue: { fontFamily: "'Fraunces', serif", fontSize: '28px', fontWeight: 400, color: '#f5efe4', letterSpacing: '-0.02em', lineHeight: 1 },
     statSub: { fontSize: '12px', color: 'rgba(245,239,228,0.5)', marginTop: '4px', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
     streakSection: { width: '100%', marginBottom: '8px' },
-    streakLabel: { fontSize: '12px', letterSpacing: '0.01em', color: 'rgba(245,239,228,0.5)', fontWeight: 600, marginBottom: '12px' },
+    streakLabel: { fontSize: LABEL_SIZE, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.5)', fontWeight: 600, marginBottom: '12px' },
     streakDots: { display: 'flex', gap: '8px', justifyContent: 'center' },
     streakDot: (done, isToday) => ({ width: '38px', height: '38px', borderRadius: '50%', background: isToday ? '#F5A81A' : done ? 'rgba(251,192,45,0.15)' : '#1a2840', border: `1px solid ${done || isToday ? '#F5A81A' : 'rgba(245,239,228,0.1)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: isToday ? '#0d1825' : done ? '#FBC02D' : 'rgba(245,239,228,0.5)', fontWeight: isToday ? 700 : 600, cursor: done ? 'pointer' : 'default', boxShadow: isToday ? '0 4px 14px rgba(245,168,26,0.4)' : 'none', transition: 'all 0.2s' }),
     streakHint: { fontSize: '11px', color: 'rgba(245,239,228,0.35)', fontStyle: 'italic', fontFamily: "'Fraunces', serif", textAlign: 'center', marginTop: '10px' },
@@ -326,7 +326,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     journalDateSub: { fontSize: '13px', color: 'rgba(245,239,228,0.5)', marginTop: '6px', fontFamily: "'Fraunces', serif", fontStyle: 'italic' },
     journalBody: { padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '60px' },
     journalSection: { display: 'flex', flexDirection: 'column', gap: '10px' },
-    journalSectionLabel: { fontSize: '11.5px', letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600 },
+    journalSectionLabel: { fontSize: SECTION_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600 },
     journalFeelingDisplay: { display: 'flex', alignItems: 'center', gap: '16px', background: '#1a2840', border: '1px solid rgba(245,168,26,0.2)', borderRadius: '4px', padding: '18px' },
     journalFeelingEmoji: { fontSize: '36px', lineHeight: 1 },
     journalFeelingNum: { fontFamily: "'Fraunces', serif", fontSize: '36px', fontWeight: 400, color: '#FBC02D', letterSpacing: '-0.03em', lineHeight: 1 },
@@ -335,7 +335,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     journalMovementLabel: { fontSize: '14px', color: 'rgba(245,239,228,0.7)', fontWeight: 500 },
     journalNote: { background: '#1a2840', border: '1px solid rgba(245,239,228,0.08)', borderRadius: '4px', padding: '18px', fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '16px', lineHeight: 1.65, color: 'rgba(245,239,228,0.7)' },
     journalAI: { background: 'linear-gradient(135deg, rgba(245,168,26,0.08) 0%, rgba(13,24,37,0) 100%)', border: '1px solid rgba(245,168,26,0.2)', borderRadius: '4px', padding: '22px', position: 'relative', overflow: 'hidden' },
-    journalAILabel: { fontSize: '11.5px', letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '14px' },
+    journalAILabel: { fontSize: CARD_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '14px' },
     journalAIText: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '19px', lineHeight: 1.55, color: '#f5efe4', letterSpacing: '-0.01em' },
     loadingWrap: { position: 'fixed', inset: 0, background: '#0d1825', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '24px', zIndex: 100 },
     loadingText: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '18px', color: 'rgba(245,239,228,0.5)', animation: 'breathe 2s ease-in-out infinite' },
@@ -510,7 +510,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
                         <span style={styles.monthEmoji}>{feelingData[sum.rounded].emoji}</span>
                         <div>
                           <div style={styles.monthAvgVal}>{sum.avg} <span style={styles.monthAvgUnit}>avg mood</span></div>
-                          <div style={styles.monthAvgWord}>Mostly {feelingData[sum.rounded].word.toLowerCase()} · {sum.count} check-ins in 30 days</div>
+                          <div style={styles.monthAvgWord}>Mostly {feelingData[sum.rounded].word.toLowerCase()} · {sum.count} check-in{sum.count === 1 ? '' : 's'} in 30 days</div>
                         </div>
                       </div>
                       <div style={styles.weekBars}>

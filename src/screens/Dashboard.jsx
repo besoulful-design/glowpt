@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import * as api from '../lib/api'
 import { useAuth } from '../auth'
-import { AuthShell, LogoMark, BRAND, ui } from './AuthShell'
+import { AuthShell, LogoMark, BRAND, ui, SECTION_LABEL_SIZE, CARD_LABEL_SIZE } from './AuthShell'
 import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist, assignTherapist, dischargePatient, restorePatient, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
 import { FEELINGS } from '../lib/feelings'
 import { BAA_IS_EXECUTED } from '../lib/legal'
@@ -29,11 +29,11 @@ const s = {
   sub: { fontSize: 14, color: 'rgba(245,239,228,0.5)', marginBottom: 26 },
   tiles: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 24 },
   tile: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.18)', borderRadius: 6, padding: '16px 18px' },
-  tileLabel: { fontSize: 11.5, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 8 },
+  tileLabel: { fontSize: CARD_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 8 },
   tileValue: { fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 400, lineHeight: 1 },
   tileSub: { fontSize: 12, color: 'rgba(245,239,228,0.45)', marginTop: 5, fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   linkCard: { background: 'linear-gradient(135deg, rgba(245,168,26,0.1), rgba(13,24,37,0))', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 6, padding: '18px 20px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' },
-  linkLabel: { fontSize: 12, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
+  linkLabel: { fontSize: SECTION_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
   linkUrl: { fontSize: 15, color: '#f5efe4', wordBreak: 'break-all' },
   copyBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   // Shown to staff while no BAA is executed. It is a NOTICE, not a control —
@@ -44,12 +44,12 @@ const s = {
   adminLink: { fontSize: 13, fontWeight: 600, color: '#F5A81A', textDecoration: 'none', border: '1px solid rgba(245,168,26,0.4)', borderRadius: 4, padding: '7px 14px' },
   qrCard: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.2)', borderRadius: 6, padding: 20, marginBottom: 28, display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' },
   qrImg: { width: 104, height: 104, borderRadius: 6, background: '#fff', padding: 6, flexShrink: 0 },
-  qrLabel: { fontSize: 12, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
+  qrLabel: { fontSize: SECTION_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
   qrHint: { fontSize: 13.5, color: 'rgba(245,239,228,0.65)', lineHeight: 1.55, marginBottom: 12, maxWidth: '46ch' },
   qrDownload: { display: 'inline-block', background: '#F5A81A', color: '#0d1825', textDecoration: 'none', fontWeight: 600, fontSize: 14, padding: '10px 18px', borderRadius: 4 },
   // Care team (manager)
   care: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.18)', borderRadius: 6, padding: '18px 20px', marginBottom: 28 },
-  careHead: { fontSize: 12, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 14 },
+  careHead: { fontSize: SECTION_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 14 },
   theraRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(245,239,228,0.06)', fontSize: 14.5 },
   theraCount: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   inviteForm: { display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' },

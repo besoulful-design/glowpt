@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { LogoMark, BRAND, ui } from './AuthShell'
+import { LogoMark, BRAND, ui, LABEL_SIZE } from './AuthShell'
 import { PRICE_LINE, PATIENTS_FREE_LINE, whatGlowptIs, CONTACT_EMAIL } from '../lib/marketing'
 import { useModal } from '../lib/useModal'
 
@@ -42,7 +42,7 @@ export default function Landing() {
     moreInfo: { background: 'none', border: 'none', font: 'inherit', fontSize: 14, fontWeight: 500, color: BRAND, textDecoration: 'underline', cursor: 'pointer', padding: 0, marginTop: 20 },
     overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 200 },
     modal: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, position: 'relative', padding: 28, maxWidth: 460, maxHeight: '80vh', overflowY: 'auto', textAlign: 'left', outline: 'none' },
-    modalHead: { fontSize: 12, fontWeight: 600, letterSpacing: '0.01em', color: BRAND, marginBottom: 14 },
+    modalHead: { fontSize: LABEL_SIZE, fontWeight: 600, letterSpacing: '0.01em', color: BRAND, marginBottom: 14 },
     modalLead: { fontSize: 14, lineHeight: 1.65, color: 'rgba(245,239,228,0.8)', margin: '0 0 18px' },
     bullet: { display: 'flex', gap: 10, fontSize: 14, lineHeight: 1.6, color: 'rgba(245,239,228,0.8)', marginBottom: 12 },
     tick: { color: BRAND, flexShrink: 0 },
