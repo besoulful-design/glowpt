@@ -159,7 +159,19 @@ export default function Dashboard() {
   const [tName, setTName] = useState('')
   const [tEmail, setTEmail] = useState('')
   const [notice, setNotice] = useState('')
-  const [inviteLink, setInviteLink] = useState(null) // { url, email, name, sent }
+  // ⚠️ ONE MESSAGE SLOT PER CONTROL, DELIBERATELY. Until 2026-09-05 the whole
+  // screen shared a single `notice` plus a single `inviteLink`, and BOTH were
+  // rendered inside the Care Team card. So inviting a patient put its
+  // confirmation two cards further down, below the fold on a phone: the fields
+  // just blanked and nothing appeared to happen. Discharge, restore, assignment
+  // and the sign-up switch reported their errors there too, nowhere near the
+  // control that caused them. Five of the six flows wrote somewhere the person
+  // was not looking. A message belongs beside the thing that produced it.
+  const [patientInvite, setPatientInvite] = useState(null) // { url, email, name, sent }
+  const [staffInvite, setStaffInvite] = useState(null)     // same shape
+  const [patientNotice, setPatientNotice] = useState('')
+  const [staffNotice, setStaffNotice] = useState('')
+  const [signupNotice, setSignupNotice] = useState('')
   const [pName, setPName] = useState('')
   const [pEmail, setPEmail] = useState('')
   const [openSignup, setOpenSignup] = useState(null) // null until the clinic loads
@@ -303,52 +315,88 @@ export default function Dashboard() {
     }
   }
 
+  // Rendered directly under whichever form produced it. Both invite forms use
+  // this, so the two can never drift apart the way their message slots did.
+  function InviteResult({ result, kind }) {
+    if (!result) return null
+    return (
+      <div style={s.inviteResult}>
+        <div style={s.inviteResultHead}>
+          {result.sent
+            ? `Invite emailed to ${result.email}.`
+            : `Invite created, but the email didn’t send.`}
+        </div>
+        <div style={s.inviteResultBody}>
+          {result.sent
+            ? `You can also send ${result.name} this link. It works only for their email address and expires in 14 days.`
+            : `Send ${result.name} this link instead. It works only for their email address and expires in 14 days.`}
+        </div>
+        <div style={s.inviteLinkRow}>
+          <div style={s.inviteLinkText}>{result.url}</div>
+          <button type="button" style={s.copyBtn}
+            onClick={() => {
+              navigator.clipboard?.writeText(result.url)
+              const msg = 'Invite link copied.'
+              if (kind === 'patient') setPatientNotice(msg); else setStaffNotice(msg)
+            }}>
+            Copy link
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   async function handlePatientInvite(e) {
     e.preventDefault()
-    setNotice('')
+    setPatientNotice(''); setPatientInvite(null)
     const name = pName.trim(), email = pEmail.trim()
-    if (!name) return setNotice('Enter the patient’s name.')
-    if (!email) return setNotice('Enter the patient’s email.')
+    if (!name) return setPatientNotice('Enter the patient’s name.')
+    if (!email) return setPatientNotice('Enter the patient’s email.')
     let res
     try {
       res = await api.invitePatient(email, name)
     } catch (err) {
-      return setNotice(`Couldn’t send invite: ${err.message}`)
+      return setPatientNotice(`Couldn’t send invite: ${err.message}`)
     }
     setPName(''); setPEmail('')
-    setInviteLink({ url: res.invite_url, email, name, sent: !!res.email_sent })
+    setPatientInvite({ url: res.invite_url, email, name, sent: !!res.email_sent })
   }
 
   async function toggleOpenSignup(next) {
-    setNotice('')
+    setSignupNotice('')
     const before = openSignup
     setOpenSignup(next) // optimistic: the switch should not feel laggy
     try {
       await api.setOpenSignup(next)
+      // Say so. This switch decides whether anyone holding the link can enrol,
+      // and it used to change in silence, which is how a clinic can end up open
+      // with nobody sure when or why.
+      setSignupNotice(next
+        ? 'Saved. Anyone with your link or QR can now join.'
+        : 'Saved. Only patients you invite by email can join.')
     } catch (err) {
       setOpenSignup(before)
-      setNotice(`Couldn’t change patient sign-up: ${err.message}`)
+      setSignupNotice(`Couldn’t change patient sign-up: ${err.message}`)
     }
   }
 
   async function handleInvite(e) {
     e.preventDefault()
-    setNotice('')
+    setStaffNotice(''); setStaffInvite(null)
     const name = tName.trim(), email = tEmail.trim()
-    if (!name) return setNotice('Enter the therapist’s name.')
-    if (!email) return setNotice('Enter the therapist’s email.')
+    if (!name) return setStaffNotice('Enter the therapist’s name.')
+    if (!email) return setStaffNotice('Enter the therapist’s email.')
     let res
     try {
       res = await inviteTherapist(email, name)
     } catch (err) {
-      return setNotice(`Couldn’t send invite: ${err.message}`)
+      return setStaffNotice(`Couldn’t send invite: ${err.message}`)
     }
     setTName(''); setTEmail('')
     // The link is shown whether or not the email went. The send can fail for
     // reasons that have nothing to do with the invite, which is already saved,
     // and a manager who can see the link is never stuck.
-    setInviteLink({ url: res.invite_url, email, name, sent: !!res.email_sent })
-    setNotice('')
+    setStaffInvite({ url: res.invite_url, email, name, sent: !!res.email_sent })
     setInvites(await fetchPendingInvites())
   }
 
@@ -445,6 +493,7 @@ export default function Dashboard() {
                   </button>
                 ))}
               </div>
+              {signupNotice && <div style={s.notice}>{signupNotice}</div>}
             </div>
 
             {openSignup && (
@@ -468,6 +517,8 @@ export default function Dashboard() {
                   autoComplete="off" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
                 <button style={s.inviteBtn} type="submit">Invite Patient →</button>
               </form>
+              {patientNotice && <div style={s.notice}>{patientNotice}</div>}
+              <InviteResult result={patientInvite} kind="patient" />
             </div>
 
             {openSignup && qrUrl && (
@@ -502,28 +553,8 @@ export default function Dashboard() {
                   autoComplete="off" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
                 <button style={s.inviteBtn} type="submit">Invite Therapist →</button>
               </form>
-              {notice && <div style={s.notice}>{notice}</div>}
-              {inviteLink && (
-                <div style={s.inviteResult}>
-                  <div style={s.inviteResultHead}>
-                    {inviteLink.sent
-                      ? `Invite emailed to ${inviteLink.email}.`
-                      : `Invite created, but the email didn’t send.`}
-                  </div>
-                  <div style={s.inviteResultBody}>
-                    {inviteLink.sent
-                      ? `You can also send ${inviteLink.name} this link. It works only for their email address and expires in 14 days.`
-                      : `Send ${inviteLink.name} this link instead. It works only for their email address and expires in 14 days.`}
-                  </div>
-                  <div style={s.inviteLinkRow}>
-                    <div style={s.inviteLinkText}>{inviteLink.url}</div>
-                    <button type="button" style={s.copyBtn}
-                      onClick={() => { navigator.clipboard?.writeText(inviteLink.url); setNotice('Invite link copied.') }}>
-                      Copy link
-                    </button>
-                  </div>
-                </div>
-              )}
+              {staffNotice && <div style={s.notice}>{staffNotice}</div>}
+              <InviteResult result={staffInvite} kind="staff" />
               {invites.length > 0 && (
                 <div style={s.pending}>
                   <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Pending (Waiting for First Sign-In):</strong><br />
@@ -541,6 +572,10 @@ export default function Dashboard() {
               : 'No patients assigned to you yet. Your clinic manager assigns patients to therapists.'}
           </div>
         )}
+
+        {/* Assignment, discharge and restore all report here, beside the roster
+            they act on. This used to land in the Care Team card further down. */}
+        {notice && <div style={s.notice}>{notice}</div>}
 
         {!loading && roster.length > 0 && (
           <>
