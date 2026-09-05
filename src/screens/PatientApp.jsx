@@ -249,7 +249,9 @@ Respond directly to ${firstName} in second person. Reference what they actually 
   }
 
   const styles = {
-    app: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", WebkitFontSmoothing: 'antialiased' },
+    // textAlign is declared HERE, not inherited from #root — see src/index.css.
+    // Covers both branches of this screen, the loading splash and the app.
+    app: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", WebkitFontSmoothing: 'antialiased', textAlign: 'center' },
     screen: { maxWidth: '430px', margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '0' },
     welcomeWrap: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px 32px 48px', minHeight: '100vh' },
     welcomeTop: { display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '0px' },

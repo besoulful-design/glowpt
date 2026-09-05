@@ -17,7 +17,8 @@ import { BAA_VERSION } from '../lib/legal'
 // types /admin gets a 403 from the API and is bounced home.
 
 const s = {
-  page: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif" },
+  // textAlign is declared HERE, not inherited from #root — see src/index.css.
+  page: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", textAlign: 'center' },
   bar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', borderBottom: '1px solid rgba(245,239,228,0.08)', flexWrap: 'wrap', gap: 12 },
   brand: { display: 'flex', alignItems: 'center', gap: 12 },
   wordmark: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: 26 },

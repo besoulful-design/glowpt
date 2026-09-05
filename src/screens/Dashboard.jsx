@@ -13,7 +13,10 @@ import { CONTACT_EMAIL } from '../lib/marketing'
 // is carried by the flag pills (Low mood / Inactive) shown right next to the name.
 
 const s = {
-  page: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif" },
+  // textAlign is declared HERE, not inherited from #root — see the note in
+  // src/index.css. This screen is a centred layout; the roster inside it states
+  // its own alignment per column and does not rely on this.
+  page: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", textAlign: 'center' },
   bar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', borderBottom: '1px solid rgba(245,239,228,0.08)', flexWrap: 'wrap', gap: 12 },
   brand: { display: 'flex', alignItems: 'center', gap: 12 },
   wordmark: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: 26, color: '#f5efe4' },
