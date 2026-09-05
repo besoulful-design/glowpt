@@ -173,7 +173,10 @@ export default function PatientApp() {
 
   const weekCount = week.filter(d => d.done).length
   const today = new Date()
-  const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+  // No year: this is today's check-in, so the year is noise, and dropping it
+  // keeps the line a timestamp rather than a full date. Display only — nothing
+  // is stored from this string.
+  const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   const toggleMovement = (item) => {
     setMovements(prev => prev.includes(item) ? prev.filter(m => m !== item) : [...prev, item])
