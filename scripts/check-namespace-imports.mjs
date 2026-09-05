@@ -56,8 +56,35 @@ for (const file of walk(SRC)) {
   }
 }
 
+// Second guard, same family: an identifier that does not exist. `slugEdited`
+// survived a control's removal on 2026-09-05 inside a JSX handler, so it was a
+// ReferenceError on first keystroke and the build was green. eslint's no-undef
+// catches exactly that. Only THAT rule is enforced here: src/ carries 15 other
+// lint findings (react-hooks style) that are not runtime faults, and failing
+// the build on those would be a different, larger decision.
+try {
+  const { execFileSync } = await import('node:child_process');
+  let out = '';
+  try {
+    out = execFileSync('npx', ['eslint', SRC, '-f', 'json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch (e) {
+    out = e.stdout || ''; // eslint exits non-zero when it reports anything
+  }
+  if (out.trim()) {
+    for (const file of JSON.parse(out)) {
+      for (const m of file.messages) {
+        if (m.ruleId === 'no-undef') {
+          problems.push(`${file.filePath.split('/glowpt/').pop()}:${m.line}: ${m.message}`);
+        }
+      }
+    }
+  }
+} catch {
+  // eslint missing or unrunnable: the namespace check above still stands.
+}
+
 if (problems.length) {
-  console.error('\nMissing exports behind a namespace import:\n');
+  console.error('\nThings that would fail at RUNTIME but not at build time:\n');
   for (const p of problems) console.error('  ' + p);
   console.error('\nThese fail at runtime, not at build time. Fix before shipping.\n');
   process.exit(1);

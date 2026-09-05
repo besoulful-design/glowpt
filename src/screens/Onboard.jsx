@@ -13,12 +13,21 @@ function slugify(s) {
 }
 
 
-// /onboard — a clinic creates its account, reviews the BAA, and gets its patient link.
+// /onboard — a clinic creates its account and reviews the BAA.
+//
+// ⚠️ THE SLUG IS INTERNAL AS OF 2026-09-05 AND IS NEVER SHOWN. It used to be
+// previewed here as "Patient link: glowpt.app/join/<slug>" with an Edit
+// control, because that link was how patients enrolled themselves. Walk-in
+// sign-up was removed, so the link no longer enrols anyone and showing it
+// promised something that does not happen. The slug still has to exist and be
+// unique (it identifies the clinic and /join/<slug> still resolves), so it is
+// derived from the clinic name and a collision is resolved automatically
+// rather than handed back to someone who now has no field to fix it in.
 export default function Onboard() {
   const [clinicName, setClinicName] = useState('')
-  const [slug, setSlug] = useState('')
-  const [slugEdited, setSlugEdited] = useState(false)
-  const [editingSlug, setEditingSlug] = useState(false)
+  // Fixed once the code is sent, so a resend cannot land on a different slug
+  // than the one the first attempt claimed.
+  const [resolvedSlug, setResolvedSlug] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [baaReviewed, setBaaReviewed] = useState(false)
@@ -30,16 +39,38 @@ export default function Onboard() {
   // Above the early return below: hooks cannot sit after a conditional return.
   const panelRef = useModal(showBaa, () => setShowBaa(false))
 
-  const effectiveSlug = slugEdited ? slug : slugify(clinicName)
+  const effectiveSlug = resolvedSlug || slugify(clinicName)
+
+  // The first free slug from the clinic name: riverside-pt, then -2, -3...
+  // getClinicBySlug 404s when a slug is free, so a 404 is the success case here.
+  // Two clinics genuinely sharing a name in different towns is ordinary, and
+  // with no slug field on the form there is nothing for the person to change.
+  async function findFreeSlug(base) {
+    for (let n = 1; n <= 25; n++) {
+      const candidate = n === 1 ? base : `${base}-${n}`
+      try {
+        await api.getClinicBySlug(candidate)
+        // 200: taken, try the next one.
+      } catch (err) {
+        if (err.status === 404) return candidate
+        throw err // a real failure, not "available"
+      }
+    }
+    return null
+  }
 
   // Create the clinic under the entered email (a fresh manager account), verified
   // by an email code — so onboarding never hijacks whoever is currently signed in.
-  async function sendCode() {
-    savePendingOnboard(clinicName.trim(), effectiveSlug, fullName.trim())
+  async function sendCode(slugOverride) {
+    // The override is passed on the first send: setResolvedSlug has not landed
+    // in state yet at that point. A resend calls this with nothing and picks up
+    // the stored value, so both routes use the same slug.
+    const useSlug = slugOverride || effectiveSlug
+    savePendingOnboard(clinicName.trim(), useSlug, fullName.trim())
     return cognito.beginSignUp(email.trim(), {
       flow: 'onboard',
       onboard_clinic_name: clinicName.trim(),
-      onboard_clinic_slug: effectiveSlug,
+      onboard_clinic_slug: useSlug,
       full_name: fullName.trim(),
     })
   }
@@ -48,26 +79,28 @@ export default function Onboard() {
     e.preventDefault()
     setError('')
     if (!clinicName.trim()) return setError('Please enter your clinic name.')
-    if (!effectiveSlug) return setError('Please enter a valid clinic web name.')
+    // Only possible if the name has no letters or numbers at all.
+    if (!slugify(clinicName)) return setError('Please use letters or numbers in your clinic name.')
     if (!fullName.trim()) return setError('Please enter your name.')
     if (!email.trim()) return setError('Please enter your work email.')
     if (!baaReviewed) return setError('Please confirm you’ve reviewed the BAA.')
     setBusy(true)
 
-    // Make sure the slug isn't already taken (getClinicBySlug 404 = available).
+    let free
     try {
-      await api.getClinicBySlug(effectiveSlug)
+      free = await findFreeSlug(slugify(clinicName))
+    } catch {
       setBusy(false)
-      return setError('That clinic web name is taken. Try another.')
-    } catch (err) {
-      if (err.status !== 404) {
-        setBusy(false)
-        return setError('Couldn’t check that name just now. Try again.')
-      }
+      return setError('Couldn’t check that name just now. Try again.')
     }
+    if (!free) {
+      setBusy(false)
+      return setError('Too many clinics share that name. Try a more specific one.')
+    }
+    setResolvedSlug(free)
 
     try {
-      setPending(await sendCode())
+      setPending(await sendCode(free))
     } catch (err) {
       setError(err?.message || 'Couldn’t send a code just now. Try again.')
     } finally {
@@ -84,33 +117,11 @@ export default function Onboard() {
       {/* Explicit break: the natural wrap put "Your" on line 1 at desktop width
           and broke differently per browser. This pins it to Bring GlowPT to / Your Clinic. */}
       <div style={ui.title}>Bring <Brand /> to<br />Your Clinic</div>
-      <div style={ui.muted}>Set up your clinic in a minute. You’ll get a private link to share with your patients.</div>
+      <div style={ui.muted}>Set up your clinic in a minute. You’ll invite your patients by email from your dashboard.</div>
 
       <form onSubmit={handleSubmit} style={ui.form}>
         <input style={ui.input} placeholder="Clinic name (e.g. Riverside PT)" value={clinicName}
-          onChange={e => { setClinicName(e.target.value); if (!slugEdited) setSlug(slugify(e.target.value)) }} />
-        {/* The link name is derived from the clinic name and almost never needs
-            touching, so it is shown as a result rather than asked as a question.
-            The field only appears if they choose to change it — which also keeps
-            the signup form at four fields on a page selling a one-minute setup. */}
-        <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(245,239,228,0.4)', marginTop: -4, lineHeight: 1.6 }}>
-          Patient link: {window.location.host}/join/<strong style={{ color: '#F5A81A' }}>{effectiveSlug || 'your-clinic'}</strong>
-          {!editingSlug && (
-            <>
-              {' · '}
-              <span role="button" tabIndex={0}
-                onClick={() => setEditingSlug(true)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditingSlug(true) } }}
-                style={{ color: '#F5A81A', textDecoration: 'underline', cursor: 'pointer' }}>
-                Edit
-              </span>
-            </>
-          )}
-        </div>
-        {editingSlug && (
-          <input style={ui.input} placeholder="Link name" value={effectiveSlug} autoFocus
-            onChange={e => { setSlugEdited(true); setSlug(slugify(e.target.value)) }} />
-        )}
+          onChange={e => setClinicName(e.target.value)} />
         <input style={ui.input} placeholder="Your name" value={fullName}
           onChange={e => setFullName(e.target.value)} autoComplete="name" />
         <input style={ui.input} placeholder="Your work email" type="email" value={email}
