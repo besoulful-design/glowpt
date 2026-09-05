@@ -1,4 +1,5 @@
 import * as api from './api'
+import { isFeeling } from './feelings'
 
 // Fetch a clinic's patients and their check-ins.
 // RLS scopes the rows automatically: a manager gets the whole clinic; a therapist
@@ -62,13 +63,22 @@ export function buildRoster(patients, checkins) {
     const cs = byUser[p.id] || []
     const last = cs[0]
     const daysSince = last ? daysBetween(new Date(), last.created_at) : null
-    const last3 = cs.slice(0, 3).map(c => c.feeling).reverse() // oldest→newest of the recent 3
-    const rated = cs.map(c => c.feeling).filter(f => typeof f === 'number')
+    // ⚠️ EVERY read of `feeling` goes through isFeeling, and that is load-bearing.
+    // A stored value off the 1-5 scale (a 0 got in on 2026-09-05) is NOT a rating:
+    // it must read as "no check-in", never as a low score. Testing `!= null` or
+    // `typeof === 'number'` lets a 0 through, which is what blanked the dashboard.
+    const last3 = cs.slice(0, 3).map(c => (isFeeling(c.feeling) ? c.feeling : null)).reverse() // oldest→newest of the recent 3
+    const rated = cs.map(c => c.feeling).filter(f => isFeeling(f))
+    // Guaranteed null or a real 1-5 here, which is what lets the dashboard index
+    // FEELINGS by Math.round(avg) without a lookup ever coming back undefined.
     const avg = rated.length ? rated.reduce((a, b) => a + b, 0) / rated.length : null
 
     const flags = []
     if (daysSince == null || daysSince >= 5) flags.push('inactive')
-    if (cs.length >= 2 && cs[0].feeling <= 2 && cs[1].feeling <= 2) flags.push('low')
+    // Still the two most recent check-ins, but an unrated one can no longer pose
+    // as a low score and flag a patient who never said they were struggling.
+    if (cs.length >= 2 && isFeeling(cs[0].feeling) && isFeeling(cs[1].feeling)
+        && cs[0].feeling <= 2 && cs[1].feeling <= 2) flags.push('low')
 
     return {
       id: p.id,
