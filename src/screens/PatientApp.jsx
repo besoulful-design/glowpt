@@ -137,6 +137,15 @@ export default function PatientApp() {
   // type "ok" to get past it, which is worse than leaving it empty.
   const [needsFeeling, setNeedsFeeling] = useState(false)
   const feelingRef = useRef(null)
+  // ⚠️ A FAILED SAVE USED TO BE INVISIBLE. It was caught, console.logged, and
+  // the patient was then shown their reflection exactly as if it had saved, so
+  // a check-in could fall on the floor with nobody any the wiser. That is the
+  // house's recurring silent-failure shape and David's bar is that nothing
+  // falls off. The failed payload is held so Try Again re-saves THAT, rather
+  // than rebuilding it and spending a second Anthropic call on a reflection the
+  // patient has already been given.
+  const [unsavedCheckin, setUnsavedCheckin] = useState(null)
+  const [retrying, setRetrying] = useState(false)
   const [movements, setMovements] = useState([])
   const [otherMovement, setOtherMovement] = useState('')
   const [note, setNote] = useState('')
@@ -243,14 +252,32 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     }
     try {
       await api.saveCheckin(payload)
+      setUnsavedCheckin(null)
     } catch (err) {
       console.log('Save error:', err.message)
+      setUnsavedCheckin(payload)
     }
 
     setAiResponse(response)
     await loadData()
     setLoading(false)
     setScreen('response')
+  }
+
+  // Re-saves the exact payload that failed. No AI call: the reflection is
+  // already on screen and re-generating it would both cost a call and hand the
+  // patient different words for the same day.
+  const retrySave = async () => {
+    if (!unsavedCheckin || retrying) return
+    setRetrying(true)
+    try {
+      await api.saveCheckin(unsavedCheckin)
+      setUnsavedCheckin(null)
+      await loadData()
+    } catch (err) {
+      console.log('Save retry error:', err.message)
+    }
+    setRetrying(false)
   }
 
   const startNewCheckin = () => {
@@ -310,6 +337,10 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     feelingBtn: (selected) => ({ flex: 1, border: `1px solid ${selected ? '#F5A81A' : 'rgba(245,239,228,0.12)'}`, borderRadius: '6px', background: selected ? '#F5A81A' : '#1a2840', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px 6px 10px', gap: '6px', transform: selected ? 'scale(1.06)' : 'scale(1)', transition: 'all 0.2s', boxShadow: selected ? '0 4px 18px rgba(245,168,26,0.4)' : 'none' }),
     feelingNum: (selected) => ({ fontFamily: "'Fraunces', serif", fontSize: '36px', fontWeight: selected ? 600 : 400, color: selected ? '#0d1825' : 'rgba(245,239,228,0.7)', lineHeight: 1 }),
     feelingEmoji: { fontSize: '20px', lineHeight: 1 },
+    saveFailed: { background: 'rgba(231,154,146,0.08)', border: '1px solid rgba(231,154,146,0.35)', borderRadius: '8px', padding: '16px 18px', margin: '0 0 22px', textAlign: 'left' },
+    saveFailedTitle: { fontSize: '15px', fontWeight: 600, color: 'rgba(231,154,146,0.95)', marginBottom: '6px' },
+    saveFailedBody: { fontSize: '13.5px', lineHeight: 1.5, color: 'rgba(245,239,228,0.6)', marginBottom: '14px' },
+    saveFailedBtn: { background: 'transparent', border: '1px solid rgba(231,154,146,0.5)', borderRadius: '6px', padding: '10px 18px', color: 'rgba(231,154,146,0.95)', fontSize: '14px', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' },
     feelingRequired: { marginTop: '12px', fontSize: '13.5px', color: '#FBC02D', fontWeight: 500 },
     feelingWord: (selected) => ({ fontSize: '10px', color: selected ? 'rgba(13,24,37,0.75)' : 'rgba(245,239,228,0.35)', fontWeight: 500, letterSpacing: '0.04em', textAlign: 'center', lineHeight: 1.2 }),
     movementList: { display: 'flex', flexDirection: 'column', gap: '10px' },
@@ -600,6 +631,22 @@ Respond directly to ${firstName} in second person. Reference what they actually 
               </div>
               {aiResponse && <div style={styles.responseEyebrow}>Today's Reflection</div>}
               {aiResponse && <div style={styles.responseMessage}>{aiResponse}</div>}
+
+              {/* Sits with the reflection rather than at the top of the screen,
+                  because it is about the check-in the patient just made. The
+                  reflection is real and they keep it; what failed is the record
+                  of the day, and saying so is the whole point. */}
+              {unsavedCheckin && (
+                <div style={styles.saveFailed}>
+                  <div style={styles.saveFailedTitle}>We couldn’t save this check-in.</div>
+                  <div style={styles.saveFailedBody}>
+                    Your reflection is yours to keep, but today isn’t recorded yet. Check your connection and try again.
+                  </div>
+                  <button style={styles.saveFailedBtn} onClick={retrySave} disabled={retrying}>
+                    {retrying ? 'Saving…' : 'Try Again →'}
+                  </button>
+                </div>
+              )}
 
               <div style={styles.statsRow}>
                 <div style={styles.statCard}>
