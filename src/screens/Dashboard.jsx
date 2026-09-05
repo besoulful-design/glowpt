@@ -95,14 +95,15 @@ const s = {
 // ⚠️ EVERY COLUMN STATES ITS OWN `align`, AND THAT IS LOAD-BEARING — DO NOT DROP
 // IT AS A NO-OP. `#root` in src/index.css sets `text-align: center`, which every
 // screen inherits. A plain text cell inherits it too, but the Patient and
-// Therapist cells are FLEX containers, and text-align does not move flex items.
-// So those two columns sat left while their headers sat centre, which read as
-// the header being ~115px adrift on Patient and ~240px on Therapist. Stating the
-// alignment on both halves makes the roster immune to whatever it inherits.
+// Therapist cells are FLEX containers, and text-align does not move flex items,
+// so those two sat left while their headers sat centre — which read as the
+// header being ~115px adrift on Patient and ~240px on Therapist. Stating the
+// alignment on BOTH halves, and translating it for flex cells via FLEX_ALIGN,
+// makes the roster immune to whatever it inherits.
 //
 // ORDER (2026-09-05, David): the average mood is one of the most important
-// things to see, so it sits immediately beside the name, with the trend next.
-// The row reads as identity, then how they feel, then how engaged they are,
+// things to see, so it sits immediately beside the name, then the trend and the
+// streak (the two engagement signals together), then when they were last seen,
 // then who has them. It also puts the average on screen at phone width, where
 // the table scrolls sideways and it used to sit three columns out of reach.
 //
@@ -110,22 +111,24 @@ const s = {
 // whatever is left, which is what gave the Patient column 264px to hold a 60px
 // name. Each cap is the wider of the column's header label and its widest real
 // value: Last Check-In 77px header vs 69px "8 days ago", Trend three 20px slots
-// plus gaps, Streak 36px header, Avg Mood 55px header. Patient is capped at the
+// plus gaps, Streak 36px header, Avg Mood 57px header. Patient is capped at the
 // longest real NAME rather than name-plus-flag-pill, so a flagged patient wraps
-// their pill onto a second line — that is deliberate, it costs nothing to a
-// patient who is on track, and a slightly taller row suits one needing
-// attention. Only Therapist may absorb slack, because it ends the row where
-// leftover space reads as margin rather than as a hole.
+// their pill onto a second line — deliberate: it costs nothing to a patient who
+// is on track, and a taller row suits one needing attention.
 // Re-measure before widening any of these.
 const ROSTER_COLUMNS = [
-  { key: 'patient',   label: 'Patient',       w: 'minmax(110px,140px)', align: 'left', plain: true },
-  { key: 'avg',       label: 'Avg Mood',      w: '64px',                align: 'left' },
-  { key: 'trend',     label: '3-Day Trend',   w: '72px',                align: 'left' },
-  { key: 'last',      label: 'Last Check-In', w: '82px',                align: 'left' },
-  { key: 'streak',    label: 'Streak',        w: '44px',                align: 'left' },
+  { key: 'patient',   label: 'Patient',       w: 'minmax(110px,140px)', align: 'center', plain: true },
+  { key: 'avg',       label: 'Avg Mood',      w: '64px',                align: 'center' },
+  { key: 'trend',     label: '3-Day Trend',   w: '72px',                align: 'center' },
+  { key: 'streak',    label: 'Streak',        w: '44px',                align: 'center' },
+  { key: 'last',      label: 'Last Check-In', w: '82px',                align: 'center' },
   // Managers assign and discharge; a therapist sees their own caseload and neither.
-  { key: 'therapist', label: 'Therapist',     w: 'minmax(150px,1fr)',   align: 'left', plain: true, managerOnly: true },
+  { key: 'therapist', label: 'Therapist',     w: 'minmax(150px,170px)', align: 'center', plain: true, managerOnly: true },
 ]
+
+// text-align does not move flex items, so a flex cell needs the flex equivalent.
+// That mismatch IS the bug described above; keep the two in step.
+const FLEX_ALIGN = { left: 'flex-start', center: 'center', right: 'flex-end' }
 
 function Trend({ last3 }) {
   const days = [...last3]
@@ -421,10 +424,10 @@ export default function Dashboard() {
   // One cell renderer per column key. Only the CONTENT lives here; the width and
   // the alignment come from ROSTER_COLUMNS, so a cell can never disagree with
   // its own header.
-  function rosterCell(key, r) {
-    switch (key) {
+  function rosterCell(c, r) {
+    switch (c.key) {
       case 'patient':
-        return <div style={s.name}><span>{r.name}</span><NameFlags flags={r.flags} /></div>
+        return <div style={{ ...s.name, justifyContent: FLEX_ALIGN[c.align] }}><span>{r.name}</span><NameFlags flags={r.flags} /></div>
       case 'avg':
         return r.avg == null ? '—' : (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -436,7 +439,7 @@ export default function Dashboard() {
       case 'streak': return r.streak > 0 ? `${r.streak}🔥` : '—'
       case 'therapist':
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: FLEX_ALIGN[c.align] }}>
             <select style={s.sel} value={r.therapistId || ''} onChange={e => handleAssign(r.id, e.target.value || null)}>
               <option value="">Unassigned</option>
               {therapists.map(t => <option key={t.id} value={t.id}>{t.full_name || 'Therapist'}</option>)}
@@ -576,7 +579,7 @@ export default function Dashboard() {
                   <div key={r.id} style={{ ...s.row, gridTemplateColumns: rosterCols }}>
                     {rosterColumns.map(c => (
                       <div key={c.key} style={{ ...(c.plain ? null : s.cell), textAlign: c.align }}>
-                        {rosterCell(c.key, r)}
+                        {rosterCell(c, r)}
                       </div>
                     ))}
                   </div>

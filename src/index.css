@@ -58,6 +58,21 @@ body {
   width: 1126px;
   max-width: 100%;
   margin: 0 auto;
+  /* ⚠️ TRAP, READ BEFORE REMOVING OR RELYING ON THIS (documented 2026-09-05).
+     `text-align: center` here is inherited by every screen, and it is INVISIBLE
+     at the point of use. A plain text node obeys it; a FLEX container does not,
+     because text-align never moves flex items. On 2026-09-05 that mismatch made
+     the clinic roster's Patient and Therapist headers look ~115px and ~240px
+     adrift from their own cells, because those two cells are flex and the rest
+     were not. Cost most of a session to find, twice.
+     WRITING NEW UI: state the alignment you want on the element itself, and for
+     a flex container use justify-content / align-items, not text-align. See
+     ROSTER_COLUMNS + FLEX_ALIGN in src/screens/Dashboard.jsx.
+     REMOVING THIS: Landing and AuthShell (login, join, onboard, no-clinic, code
+     verify, invite) already set their own centring and would not change. The
+     three that inherit it and WOULD change are Dashboard, Admin and PatientApp,
+     all of which sit behind the login. Do it as its own change, with someone
+     signed in to look at those three, not as a side effect of something else. */
   text-align: center;
   border-inline: 1px solid var(--border);
   min-height: 100svh;
