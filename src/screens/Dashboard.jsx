@@ -89,14 +89,39 @@ const s = {
 }
 
 // Roster grid columns — managers get an extra "Therapist" (assign) column.
-// Header + each patient row are SEPARATE grids, so the short columns (streak,
-// trend, avg) are given fixed px widths and the text columns a min floor
-// — that way every grid resolves identical column edges and things line up.
-// (Bare `fr` sizes to each row's own content, which is what made them drift.)
-// The flag (Low mood / Inactive) now sits inline next to the name, so there's
-// no separate Status column.
-const COLS_MANAGER = 'minmax(150px,1.6fr) minmax(72px,0.9fr) 60px 84px 78px minmax(120px,1.2fr)'
-const COLS_THERAPIST = 'minmax(150px,1.6fr) minmax(80px,1fr) 60px 84px 78px'
+//
+// ORDER (2026-09-05, David): Patient, Avg, 3-Day Trend, Last Check-In, Streak.
+// The average mood is one of the most important things to see, so it sits
+// immediately beside the name, with the trend right after it. That groups the
+// row as identity → how they feel → how engaged they are → who has them.
+// It also means Avg is on screen at phone width, where the table scrolls
+// sideways and it used to sit three columns out of reach.
+//
+// WIDTHS ARE CAPPED, NOT `fr`. Header + each patient row are SEPARATE grids, so
+// every track has to resolve identically in both, which rules out content-based
+// sizing. ⚠️ The ceiling is the load-bearing part: a bare `fr` grows to fill
+// whatever is left, and at desktop width that gave the Patient column ~264px to
+// hold a ~60px name, stranding a gap between a patient and their own data. Only
+// the Therapist column may absorb slack, because it ends the row, where leftover
+// space reads as margin rather than as a hole. Both column sets use the SAME
+// ceilings so a manager and a therapist see the same shape; the therapist view
+// simply ends after Streak.
+//
+// The ceilings are MEASURED, not guessed (2026-09-05), because every extra pixel
+// of ceiling is dead air beside a short name. Widest real patient cell is a name
+// plus one flag pill: "James Okafor [Inactive]" 167px, "Maria Chen [Low Mood]"
+// 164px, so 175px seats every currently flagged patient on one line. A longer
+// name with a pill wraps to a second line, which is what `flexWrap` on `s.name`
+// is for and which only happens to a patient who is already flagged. The rest
+// are the wider of their header label and their widest value: Last Check-In
+// 77px header vs 69px "8 days ago", Trend three 20px slots plus gaps, Streak
+// 36px header. Re-measure before widening any of them.
+//
+// The flag (Low Mood / Inactive) sits inline next to the name, so there's no
+// separate Status column.
+//                            patient                avg  trend  last check-in  streak  therapist
+const COLS_MANAGER = 'minmax(150px,175px) 64px 78px 90px 56px minmax(150px,1fr)'
+const COLS_THERAPIST = 'minmax(150px,175px) 64px 78px 90px 56px'
 
 function Trend({ last3 }) {
   const days = [...last3]
@@ -510,20 +535,20 @@ export default function Dashboard() {
             <div style={s.scroll}>
               <div style={{ minWidth: isManager ? 680 : 560 }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
-                  <div>Patient</div><div>Last Check-In</div><div style={{ textAlign: 'center' }}>Streak</div><div>3-Day Trend</div><div style={{ textAlign: 'center' }}>Avg</div>
+                  <div>Patient</div><div style={{ textAlign: 'center' }}>Avg</div><div>3-Day Trend</div><div>Last Check-In</div><div style={{ textAlign: 'center' }}>Streak</div>
                   {isManager && <div>Therapist</div>}
                 </div>
                 {roster.map(r => (
                   <div key={r.id} style={{ ...s.row, gridTemplateColumns: rosterCols }}>
                     <div style={s.name}><span>{r.name}</span><NameFlags flags={r.flags} /></div>
-                    <div style={s.cell}>{relativeDay(r.lastCheckin)}</div>
-                    <div style={{ ...s.cell, textAlign: 'center' }}>{r.streak > 0 ? `${r.streak}🔥` : '—'}</div>
-                    <div><Trend last3={r.last3} /></div>
                     <div style={{ ...s.cell, textAlign: 'center' }}>
                       {r.avg != null
                         ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, justifyContent: 'center' }}><span style={s.slot} title={FEELINGS[Math.round(r.avg)].word}>{FEELINGS[Math.round(r.avg)].emoji}</span>{r.avg.toFixed(1)}</span>
                         : '—'}
                     </div>
+                    <div><Trend last3={r.last3} /></div>
+                    <div style={s.cell}>{relativeDay(r.lastCheckin)}</div>
+                    <div style={{ ...s.cell, textAlign: 'center' }}>{r.streak > 0 ? `${r.streak}🔥` : '—'}</div>
                     {isManager && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
                         <select style={s.sel} value={r.therapistId || ''} onChange={e => handleAssign(r.id, e.target.value || null)}>
