@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import * as api from '../lib/api'
 import { useAuth } from '../auth'
-import { AuthShell, LogoMark, BRAND, ui } from './AuthShell'
+import { AuthShell, LogoMark, BrandLockup, BRAND, ui } from './AuthShell'
 import { BAA_VERSION } from '../lib/legal'
 
 // /admin — David's cross-clinic operator view. Every clinic on the platform,
@@ -20,10 +20,6 @@ const s = {
   // textAlign is declared HERE, not inherited from #root — see src/index.css.
   page: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", textAlign: 'center' },
   bar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', borderBottom: '1px solid rgba(245,239,228,0.08)', flexWrap: 'wrap', gap: 12 },
-  brand: { display: 'flex', alignItems: 'center', gap: 12 },
-  wordmark: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: 26 },
-  wordmarkPT: { fontFamily: "'DM Sans', sans-serif", fontStyle: 'normal', fontWeight: 600, color: BRAND },
-  tag: { fontSize: 13, color: 'rgba(245,239,228,0.6)', borderLeft: '1px solid rgba(245,239,228,0.15)', paddingLeft: 12 },
   navLink: { fontSize: 13, fontWeight: 600, color: BRAND, textDecoration: 'none', border: '1px solid rgba(245,168,26,0.4)', borderRadius: 4, padding: '7px 14px' },
   signOut: { fontSize: 13, color: 'rgba(245,239,228,0.5)', background: 'transparent', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '7px 14px', cursor: 'pointer' },
   wrap: { maxWidth: 1040, margin: '0 auto', padding: '24px clamp(14px, 4vw, 28px) 60px' },
@@ -129,11 +125,7 @@ export default function Admin() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap'); * { box-sizing: border-box; } html, body { margin: 0; background: #0d1825; overflow-x: hidden; }`}</style>
 
       <div style={s.bar}>
-        <div style={s.brand}>
-          <LogoMark size={34} marginBottom={0} />
-          <div style={s.wordmark}>Glow<span style={s.wordmarkPT}>PT</span></div>
-          <div style={s.tag}>All Clinics</div>
-        </div>
+        <BrandLockup label="All Clinics" />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Link to="/dashboard" style={s.navLink}>{myClinic?.name || 'Dashboard'}</Link>
           <button style={s.signOut} onClick={signOut}>Sign Out</button>

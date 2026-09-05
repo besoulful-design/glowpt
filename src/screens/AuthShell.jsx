@@ -43,6 +43,29 @@ export function LogoMark({ size = 136, marginBottom = 20 }) {
   )
 }
 
+// The signed-in app bar's brand lockup: the logo, the wordmark, and the label
+// saying where you are. Declared ONCE, because these two bars had already
+// drifted apart — Admin had gained the logo and Dashboard had not, and their
+// labels sat at 13px and 14px. That is the fourth time a duplicated brand
+// declaration has drifted in this app (favicon vs touch icon, AuthShell vs
+// PatientApp LogoMark, the wordmark itself), so it lives here now.
+// `label` is optional: a manager with no clinic loaded shows the mark alone.
+export function BrandLockup({ label }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <LogoMark size={34} marginBottom={0} />
+      <span style={{ fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: 26, color: '#f5efe4' }}>
+        Glow<span style={{ fontFamily: "'DM Sans', sans-serif", fontStyle: 'normal', fontWeight: 600, color: BRAND }}>PT</span>
+      </span>
+      {label && (
+        <span style={{ fontSize: 14, color: 'rgba(245,239,228,0.6)', borderLeft: '1px solid rgba(245,239,228,0.15)', paddingLeft: 12 }}>
+          {label}
+        </span>
+      )}
+    </div>
+  )
+}
+
 export function AuthShell({ children }) {
   return (
     <div style={{ minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", display: 'flex', justifyContent: 'center' }}>
