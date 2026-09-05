@@ -157,24 +157,31 @@ export async function beginSignUp(email, clientMetadata = {}) {
   } catch (err) {
     if (err?.name !== 'UsernameExistsException') throw err;
 
-    // The address already has a Cognito account. There are two very different
-    // reasons for that, and they need different flows.
+    // The address already has a Cognito account, for one of two reasons: a
+    // genuine returning user, or someone who started a sign-up and walked away
+    // at the code screen (SignUp takes the address immediately, UNCONFIRMED).
     //
-    // (1) SOMEONE STARTED THIS AND WALKED AWAY at the code screen. SignUp
-    //     creates the account immediately, in an UNCONFIRMED state, so the
-    //     address is taken even though nothing was completed. The right move is
-    //     to FINISH that sign-up, because ConfirmSignUp is what fires the
-    //     post-confirmation Lambda that attaches the clinic. Falling straight
-    //     to sign-in skips it, leaving an authenticated user with no identity
-    //     row and no clinic, on the NoClinic screen. (That is exactly what
-    //     happened to a real invited patient on 2026-09-05.)
+    // ⚠️⚠️ ASK SIGN-IN, NOT ResendConfirmationCode. An earlier version of this
+    // probed with ResendConfirmationCode on the assumption that it only
+    // succeeds for an unconfirmed account. IT DOES NOT: against this pool it
+    // happily emails a "verify your new account" code to a CONFIRMED user, so
+    // the probe reported "unconfirmed" for everyone, and the ConfirmSignUp that
+    // followed could never succeed. Every invited person whose account already
+    // existed got a code that would not work, three times over. (Shipped and
+    // caught the same day, 2026-09-05.)
     //
-    // (2) A GENUINE RETURNING USER. Sign them in, as before.
-    //
-    // Cognito will not tell us which, by design, so we ask indirectly:
-    // ResendConfirmationCode succeeds only for an unconfirmed account and
-    // throws InvalidParameterException ("User is already confirmed") otherwise.
+    // InitiateAuth answers honestly, so it goes first: it succeeds for a
+    // confirmed account, and Cognito's email-OTP sign-in also confirms an
+    // unconfirmed one. The clinic attach then runs from the frontend safety net
+    // (the pending key saved before this call) rather than from the
+    // post-confirmation Lambda, which is exactly what that net is for.
     try {
+      const pending = await beginSignIn(email);
+      return { ...pending, clientMetadata }; // keep metadata for the re-attach net
+    } catch (signInErr) {
+      // Only if sign-in itself refuses an unconfirmed account do we finish the
+      // original sign-up instead, which does fire the post-confirm Lambda.
+      if (signInErr?.name !== 'UserNotConfirmedException') throw signInErr;
       await client.send(
         new ResendConfirmationCodeCommand({
           ClientId: COGNITO_CLIENT_ID,
@@ -182,15 +189,8 @@ export async function beginSignUp(email, clientMetadata = {}) {
           ClientMetadata: clientMetadata,
         }),
       );
-      // Unconfirmed: a fresh 6-digit confirmation code is on its way, and
-      // confirm() will run the proper ConfirmSignUp path.
       return { kind: 'signup', email, clientMetadata };
-    } catch {
-      // Already confirmed, or the resend was refused for any other reason.
-      // Sign-in is the correct fallback and is never worse than before.
     }
-    const pending = await beginSignIn(email);
-    return { ...pending, clientMetadata }; // keep metadata for the re-attach net
   }
 }
 
