@@ -171,6 +171,29 @@ begin
     where attrelid = 'public.checkins'::regclass and attname = 'user_id';
   raise notice '% T14 checkins.user_id is NOT NULL', case when denied then 'PASS:' else 'FAIL:' end;
 
+  -- T14b TIGHTENING P3 (2026-09-05): feeling must be on the 1-5 scale. The app
+  -- maps 1-5 to a face and indexes that map directly, so an off-scale value is a
+  -- lookup returning undefined, which blanked the clinic dashboard for a whole
+  -- clinic. Dated YESTERDAY on purpose: A1 already checked in today, so a
+  -- same-day row would be rejected by the one-per-day index and this would pass
+  -- for the wrong reason. check_violation specifically, for the same reason.
+  perform set_config('app.user_id', pat_a1::text, true);
+  denied := false;
+  begin
+    insert into public.checkins (user_id, clinic_id, feeling, created_at)
+      values (current_user_id(), auth_clinic_id(), 0, now() - interval '1 day');
+  exception when check_violation then denied := true; end;
+  raise notice '% T14b off-scale feeling (0) rejected', case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- The same row with a real rating must still go in, or T14b would pass simply
+  -- because nothing can be inserted for yesterday at all.
+  denied := false;
+  begin
+    insert into public.checkins (user_id, clinic_id, feeling, created_at)
+      values (current_user_id(), auth_clinic_id(), 3, now() - interval '1 day');
+  exception when others then denied := true; end;
+  raise notice '% T14c a valid feeling on that same day still inserts', case when not denied then 'PASS:' else 'FAIL:' end;
+
   -- T15 LEAST PRIVILEGE (Phase 2): glowpt_app must NOT be able to mint an
   -- identity. Only glowpt_postconfirm holds EXECUTE on register_user now.
   perform set_config('app.user_id', pat_a1::text, true);

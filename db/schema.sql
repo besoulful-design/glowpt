@@ -176,7 +176,15 @@ create table public.checkins (
   ai_response    text,
   created_at     timestamptz default timezone('utc', now()),
   other_movement text,
-  clinic_id      uuid references public.clinics(id) on delete cascade
+  clinic_id      uuid references public.clinics(id) on delete cascade,
+  -- ⚠️ THE SCALE IS 1-5 AND THE APP INDEXES INTO IT DIRECTLY. src/lib/feelings.js
+  -- maps 1-5 to a face and a word, so a stored value off the scale is a lookup
+  -- that returns undefined. On 2026-09-05 a check-in was saved with feeling 0
+  -- (the API's `Number(b.feeling)` turning a missing rating into 0, which
+  -- Number.isInteger happily accepted) and it blanked the clinic dashboard for
+  -- every manager and therapist who could see that patient. The API validates
+  -- too; this is the backstop that holds whatever any client sends.
+  constraint checkins_feeling_range check (feeling between 1 and 5)
 );
 create index checkins_clinic_idx on public.checkins (clinic_id, created_at desc);
 create index checkins_user_idx   on public.checkins (user_id, created_at desc);

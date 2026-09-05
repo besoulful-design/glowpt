@@ -345,8 +345,17 @@ async function postMyCheckin(client: Client, event: APIGatewayProxyEventV2WithJW
   const sub = requireSub(event);
   const b = parseBody(event);
 
-  const feeling = Number(b.feeling);
-  if (!Number.isInteger(feeling)) throw new HttpError(400, 'feeling_required');
+  // ⚠️ DO NOT GO BACK TO `Number(b.feeling)`. It returns 0 for null, '' and
+  // false, and Number.isInteger(0) is true, so the guard below used to ACCEPT a
+  // missing rating and silently store it as 0. The scale is 1-5, so the clinic
+  // dashboard looked up a face that does not exist and blanked for every
+  // manager and therapist who could see that patient (2026-09-05). Reject
+  // anything off the scale here, and let the DB's checkins_feeling_range check
+  // catch whatever never comes through this handler.
+  const feeling = typeof b.feeling === 'number' ? b.feeling : NaN;
+  if (!Number.isInteger(feeling) || feeling < 1 || feeling > 5) {
+    throw new HttpError(400, 'feeling_required');
+  }
 
   const feelingWord = typeof b.feeling_word === 'string' ? b.feeling_word : null;
   const movements = Array.isArray(b.movements) ? (b.movements as string[]) : null;
