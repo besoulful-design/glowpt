@@ -63,6 +63,33 @@ export const getRoster = () => request('/clinic/roster');
 export const getTherapists = () => request('/clinic/therapists');
 export const getInvites = () => request('/clinic/invites');
 
+// -- RPCs (bodies carry entity ids, never the URL) --
+export const provisionClinic = (name, slug) =>
+  request('/rpc/provision-clinic', { method: 'POST', body: { name, slug } });
+export const joinClinic = (slug, fullName, consentVersion) =>
+  request('/rpc/join-clinic', {
+    method: 'POST',
+    body: { slug, full_name: fullName, consent_version: consentVersion },
+  });
+// Public, like getClinicBySlug: read before the person has an account, so the
+// staff sign-up page can name the clinic and role. The token in the URL is the
+// invite's own identifier, not an identifier for a person.
+export const getStaffInvite = (token) =>
+  request(`/staff-invites/${encodeURIComponent(token)}`, { auth: false });
+// token is optional. With one, this is someone following an invite link; without
+// one, it is auth.jsx's blind safety net. Either way the database requires the
+// caller's verified email to match the invite, so the token alone grants nothing.
+export const acceptStaffInvite = (token = null) =>
+  request('/rpc/accept-staff-invite', { method: 'POST', body: { token } });
+export const invitePatient = (email, fullName) =>
+  request('/rpc/invite-patient', { method: 'POST', body: { email, full_name: fullName } });
+// Separate from acceptStaffInvite because this door records consent and that
+// one deliberately cannot; the database refuses each the other's invites.
+export const acceptPatientInvite = (token, consentVersion) =>
+  request('/rpc/accept-patient-invite', {
+    method: 'POST',
+    body: { token, consent_version: consentVersion },
+  });
 export const inviteStaff = (email, fullName, role = 'therapist') =>
   request('/rpc/invite-staff', {
     method: 'POST',
