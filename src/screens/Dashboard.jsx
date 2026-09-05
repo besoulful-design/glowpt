@@ -47,6 +47,8 @@ const s = {
   inviteInput: { flex: '1 1 150px', background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '9px 12px', color: '#f5efe4', fontSize: 14, fontFamily: 'inherit' },
   inviteBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '9px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   pending: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', marginTop: 12, lineHeight: 1.6 },
+  pendingRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' },
+  resendBtn: { background: 'transparent', border: '1px solid rgba(245,168,26,0.4)', color: '#F5A81A', borderRadius: 4, padding: '4px 12px', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' },
   notice: { fontSize: 13, color: '#9bb06a', marginTop: 12 },
   inviteResult: { marginTop: 14, padding: '14px 16px', background: 'rgba(245,168,26,0.07)', border: '1px solid rgba(245,168,26,0.3)', borderRadius: 6 },
   inviteResultHead: { fontSize: 14, lineHeight: 1.5, fontWeight: 600, color: '#f5efe4', marginBottom: 4 },
@@ -239,6 +241,49 @@ export default function Dashboard() {
     }
   }
 
+  // Resend an invite that has not been used yet. It reuses the same RPC as the
+  // form, which upserts: the person keeps their place in the list and gets a
+  // FRESH token, so the old link dies. That matters, because it is also how a
+  // link sent to the wrong address is killed.
+  const [resending, setResending] = useState('')
+  async function resendInvite(inv) {
+    const patient = inv.role === 'patient'
+    const setNote = patient ? setPatientNotice : setStaffNotice
+    const setResult = patient ? setPatientInvite : setStaffInvite
+    setNote(''); setResult(null); setResending(inv.email)
+    try {
+      const res = patient
+        ? await api.invitePatient(inv.email, inv.full_name)
+        : await api.inviteStaff(inv.email, inv.full_name, inv.role)
+      setResult({ url: res.invite_url, email: inv.email, name: inv.full_name || inv.email, sent: !!res.email_sent })
+      setInvites(await fetchPendingInvites())
+    } catch (err) {
+      setNote(`Couldn’t resend to ${inv.email}: ${err.message}`)
+    } finally {
+      setResending('')
+    }
+  }
+
+  // One list for both kinds. Each row carries its own Resend, so nobody has to
+  // retype a name and address that the clinic has already given us once.
+  function PendingList({ people }) {
+    if (people.length === 0) return null
+    return (
+      <div style={s.pending}>
+        <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Invited (Waiting for First Sign-In):</strong>
+        {people.map(i => (
+          <div key={i.email} style={s.pendingRow}>
+            <span>{i.full_name || '—'} · {i.email}</span>
+            <button type="button" style={s.resendBtn} disabled={resending === i.email}
+              onClick={() => resendInvite(i)}>
+              {resending === i.email ? 'Sending…' : 'Resend'}
+            </button>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   // Rendered directly under whichever form produced it. Both invite forms use
   // this, so the two can never drift apart the way their message slots did.
   function InviteResult({ result, kind }) {
@@ -393,12 +438,7 @@ export default function Dashboard() {
               </form>
               {patientNotice && <div style={s.notice}>{patientNotice}</div>}
               <InviteResult result={patientInvite} kind="patient" />
-              {pendingPatients.length > 0 && (
-                <div style={s.pending}>
-                  <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Invited (Waiting for First Sign-In):</strong><br />
-                  {pendingPatients.map(i => `${i.full_name || '—'} · ${i.email}`).join('  ·  ')}
-                </div>
-              )}
+              <PendingList people={pendingPatients} />
             </div>
 
             {/* Care team — invite therapists and see how many patients each carries. */}
@@ -424,12 +464,7 @@ export default function Dashboard() {
               </form>
               {staffNotice && <div style={s.notice}>{staffNotice}</div>}
               <InviteResult result={staffInvite} kind="staff" />
-              {pendingStaff.length > 0 && (
-                <div style={s.pending}>
-                  <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Invited (Waiting for First Sign-In):</strong><br />
-                  {pendingStaff.map(i => `${i.full_name || '—'} · ${i.email}`).join('  ·  ')}
-                </div>
-              )}
+              <PendingList people={pendingStaff} />
             </div>
           </>
         )}
