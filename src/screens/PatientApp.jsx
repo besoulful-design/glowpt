@@ -268,7 +268,9 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     btnPrimary: { width: '100%', padding: '18px 24px', border: 'none', borderRadius: '4px', background: '#F5A81A', color: '#0d1825', fontFamily: "'DM Sans', sans-serif", fontSize: '16px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.01em' },
     btnSecondary: { width: '100%', padding: '18px 24px', border: '1px solid rgba(245,239,228,0.15)', borderRadius: '4px', background: 'transparent', color: 'rgba(245,239,228,0.7)', fontFamily: "'DM Sans', sans-serif", fontSize: '16px', fontWeight: 500, cursor: 'pointer' },
     btnGhost: { width: '100%', padding: '12px', border: 'none', background: 'transparent', color: 'rgba(245,239,228,0.5)', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', cursor: 'pointer' },
-    checkinHeader: { padding: '56px 28px 24px' },
+    // 20px above the logo matches welcomeWrap and responseTop; it was 56px when
+    // the date was the first thing on this screen.
+    checkinHeader: { padding: '20px 28px 24px' },
     checkinDate: { fontSize: LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '8px' },
     checkinTitle: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '32px', lineHeight: 1.15, color: '#f5efe4', letterSpacing: '-0.02em' },
     checkinTitleEm: { fontStyle: 'italic', color: '#FBC02D' },
@@ -405,6 +407,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
         {screen === 'checkin' && (
           <div>
             <div style={styles.checkinHeader}>
+              <LogoMark size={132} marginBottom={16} />
               <div style={styles.checkinDate}>{dateStr}</div>
               <div style={styles.checkinTitle}>How are you<br /><span style={styles.checkinTitleEm}>feeling today?</span></div>
             </div>
