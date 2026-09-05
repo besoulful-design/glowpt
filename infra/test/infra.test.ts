@@ -38,7 +38,19 @@ test('data API: HTTP API with a Cognito JWT authorizer, one public route, scoped
     AuthorizerType: 'JWT',
   });
 
-  // Every route but the /join slug lookup is JWT-protected; that one is public.
+  // ⚠️ THE PUBLIC SURFACE IS THE POINT OF THIS ASSERTION. Exactly two routes may
+  // be reached without a token, and both must be, because the caller has no
+  // account yet at that moment:
+  //   - the /join slug lookup, so a walk-in page can name its clinic;
+  //   - the invite lookup, so an invite link can say which clinic and role it
+  //     is for. Its token is 256 bits of randomness and grants nothing by
+  //     itself; claiming the invite still requires a verified matching email.
+  // Anything else appearing here is a route that forgot its authorizer, so add
+  // to this list only deliberately.
+  //
+  // (The invite route shipped 2026-09-04 and this list was not updated with it,
+  // so the suite was red until 2026-09-05. A stale expectation is not a passing
+  // test with a footnote; it is a broken alarm.)
   const routes = template.findResources('AWS::ApiGatewayV2::Route');
   const byAuth: Record<string, string[]> = { JWT: [], NONE: [] };
   for (const r of Object.values(routes) as any[]) {
@@ -46,16 +58,29 @@ test('data API: HTTP API with a Cognito JWT authorizer, one public route, scoped
     const authType = r.Properties.AuthorizationType as string;
     (byAuth[authType] ??= []).push(key);
   }
-  expect(byAuth.NONE).toEqual(['GET /clinics/by-slug/{slug}']);
+  expect([...byAuth.NONE].sort()).toEqual([
+    'GET /clinics/by-slug/{slug}',
+    'GET /staff-invites/{token}',
+  ]);
   expect(byAuth.JWT).toContain('GET /me');
   expect(byAuth.JWT).toContain('GET /clinic/roster');
   // 16 data routes (ai-response adds a 17th JWT route, asserted in the Phase 4 test).
   expect(byAuth.JWT.length).toBeGreaterThanOrEqual(16);
 
-  // The glowpt_app role's secret exists and is one of the proxy's three auth entries.
+  // The glowpt_app role's secret exists and is one of the proxy's FOUR auth
+  // entries: the RDS admin secret plus one per Lambda role (postconfirm, app,
+  // weekly). Each is a separate least-privilege DB role, which is why the count
+  // is worth asserting: a fifth appearing unnoticed means something gained
+  // database access without anyone deciding it should.
+  //
+  // (This read 3 until 2026-09-05. glowpt/db/weekly was added with
+  // weekly-summary on 2026-08-22 and the count was never updated, so this
+  // assertion had been failing for two weeks.)
   template.hasResourceProperties('AWS::SecretsManager::Secret', { Name: 'glowpt/db/app' });
+  template.hasResourceProperties('AWS::SecretsManager::Secret', { Name: 'glowpt/db/weekly' });
+  template.hasResourceProperties('AWS::SecretsManager::Secret', { Name: 'glowpt/db/postconfirm' });
   const proxies = template.findResources('AWS::RDS::DBProxy');
-  expect((Object.values(proxies)[0] as any).Properties.Auth.length).toBe(3);
+  expect((Object.values(proxies)[0] as any).Properties.Auth.length).toBe(4);
 });
 
 // Phase 4: ai-response behind the same authorizer, but OUTSIDE the VPC.

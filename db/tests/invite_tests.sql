@@ -18,6 +18,10 @@ declare
   wrongp constant uuid := 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
   expird constant uuid := 'cccccccc-cccc-cccc-cccc-cccccccccccc';
   newpat constant uuid := 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+  -- A Cognito account with NO public.users row: the account exists (someone
+  -- abandoned a sign-up at the code screen, so lib/cognito.js signed them in
+  -- instead of confirming them) but register_user never ran for it.
+  ghost  constant uuid := 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
   ptok text; clinic_a uuid;
   tok text; tok2 text; expired_tok text;
   denied boolean; n int; r record; clinic uuid;
@@ -222,5 +226,76 @@ begin
     perform set_clinic_open_signup(true);
   exception when others then denied := (sqlerrm like '%Only a clinic manager%'); end;
   raise notice '% T43 a patient cannot open their clinic to walk-ins',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- ======================================================================
+  -- The 2026-09-05 bug: a signed-in account with no public.users row.
+  -- ======================================================================
+
+  -- T44 SECURITY (regression): the email guard must FAIL CLOSED for a caller
+  -- with no users row. Before the fix `lower(v_inv.email) <> lower(NULL)` was
+  -- NULL rather than true, so the guard fell through and only the profiles
+  -- foreign key stopped the claim. The guarantee has to be the check itself.
+  perform set_config('app.user_id', mgr_a::text, true);
+  select invite_patient('ghost@a.com','Ghost') into ptok;
+  perform set_config('app.user_id', ghost::text, true);
+  denied := false;
+  begin
+    perform accept_patient_invite(ptok, 'v9-test');
+  exception when others then
+    denied := (sqlerrm like '%different email address%');
+  end;
+  raise notice '% T44 an unregistered caller is refused by the EMAIL guard, not the foreign key',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T44b the same guard on the staff door.
+  perform set_config('app.user_id', mgr_a::text, true);
+  select invite_staff('ghoststaff@a.com','Ghost Staff','therapist') into tok2;
+  perform set_config('app.user_id', ghost::text, true);
+  denied := false;
+  begin
+    perform accept_staff_invite(tok2);
+  exception when others then
+    denied := (sqlerrm like '%different email address%');
+  end;
+  raise notice '% T44b and on the staff door too',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T45 LEGIT: ensure_self creates the missing identity row, and the invite the
+  -- person actually holds then works. This is David's Felix case end to end.
+  perform ensure_self('ghost@a.com');
+  select accept_patient_invite(ptok, 'v9-test') into clinic;
+  select count(*) into n from profiles
+    where id = ghost and role = 'patient' and clinic_id = clinic_a;
+  raise notice '% T45 ensure_self unblocks the invited patient -> % rows',
+    case when n = 1 and clinic is not null then 'PASS:' else 'FAIL:' end, n;
+
+  -- T46 ensure_self is idempotent: running it again changes nothing and does
+  -- not disturb the clinic the person has just been attached to.
+  perform ensure_self('ghost@a.com');
+  select count(*) into n from profiles where id = ghost and clinic_id = clinic_a;
+  raise notice '% T46 ensure_self is idempotent -> % rows',
+    case when n = 1 then 'PASS:' else 'FAIL:' end, n;
+
+  -- T47 SECURITY: it refuses an address that already belongs to a different
+  -- subject id. Silently proceeding would attach one person to another's row.
+  perform set_config('app.user_id', '12121212-1212-1212-1212-121212121212', true);
+  denied := false;
+  begin
+    perform ensure_self('ghost@a.com');
+  exception when others then
+    denied := (sqlerrm like '%already registered to another account%');
+  end;
+  raise notice '% T47 ensure_self refuses an address owned by another account',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T48 SECURITY: ensure_self takes no id, so it can only ever create the
+  -- caller's own row. With no caller set there is nothing it can do.
+  perform set_config('app.user_id', '', true);
+  denied := false;
+  begin
+    perform ensure_self('anyone@a.com');
+  exception when others then denied := (sqlerrm like '%Not authenticated%'); end;
+  raise notice '% T48 ensure_self refuses an unauthenticated caller',
     case when denied then 'PASS:' else 'FAIL:' end;
 end $$;

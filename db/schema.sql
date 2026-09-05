@@ -318,6 +318,52 @@ begin
     on conflict (id) do nothing;
 end $$;
 
+-- ensure_self: create the CALLER'S OWN identity row if it is missing.
+--
+-- ⚠️ WHY THIS EXISTS, AND WHY IT IS NOT register_user.
+-- lib/cognito.js falls back to a normal sign-in when Cognito reports the email
+-- already has an account. Sign-in never runs ConfirmSignUp, so the
+-- post-confirmation Lambda never fires, so register_user never runs and the
+-- account has NO public.users row. Every attach RPC then dies on the profiles
+-- foreign key, and the person lands on the NoClinic screen with no idea why.
+-- (Found 2026-09-05 from a real invited patient who had abandoned an earlier
+-- invite at the code screen, leaving an unconfirmed Cognito account behind.)
+--
+-- ⛔ THE DIFFERENCE FROM register_user IS THE WHOLE POINT. register_user takes
+-- an arbitrary id and so can mint ANY identity, which is exactly why glowpt_app
+-- must never hold it (see the grant block near the foot of this file). This one
+-- takes NO id: it uses current_user_id(), which comes from the verified Cognito
+-- sub the API set with set_config. So the app role can only ever create a row
+-- for the caller who is already authenticated, never for anyone else. Keep it
+-- that way: do not add an id parameter, and do not grant register_user instead.
+create or replace function public.ensure_self(p_email citext)
+  returns void
+  language plpgsql security definer
+  set search_path = public set row_security = off
+as $$
+declare v_id uuid := public.current_user_id();
+begin
+  if v_id is null then raise exception 'Not authenticated'; end if;
+  if p_email is null or btrim(p_email::text) = '' then
+    raise exception 'An email address is required' using errcode = 'P0001';
+  end if;
+  if exists (select 1 from public.users where id = v_id) then return; end if;
+
+  begin
+    insert into public.users (id, email) values (v_id, lower(p_email));
+  exception when unique_violation then
+    -- users.email is UNIQUE, so landing here means this address already belongs
+    -- to a DIFFERENT subject id: two Cognito accounts for one address. Refuse
+    -- loudly. Silently attaching would hand one person another's clinic row.
+    raise exception 'This email address is already registered to another account'
+      using errcode = 'P0001';
+  end;
+
+  -- A bare profile, exactly as register_user leaves one: role defaults to
+  -- 'patient' with no clinic, and whichever attach RPC runs next overwrites it.
+  insert into public.profiles (id) values (v_id) on conflict (id) do nothing;
+end $$;
+
 -- get_clinic_by_slug: the ONLY unauthenticated data read in the app (a new
 -- patient with no account resolving their clinic from /join/<slug>). Replaces
 -- the old clinics "USING (true)" blanket, which exposed the entire customer
@@ -431,7 +477,13 @@ begin
     if v_inv.id is null then
       raise exception 'This invite link is no longer valid' using errcode = 'P0001';
     end if;
-    if lower(v_inv.email) <> lower(v_email) then
+    -- ⚠️ `v_email is null` is load-bearing, not defensive noise. Without it a
+    -- caller with no public.users row compares against NULL, the whole
+    -- condition is NULL rather than true, and this guard FALLS THROUGH. The
+    -- doc's promise that an invite link is safe to forward rests on this
+    -- check, so it must fail closed. (Until 2026-09-05 only the profiles
+    -- foreign key stopped that case, which is a backstop, not the guarantee.)
+    if v_email is null or lower(v_inv.email) <> lower(v_email) then
       raise exception 'This invite is for a different email address' using errcode = 'P0001';
     end if;
     -- ⚠️ A patient invite must NOT be claimed here: this function records no
@@ -546,7 +598,9 @@ begin
   if v_inv.id is null then
     raise exception 'This invite link is no longer valid' using errcode = 'P0001';
   end if;
-  if lower(v_inv.email) <> lower(v_email) then
+  -- See the note in accept_staff_invite: without the null test this guard
+  -- falls through for a caller who has no public.users row.
+  if v_email is null or lower(v_inv.email) <> lower(v_email) then
     raise exception 'This invite is for a different email address' using errcode = 'P0001';
   end if;
   if v_inv.role <> 'patient' then
@@ -978,7 +1032,9 @@ end $$;
 
 -- Functions: revoke the PUBLIC default, then grant EXECUTE explicitly.
 -- NOTE: register_user is deliberately ABSENT from glowpt_app's list. Identity
--- creation belongs to glowpt_postconfirm alone (granted just below). The three
+-- creation from an ARBITRARY id belongs to glowpt_postconfirm alone (granted
+-- just below). glowpt_app gets ensure_self instead, which can only ever create
+-- a row for the already-authenticated caller (see its comment above). The three
 -- attach RPCs (provision_clinic / join_clinic / accept_staff_invite) DO stay on
 -- glowpt_app as well, since the frontend re-runs them as an idempotent safety
 -- net on first sign-in if the post-confirmation Lambda ever missed.
@@ -996,6 +1052,7 @@ grant execute on function
   public.invite_staff(text, text, text),
   public.invite_patient(text, text),
   public.accept_patient_invite(text, text),
+  public.ensure_self(citext),
   public.set_clinic_open_signup(boolean),
   public.assign_therapist(uuid, uuid),
   public.discharge_patient(uuid),
@@ -1069,6 +1126,7 @@ alter function public.assign_therapist(uuid, uuid)            owner to glowpt_au
 alter function public.discharge_patient(uuid)                 owner to glowpt_auth;
 alter function public.restore_patient(uuid)                   owner to glowpt_auth;
 alter function public.register_user(uuid, citext, text)       owner to glowpt_auth;
+alter function public.ensure_self(citext)                     owner to glowpt_auth;
 alter function public.weekly_summary_rows()                   owner to glowpt_auth;
 alter function public.clinic_is_active(uuid)                  owner to glowpt_auth;
 alter function public.is_platform_admin()                     owner to glowpt_auth;

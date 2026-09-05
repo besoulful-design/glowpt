@@ -151,6 +151,49 @@ function requireSub(event: APIGatewayProxyEventV2WithJWTAuthorizer): string {
   return sub;
 }
 
+/** The caller's verified email claim, or null. Same source as the sub: the JWT. */
+function verifiedEmail(event: APIGatewayProxyEventV2WithJWTAuthorizer): string | null {
+  const email = event.requestContext?.authorizer?.jwt?.claims?.email;
+  return typeof email === 'string' && email ? email : null;
+}
+
+/**
+ * withUser, plus a guarantee that the caller HAS an identity row before the
+ * work runs. Only the account-attach routes use it.
+ *
+ * ⚠️ WHY THIS IS NEEDED. lib/cognito.js falls back to a normal sign-in when an
+ * email already has a Cognito account. Sign-in never runs ConfirmSignUp, so the
+ * post-confirmation Lambda never fires and register_user never runs, leaving an
+ * authenticated user with NO public.users row. Every attach RPC then dies on
+ * the profiles foreign key. (Found 2026-09-05; see the patch of that date.)
+ *
+ * The email comes from the verified JWT claim, never from the request body, and
+ * ensure_self takes no id: it can only create a row for the already
+ * authenticated caller. So this does not let the API mint arbitrary identities,
+ * which is why glowpt_app still does not hold register_user.
+ *
+ * Same transaction as the work, so a failed attach leaves no half-made account.
+ */
+async function withUserEnsured<T>(
+  client: Client,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  sub: string,
+  work: (c: Client) => Promise<T>,
+): Promise<T> {
+  const email = verifiedEmail(event);
+  return withUser(client, sub, async (c) => {
+    if (email) {
+      await c.query('select public.ensure_self($1)', [email]);
+    } else {
+      // No email claim is a pool/token configuration fault, not a user error.
+      // Carry on rather than failing the request: the attach still works for
+      // anyone who already has an identity row, which is nearly everyone.
+      console.warn(JSON.stringify({ msg: 'no email claim; skipped ensure_self', sub }));
+    }
+    return work(c);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // The staff invite email. Reaches SES through the interface VPC endpoint that
 // weekly-summary created (this Lambda has no NAT and no internet route), so the
@@ -408,7 +451,7 @@ async function rpcProvisionClinic(client: Client, event: APIGatewayProxyEventV2W
   const name = typeof b.name === 'string' ? b.name.trim() : '';
   const slug = typeof b.slug === 'string' ? b.slug.trim() : '';
   if (!name || !slug) throw new HttpError(400, 'name_and_slug_required');
-  const clinicId = await withUser(client, sub, async (c) => {
+  const clinicId = await withUserEnsured(client, event, sub, async (c) => {
     const { rows } = await c.query('select public.provision_clinic($1, $2) as clinic_id', [
       name,
       slug,
@@ -425,7 +468,7 @@ async function rpcJoinClinic(client: Client, event: APIGatewayProxyEventV2WithJW
   if (!slug) throw new HttpError(400, 'slug_required');
   const fullName = typeof b.full_name === 'string' ? b.full_name : null;
   const consentVersion = typeof b.consent_version === 'string' ? b.consent_version : null;
-  const clinicId = await withUser(client, sub, async (c) => {
+  const clinicId = await withUserEnsured(client, event, sub, async (c) => {
     const { rows } = await c.query(
       'select public.join_clinic($1, $2, $3) as clinic_id',
       [slug, fullName, consentVersion],
@@ -447,7 +490,7 @@ async function rpcAcceptStaffInvite(
   // never grants the role by itself.
   const b = parseBody(event);
   const token = typeof b.token === 'string' && b.token ? b.token : null;
-  const clinicId = await withUser(client, sub, async (c) => {
+  const clinicId = await withUserEnsured(client, event, sub, async (c) => {
     const { rows } = await c.query('select public.accept_staff_invite($1) as clinic_id', [token]);
     return rows[0].clinic_id as string | null;
   });
@@ -546,7 +589,7 @@ async function rpcAcceptPatientInvite(
   const token = typeof b.token === 'string' ? b.token : '';
   if (!token) throw new HttpError(400, 'token_required');
   const consentVersion = typeof b.consent_version === 'string' ? b.consent_version : null;
-  const clinicId = await withUser(client, sub, async (c) => {
+  const clinicId = await withUserEnsured(client, event, sub, async (c) => {
     const { rows } = await c.query('select public.accept_patient_invite($1, $2) as clinic_id', [
       token,
       consentVersion,

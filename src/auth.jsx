@@ -35,6 +35,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)      // { id (sub), email } or null
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  // Set when a clinic attach was ATTEMPTED and failed, so NoClinic can say
+  // something true instead of "open your clinic's join link", which is wrong
+  // advice for an invited patient and impossible to act on. Before 2026-09-05
+  // this was a console.log and nothing else, which is how a real patient got
+  // stranded with no way for anyone to tell why.
+  const [attachError, setAttachError] = useState(null)
 
   // Load the profile, finishing a pending attach if the post-confirmation Lambda
   // missed it. The RPCs are idempotent, so re-running is always safe.
@@ -52,11 +58,11 @@ export function AuthProvider({ children }) {
       const joinRaw = localStorage.getItem(PENDING_JOIN_KEY)
       const staffToken = localStorage.getItem(PENDING_STAFF_KEY)
       const patInviteRaw = localStorage.getItem(PENDING_PATIENT_INVITE_KEY)
-      localStorage.removeItem(PENDING_ONBOARD_KEY)
-      localStorage.removeItem(PENDING_JOIN_KEY)
-      localStorage.removeItem(PENDING_STAFF_KEY)
-      localStorage.removeItem(PENDING_PATIENT_INVITE_KEY)
 
+      // ⚠️ These keys are cleared AFTER a successful attach, not before the
+      // attempt. Clearing first meant one bad moment (a network blip, or the
+      // missing-identity-row bug) threw away the only record of which invite
+      // the person was claiming, so reloading could never recover it.
       try {
         if (onboardRaw) {
           const o = JSON.parse(onboardRaw)
@@ -77,8 +83,10 @@ export function AuthProvider({ children }) {
           // simply returns null for the many users who have no invite at all.
           await api.acceptStaffInvite(staffToken)
         }
+        setAttachError(null)
       } catch (err) {
         console.log('Profile re-attach failed:', err.message)
+        setAttachError(err.message || 'unknown')
       }
 
       try {
@@ -88,11 +96,14 @@ export function AuthProvider({ children }) {
       }
     }
 
-    // Once the clinic is attached (whether by the Lambda or the re-attach above),
-    // drop any lingering pending keys so they can never re-fire a stale attach.
+    // Attached (by the Lambda or by the re-attach above): drop every pending key
+    // so none can re-fire a stale attach, and clear any earlier failure.
     if (prof?.clinic_id) {
       localStorage.removeItem(PENDING_ONBOARD_KEY)
       localStorage.removeItem(PENDING_JOIN_KEY)
+      localStorage.removeItem(PENDING_STAFF_KEY)
+      localStorage.removeItem(PENDING_PATIENT_INVITE_KEY)
+      setAttachError(null)
     }
 
     setProfile(prof || null)
@@ -127,6 +138,7 @@ export function AuthProvider({ children }) {
     cognito.signOut()
     setUser(null)
     setProfile(null)
+    setAttachError(null)
   }
 
   async function refreshProfile() {
@@ -135,7 +147,7 @@ export function AuthProvider({ children }) {
 
   // `session` is kept as a truthy convenience mirror of `user` so existing screens
   // that check `session` keep working without change.
-  const value = { session: user, user, profile, loading, onSignedIn, signOut, refreshProfile }
+  const value = { session: user, user, profile, loading, attachError, onSignedIn, signOut, refreshProfile }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
