@@ -105,11 +105,11 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 > 1. **A new clinic is CLOSED until David opens `/admin` and presses Switch On.** The only human decision left in the flow, and the moment the BAA and the first payment get confirmed. `Record BAA Signed` and `Switch On` are separate buttons on purpose.
 > 2. **🔒 EVERY clinic is invite only, always. There is no longer a switch.** Walk-in sign-up (the `/join/<slug>` link and the printable QR) was **removed from the product on 2026-09-05** at David's direction. `/join/<slug>` still resolves, but it only ever says "You'll need an invite." **The `open_signup` column and its database gate are kept so the feature can return for a clinic that wants a code on its front desk; only the route and the UI are gone.** **LIVE STATE: both Riverside and RidgePT are invite only.**
 >
-> **⏳ THREE THINGS AWAIT A HUMAN, none of them a coding task:**
+> **⏳ TWO THINGS AWAIT A HUMAN, both long-running, neither a coding task:**
 > - **✅ DONE, 2026-09-05: patient `Felix` completed his invite end to end** (checked in, real reflection, on the roster). **The patient invite flow is now proven by a person, not just at the API.** Kept here only so the next session knows it is closed.
 > - **The attorney review** (item 2 below). **David expected it done in the week of 2026-09-01 and that week has now ended**, so it is the item most worth asking about first.
 > - **Bedrock** (item 1 below). AWS holds the case; expect their follow-up **2026-09-09 to 09-11**. **David does nothing.**
-> - **The iPhone QR save** is fixed but **not yet confirmed on his phone.**
+> - ~~**The iPhone QR save**~~ **MOOT as of 2026-09-05: the QR was removed from the product entirely.** It was never confirmed on his phone and now never needs to be.
 >
 > **🗓️ ONE DATED CLEANUP: after 2026-09-18, delete the `/staff/:token` route alias** in `src/App.jsx`. It exists only because the first staff invite links pointed there and they live 14 days.
 >
