@@ -12,8 +12,8 @@ import CodeVerify from './CodeVerify'
 // (Also mounted at /staff/:token, which is where the first staff invite links
 // pointed; those live 14 days, so the alias stays until they have expired.)
 //
-// This is the third door into an account, and for a patient it is now the ONLY
-// one at a clinic that has not asked for a walk-in QR.
+// This is the third door into an account, and as of 2026-09-05 it is the ONLY
+// one for a patient anywhere: the walk-in join link and QR were removed.
 //
 // ⚠️ THE TOKEN IN THIS URL IS NOT A CREDENTIAL. It names which invite is being
 // claimed so the page can say which clinic and which role. Joining still

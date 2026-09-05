@@ -182,7 +182,6 @@ export class Api extends Construct {
       ['/rpc/invite-staff', apigwv2.HttpMethod.POST],
       ['/rpc/invite-patient', apigwv2.HttpMethod.POST],
       ['/rpc/accept-patient-invite', apigwv2.HttpMethod.POST],
-      ['/rpc/set-open-signup', apigwv2.HttpMethod.POST],
       ['/rpc/assign-therapist', apigwv2.HttpMethod.POST],
       ['/rpc/discharge-patient', apigwv2.HttpMethod.POST],
       ['/rpc/restore-patient', apigwv2.HttpMethod.POST],

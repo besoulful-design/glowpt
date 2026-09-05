@@ -195,7 +195,13 @@ async function seedDemo() {
     // or a check-in is not a demo. This is the one place a clinic is created
     // outside provision_clinic, so it is the one place that must remember.
     const { rows: [clinic] } = await db.query(
-      'insert into public.clinics (name, slug, activated_at, open_signup) values ($1, $2, now(), true) returning id',
+      // ⚠️ open_signup is FALSE. This script inserts the clinic directly rather
+      // than through provision_clinic, so it is the one path that can recreate
+      // the demo in a state nobody wants. It had to be taught activated_at for
+      // that reason on 2026-08-26 and open_signup on 2026-09-04; on 2026-09-05
+      // walk-in sign-up was removed from the product, so true here would put
+      // Riverside back into a state the UI can no longer even show.
+      'insert into public.clinics (name, slug, activated_at, open_signup) values ($1, $2, now(), false) returning id',
       [CLINIC.name, CLINIC.slug],
     );
     console.log(`Clinic: ${CLINIC.name} (${clinic.id})`);

@@ -423,7 +423,13 @@ async function getTherapists(client: Client, event: APIGatewayProxyEventV2WithJW
   return json(200, { therapists: result });
 }
 
-// -- Clinic: pending staff invites (manager-only by RLS).
+// -- Clinic: pending invites, staff AND patient (manager-only by RLS).
+//
+// ⚠️ EXPIRED INVITES ARE EXCLUDED. Without the expiry test a dead link sat in
+// the manager's "Pending" list forever, looking like someone who had simply not
+// got round to signing in. The role travels with each row so the dashboard can
+// list patients and staff separately: they share this table by design, and
+// until 2026-09-05 an invited PATIENT appeared under Care Team.
 async function getInvites(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const sub = requireSub(event);
   const result = await withUser(client, sub, async (c) => {
@@ -431,6 +437,7 @@ async function getInvites(client: Client, event: APIGatewayProxyEventV2WithJWTAu
       `select email, full_name, role
          from public.staff_invites
         where consumed_at is null
+          and expires_at > now()
         order by created_at desc`,
     );
     return rows;
@@ -599,19 +606,6 @@ async function rpcAcceptPatientInvite(
   return json(200, { clinic_id: clinicId });
 }
 
-// The manager's own switch: walk-ins, or invite only. Not a platform-admin
-// call; the DB refuses anyone who is not a manager of the clinic.
-async function rpcSetOpenSignup(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
-  const sub = requireSub(event);
-  const b = parseBody(event);
-  const open = b.open === true;
-  const value = await withUser(client, sub, async (c) => {
-    const { rows } = await c.query('select public.set_clinic_open_signup($1) as open_signup', [open]);
-    return rows[0].open_signup as boolean;
-  });
-  return json(200, { open_signup: value });
-}
-
 // -- Public: read a staff invite by its token so the sign-up screen can name the
 //    clinic and the role before the person has an account. The SECOND and last
 //    unauthenticated route. It reveals the invited email to whoever holds the
@@ -739,7 +733,12 @@ const ROUTES: Record<string, Route> = {
   'POST /rpc/invite-staff': rpcInviteStaff,
   'POST /rpc/invite-patient': rpcInvitePatient,
   'POST /rpc/accept-patient-invite': rpcAcceptPatientInvite,
-  'POST /rpc/set-open-signup': rpcSetOpenSignup,
+  // NOTE: there is deliberately NO route for set_clinic_open_signup as of
+  // 2026-09-05. Walk-in sign-up (the /join/<slug> link and the printable QR)
+  // was removed from the product; an invite is the only way a patient joins.
+  // The DB function and the clinics.open_signup column are kept so the feature
+  // can be brought back for a clinic that wants a code on its front desk, but
+  // with no route there is no live path to turn it on.
   'POST /rpc/assign-therapist': rpcAssignTherapist,
   'POST /rpc/discharge-patient': rpcDischargePatient,
   'POST /rpc/restore-patient': rpcRestorePatient,

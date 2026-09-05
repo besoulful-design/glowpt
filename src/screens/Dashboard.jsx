@@ -7,7 +7,6 @@ import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist,
 import { FEELINGS } from '../lib/feelings'
 import { BAA_IS_EXECUTED } from '../lib/legal'
 import { CONTACT_EMAIL } from '../lib/marketing'
-import QRCode from 'qrcode'
 
 // The 3-day trend shows the SAME emoji faces the patient taps at check-in (from
 // ../lib/feelings) — so staff and patient share one language. "Who needs attention"
@@ -32,9 +31,6 @@ const s = {
   tileLabel: { fontSize: CARD_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 8 },
   tileValue: { fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 400, lineHeight: 1 },
   tileSub: { fontSize: 12, color: 'rgba(245,239,228,0.45)', marginTop: 5, fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
-  linkCard: { background: 'linear-gradient(135deg, rgba(245,168,26,0.1), rgba(13,24,37,0))', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 6, padding: '18px 20px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' },
-  linkLabel: { fontSize: SECTION_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
-  linkUrl: { fontSize: 15, color: '#f5efe4', wordBreak: 'break-all' },
   copyBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   // Shown to staff while no BAA is executed. It is a NOTICE, not a control —
   // nothing in the app stops a clinic adding real patients today.
@@ -42,11 +38,6 @@ const s = {
   baaBannerLead: { fontWeight: 600, color: '#F5A81A' },
   baaBannerLink: { color: '#F5A81A' },
   adminLink: { fontSize: 13, fontWeight: 600, color: '#F5A81A', textDecoration: 'none', border: '1px solid rgba(245,168,26,0.4)', borderRadius: 4, padding: '7px 14px' },
-  qrCard: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.2)', borderRadius: 6, padding: 20, marginBottom: 28, display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' },
-  qrImg: { width: 104, height: 104, borderRadius: 6, background: '#fff', padding: 6, flexShrink: 0 },
-  qrLabel: { fontSize: SECTION_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 6 },
-  qrHint: { fontSize: 13.5, color: 'rgba(245,239,228,0.65)', lineHeight: 1.55, marginBottom: 12, maxWidth: '46ch' },
-  qrDownload: { display: 'inline-block', background: '#F5A81A', color: '#0d1825', border: 'none', fontFamily: 'inherit', cursor: 'pointer', fontWeight: 600, fontSize: 14, padding: '10px 18px', borderRadius: 4 },
   // Care team (manager)
   care: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.18)', borderRadius: 6, padding: '18px 20px', marginBottom: 28 },
   careHead: { fontSize: SECTION_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 14 },
@@ -57,16 +48,6 @@ const s = {
   inviteBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '9px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   pending: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', marginTop: 12, lineHeight: 1.6 },
   notice: { fontSize: 13, color: '#9bb06a', marginTop: 12 },
-  signupCard: { background: '#1a2840', border: '1px solid rgba(245,239,228,0.08)', borderRadius: 6, padding: 18, marginBottom: 20 },
-  signupRow: { display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4 },
-  signupOpt: (on) => ({
-    flex: '1 1 220px', textAlign: 'left', cursor: 'pointer', borderRadius: 6, padding: '12px 14px',
-    fontFamily: 'inherit',
-    background: on ? 'rgba(245,168,26,0.12)' : 'transparent',
-    border: `1px solid ${on ? 'rgba(245,168,26,0.55)' : 'rgba(245,239,228,0.12)'}`,
-  }),
-  signupOptLabel: { fontSize: 14.5, fontWeight: 600, color: '#f5efe4', marginBottom: 3 },
-  signupOptHint: { fontSize: 12.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.5)' },
   inviteResult: { marginTop: 14, padding: '14px 16px', background: 'rgba(245,168,26,0.07)', border: '1px solid rgba(245,168,26,0.3)', borderRadius: 6 },
   inviteResultHead: { fontSize: 14, lineHeight: 1.5, fontWeight: 600, color: '#f5efe4', marginBottom: 4 },
   inviteResultBody: { fontSize: 13, lineHeight: 1.6, color: 'rgba(245,239,228,0.65)', marginBottom: 10 },
@@ -151,8 +132,6 @@ export default function Dashboard() {
   const [therapists, setTherapists] = useState([])
   const [invites, setInvites] = useState([])
   const [loading, setLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
-  const [qrUrl, setQrUrl] = useState('')
   // Only a platform admin sees the Admin link. The server answers this, and the
   // /admin screen re-checks on its own — this just decides whether to show it.
   const [isAdmin, setIsAdmin] = useState(false)
@@ -163,18 +142,15 @@ export default function Dashboard() {
   // screen shared a single `notice` plus a single `inviteLink`, and BOTH were
   // rendered inside the Care Team card. So inviting a patient put its
   // confirmation two cards further down, below the fold on a phone: the fields
-  // just blanked and nothing appeared to happen. Discharge, restore, assignment
-  // and the sign-up switch reported their errors there too, nowhere near the
-  // control that caused them. Five of the six flows wrote somewhere the person
-  // was not looking. A message belongs beside the thing that produced it.
+  // just blanked and nothing appeared to happen. Discharge, restore and
+  // assignment reported their errors there too, nowhere near the control that
+  // caused them. A message belongs beside the thing that produced it.
   const [patientInvite, setPatientInvite] = useState(null) // { url, email, name, sent }
   const [staffInvite, setStaffInvite] = useState(null)     // same shape
   const [patientNotice, setPatientNotice] = useState('')
   const [staffNotice, setStaffNotice] = useState('')
-  const [signupNotice, setSignupNotice] = useState('')
   const [pName, setPName] = useState('')
   const [pEmail, setPEmail] = useState('')
-  const [openSignup, setOpenSignup] = useState(null) // null until the clinic loads
 
   const isManager = profile?.role === 'manager'
   const staffName = greetingName(profile?.full_name)
@@ -213,56 +189,6 @@ export default function Dashboard() {
     return () => { active = false }
   }, [profile, isManager, loadRoster])
 
-  useEffect(() => { if (clinic) setOpenSignup(clinic.open_signup === true) }, [clinic])
-
-  // Generate a printable QR code of the clinic's patient invite link.
-  useEffect(() => {
-    if (!clinic) { setQrUrl(''); return }
-    const url = `${window.location.origin}/join/${clinic.slug}`
-    QRCode.toDataURL(url, { width: 320, margin: 2, color: { dark: '#0d1825', light: '#ffffff' } })
-      .then(setQrUrl).catch(() => setQrUrl(''))
-  }, [clinic])
-
-  // Save the QR to the device.
-  //
-  // ⚠️ This was an <a href={dataUrl} download> until 2026-09-04 and it did
-  // NOTHING ON AN IPHONE. iOS Safari ignores the `download` attribute on a
-  // data: URL and also refuses to navigate to one, so the tap was inert — and
-  // silently so, which is why it survived: it works on desktop, which is the
-  // only place it had ever been tried.
-  //
-  // Two paths, chosen by capability rather than by sniffing the user agent:
-  // where the browser can share a FILE (iOS Safari, Android Chrome) we open the
-  // native share sheet, which is how you actually get a file onto a phone —
-  // Save to Files, Add to Photos, AirDrop, Print. Everywhere else we click a
-  // blob: URL, which desktop browsers download properly. A blob is used rather
-  // than the data: URL in both paths; some browsers choke on very long ones.
-  const saveQr = useCallback(async () => {
-    if (!qrUrl) return
-    const name = `glowpt-${clinic?.slug || 'clinic'}-qr.png`
-    const blob = await (await fetch(qrUrl)).blob()
-
-    const file = new File([blob], name, { type: 'image/png' })
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: 'Patient sign-up QR' })
-        return
-      } catch (err) {
-        // The reader dismissed the sheet: that is a choice, not a failure.
-        if (err?.name === 'AbortError') return
-        // Anything else (no handler, share refused) falls through to download.
-      }
-    }
-
-    const href = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = href
-    a.download = name
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(href)
-  }, [qrUrl, clinic])
 
   // Ask once whether this staff member is also a platform admin. A plain false
   // on any failure: the link is a convenience, and /admin enforces access itself.
@@ -275,15 +201,13 @@ export default function Dashboard() {
     return () => { active = false }
   }, [profile])
 
+  // Patient and staff invites share one table by design, so the dashboard has to
+  // split them. Until 2026-09-05 an invited PATIENT was listed under Care Team,
+  // which is where David spotted Felix.
+  const pendingPatients = invites.filter(i => i.role === 'patient')
+  const pendingStaff = invites.filter(i => i.role !== 'patient')
+
   const stats = clinicStats(roster)
-  const joinUrl = clinic ? `${window.location.origin}/join/${clinic.slug}` : ''
-
-  function copyLink() {
-    navigator.clipboard?.writeText(joinUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1800)
-  }
-
   async function handleAssign(patientId, therapistId) {
     const prev = roster
     setRoster(rs => rs.map(r => (r.id === patientId ? { ...r, therapistId } : r))) // optimistic
@@ -360,24 +284,6 @@ export default function Dashboard() {
     }
     setPName(''); setPEmail('')
     setPatientInvite({ url: res.invite_url, email, name, sent: !!res.email_sent })
-  }
-
-  async function toggleOpenSignup(next) {
-    setSignupNotice('')
-    const before = openSignup
-    setOpenSignup(next) // optimistic: the switch should not feel laggy
-    try {
-      await api.setOpenSignup(next)
-      // Say so. This switch decides whether anyone holding the link can enrol,
-      // and it used to change in silence, which is how a clinic can end up open
-      // with nobody sure when or why.
-      setSignupNotice(next
-        ? 'Saved. Anyone with your link or QR can now join.'
-        : 'Saved. Only patients you invite by email can join.')
-    } catch (err) {
-      setOpenSignup(before)
-      setSignupNotice(`Couldn’t change patient sign-up: ${err.message}`)
-    }
   }
 
   async function handleInvite(e) {
@@ -474,38 +380,6 @@ export default function Dashboard() {
               <div style={s.tile}><div style={s.tileLabel}>Need Attention</div><div style={{ ...s.tileValue, color: stats.atRisk ? '#FBC02D' : '#f5efe4' }}>{stats.atRisk}</div><div style={s.tileSub}>flagged</div></div>
             </div>
 
-            {/* How this clinic enrols patients. Invite-only is the default for a
-                new clinic, so nobody is exposed by a link they never asked for;
-                a clinic that wants a code on the front desk turns it back on
-                here. The DB enforces it either way (join_clinic), so the cards
-                below are hidden for tidiness, not for safety. */}
-            <div style={s.signupCard}>
-              <div style={s.linkLabel}>Patient Sign-Up</div>
-              <div style={s.signupRow}>
-                {[
-                  { v: false, label: 'Invite only', hint: 'You add each patient by email. Nobody else can join.' },
-                  { v: true, label: 'Open link + QR', hint: 'Anyone with your link or QR can join. Good for a front desk.' },
-                ].map(o => (
-                  <button key={String(o.v)} type="button" onClick={() => toggleOpenSignup(o.v)}
-                    style={s.signupOpt(openSignup === o.v)}>
-                    <div style={s.signupOptLabel}>{o.label}</div>
-                    <div style={s.signupOptHint}>{o.hint}</div>
-                  </button>
-                ))}
-              </div>
-              {signupNotice && <div style={s.notice}>{signupNotice}</div>}
-            </div>
-
-            {openSignup && (
-              <div style={s.linkCard}>
-                <div>
-                  <div style={s.linkLabel}>Your Patient Invite Link</div>
-                  <div style={s.linkUrl}>{joinUrl}</div>
-                </div>
-                <button style={s.copyBtn} onClick={copyLink}>{copied ? 'Copied ✓' : 'Copy link'}</button>
-              </div>
-            )}
-
             {/* Invites work whichever way the switch is set. */}
             <div style={s.care}>
               <div style={s.careHead}>Invite a Patient</div>
@@ -519,23 +393,18 @@ export default function Dashboard() {
               </form>
               {patientNotice && <div style={s.notice}>{patientNotice}</div>}
               <InviteResult result={patientInvite} kind="patient" />
-            </div>
-
-            {openSignup && qrUrl && (
-              <div style={s.qrCard}>
-                <img src={qrUrl} alt="Patient sign-up QR code" style={s.qrImg} />
-                <div style={{ flex: 1, minWidth: 130 }}>
-                  <div style={s.qrLabel}>Patient Sign-Up QR</div>
-                  <div style={s.qrHint}>Print this for your front desk and treatment areas. Patients scan it with their phone camera to join. No links to send.</div>
-                  <button type="button" onClick={saveQr} style={s.qrDownload}>Save QR ↓</button>
+              {pendingPatients.length > 0 && (
+                <div style={s.pending}>
+                  <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Invited (Waiting for First Sign-In):</strong><br />
+                  {pendingPatients.map(i => `${i.full_name || '—'} · ${i.email}`).join('  ·  ')}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Care team — invite therapists and see how many patients each carries. */}
             <div style={s.care}>
               <div style={s.careHead}>Care Team</div>
-              {therapists.length === 0 && invites.length === 0 && (
+              {therapists.length === 0 && pendingStaff.length === 0 && (
                 <div style={s.emptyTeam}>No therapists yet. Invite one below, and once they sign in you can assign patients to them.</div>
               )}
               {therapists.map(t => {
@@ -555,10 +424,10 @@ export default function Dashboard() {
               </form>
               {staffNotice && <div style={s.notice}>{staffNotice}</div>}
               <InviteResult result={staffInvite} kind="staff" />
-              {invites.length > 0 && (
+              {pendingStaff.length > 0 && (
                 <div style={s.pending}>
-                  <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Pending (Waiting for First Sign-In):</strong><br />
-                  {invites.map(i => `${i.full_name || '—'} · ${i.email}`).join('  ·  ')}
+                  <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Invited (Waiting for First Sign-In):</strong><br />
+                  {pendingStaff.map(i => `${i.full_name || '—'} · ${i.email}`).join('  ·  ')}
                 </div>
               )}
             </div>
@@ -568,7 +437,7 @@ export default function Dashboard() {
         {!loading && roster.length === 0 && (
           <div style={s.empty}>
             {isManager
-              ? 'No patients yet. Share your invite link above to get your first patients checking in.'
+              ? 'No patients yet. Invite your first patient above and they will get a link by email.'
               : 'No patients assigned to you yet. Your clinic manager assigns patients to therapists.'}
           </div>
         )}

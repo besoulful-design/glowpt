@@ -4,8 +4,11 @@ import { AuthShell, LogoMark, ui } from './AuthShell'
 
 // Shown to a signed-in patient who isn't attached to any clinic.
 // Without this gate they'd drop straight into the daily check-in and every entry
-// would save with clinic_id = null — invisible to every clinic dashboard. A patient
-// gets attached to a clinic by using that clinic's join link / QR code (/join/<slug>).
+// would save with clinic_id = null, invisible to every clinic dashboard.
+//
+// ⚠️ AS OF 2026-09-05 AN INVITE IS THE ONLY WAY IN. The walk-in join link and
+// the printable QR are gone, so any copy here telling someone to "open your
+// clinic's link" would be sending them somewhere that now refuses them.
 export default function NoClinic() {
   const { user, signOut, attachError, refreshProfile } = useAuth()
   const [retrying, setRetrying] = useState(false)
@@ -59,11 +62,11 @@ export default function NoClinic() {
       <div style={ui.title}>You’re not connected to a clinic yet.</div>
       <div style={ui.muted}>
         Your account is ready{user?.email ? ` for ${user.email}` : ''}, but it isn’t linked to a clinic,
-        so there’s nowhere for your check-ins to go. Open the join link or scan the QR code your
-        clinic gave you, and you’ll be all set.
+        so there’s nowhere for your check-ins to go. Ask your clinic to invite you, and you’ll get a
+        link by email that sets you up.
       </div>
       <button style={ui.btn} onClick={signOut}>Sign Out</button>
-      <div style={ui.fine}>Already have your clinic’s link? Open it and sign in with this same email.</div>
+      <div style={ui.fine}>Already have an invite email? Open its link and sign in with this same address.</div>
     </AuthShell>
   )
 }
