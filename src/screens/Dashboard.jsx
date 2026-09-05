@@ -50,8 +50,12 @@ const s = {
   pendingRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' },
   resendBtn: { background: 'transparent', border: '1px solid rgba(245,168,26,0.4)', color: '#F5A81A', borderRadius: 4, padding: '4px 12px', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' },
   notice: { fontSize: 13, color: '#9bb06a', marginTop: 12 },
-  inviteResult: { marginTop: 14, padding: '14px 16px', background: 'rgba(245,168,26,0.07)', border: '1px solid rgba(245,168,26,0.3)', borderRadius: 6 },
-  inviteResultHead: { fontSize: 14, lineHeight: 1.5, fontWeight: 600, color: '#f5efe4', marginBottom: 4 },
+  inviteResult: { position: 'relative', marginTop: 14, padding: '14px 16px', background: 'rgba(245,168,26,0.07)', border: '1px solid rgba(245,168,26,0.3)', borderRadius: 6 },
+  inviteResultClose: { position: 'absolute', top: 6, right: 8, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'none', border: 'none', borderRadius: 4, color: 'rgba(245,239,228,0.45)', fontSize: 15, lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit' },
+  // ⚠️ overflowWrap is load-bearing: this line ends in an email address, which
+  // has no natural break, so at phone width it ran off the panel and under the
+  // ✕. paddingRight keeps it clear of that button once it wraps.
+  inviteResultHead: { fontSize: 14, lineHeight: 1.5, fontWeight: 600, color: '#f5efe4', marginBottom: 4, paddingRight: 26, overflowWrap: 'anywhere' },
   inviteResultBody: { fontSize: 13, lineHeight: 1.6, color: 'rgba(245,239,228,0.65)', marginBottom: 10 },
   inviteLinkRow: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' },
   inviteLinkText: { flex: '1 1 220px', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.8)', wordBreak: 'break-all' },
@@ -288,8 +292,15 @@ export default function Dashboard() {
   // this, so the two can never drift apart the way their message slots did.
   function InviteResult({ result, kind }) {
     if (!result) return null
+    const dismiss = () => {
+      if (kind === 'patient') { setPatientInvite(null); setPatientNotice('') }
+      else { setStaffInvite(null); setStaffNotice('') }
+    }
     return (
       <div style={s.inviteResult}>
+        {/* It had no way out until 2026-09-05: it sat there until you invited
+            someone else or reloaded the page. */}
+        <button type="button" style={s.inviteResultClose} onClick={dismiss} aria-label="Dismiss">✕</button>
         <div style={s.inviteResultHead}>
           {result.sent
             ? `Invite emailed to ${result.email}.`
@@ -429,10 +440,12 @@ export default function Dashboard() {
             <div style={s.care}>
               <div style={s.careHead}>Invite a Patient</div>
               <form onSubmit={handlePatientInvite} style={s.inviteForm}>
+                {/* Typing the next patient clears the last result, so the card
+                    is never showing one person's link above another's form. */}
                 <input style={s.inviteInput} placeholder="Patient name" value={pName}
-                  onChange={e => setPName(e.target.value)} autoComplete="name" />
+                  onChange={e => { setPName(e.target.value); setPatientInvite(null); setPatientNotice('') }} autoComplete="name" />
                 <input style={s.inviteInput} placeholder="Patient email" type="email" value={pEmail}
-                  onChange={e => setPEmail(e.target.value)}
+                  onChange={e => { setPEmail(e.target.value); setPatientInvite(null); setPatientNotice('') }}
                   autoComplete="off" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
                 <button style={s.inviteBtn} type="submit">Invite Patient →</button>
               </form>
@@ -457,8 +470,10 @@ export default function Dashboard() {
                 )
               })}
               <form onSubmit={handleInvite} style={s.inviteForm}>
-                <input style={s.inviteInput} placeholder="Therapist name" value={tName} onChange={e => setTName(e.target.value)} autoComplete="name" />
-                <input style={s.inviteInput} placeholder="Therapist email" type="email" value={tEmail} onChange={e => setTEmail(e.target.value)}
+                <input style={s.inviteInput} placeholder="Therapist name" value={tName}
+                  onChange={e => { setTName(e.target.value); setStaffInvite(null); setStaffNotice('') }} autoComplete="name" />
+                <input style={s.inviteInput} placeholder="Therapist email" type="email" value={tEmail}
+                  onChange={e => { setTEmail(e.target.value); setStaffInvite(null); setStaffNotice('') }}
                   autoComplete="off" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
                 <button style={s.inviteBtn} type="submit">Invite Therapist →</button>
               </form>

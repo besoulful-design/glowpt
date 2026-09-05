@@ -219,7 +219,9 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, fullNa
   const pitch = isPatient
     ? `GlowPT is a 30-second check-in you do each day between visits. It takes a moment, and your care team can see how you are getting on.`
     : `GlowPT is a daily check-in your patients use between visits. You will see how they are doing, without any extra work.`;
-  const cta = isPatient ? 'Start checking in →' : 'Accept the invitation →';
+  // Title Case per the house label rule; "In" is a phrasal-verb particle, so it
+  // is capitalised even though it is short.
+  const cta = isPatient ? 'Start Checking In →' : 'Accept the Invitation →';
   return `<div style="font-family:-apple-system,Segoe UI,sans-serif;background:#0d1825;color:#f5efe4;padding:32px;border-radius:8px;max-width:480px;margin:auto">
     <img src="${APP_URL}/apple-touch-icon.png" alt="GlowPT" width="56" height="56" style="display:block;width:56px;height:56px;border:0;border-radius:13px;margin-bottom:12px">
     <div style="font-size:26px;font-weight:600;margin-bottom:18px">Glow<span style="color:#F5A81A">PT</span></div>
@@ -227,7 +229,14 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, fullNa
     <p style="font-size:16px;line-height:1.6;color:rgba(245,239,228,0.8)">${clinicName} has invited you to join GlowPT as ${roleWord}.</p>
     <p style="font-size:15px;line-height:1.6;color:rgba(245,239,228,0.6)">${pitch}</p>
     <a href="${inviteUrl}" style="display:inline-block;margin-top:14px;background:#F5A81A;color:#0d1825;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:4px">${cta}</a>
-    <p style="font-size:13px;line-height:1.6;color:rgba(245,239,228,0.5);margin-top:22px">This link works only for this email address and expires in 14 days. No password is needed. We will email you a code.</p>
+    <!-- ⚠️ THE ORDER OF THESE SENTENCES IS THE POINT. This used to read "No
+         password is needed. We will email you a code.", which contradicted the
+         button above it: the button says start checking in, the fine print says
+         wait for a code, and a reader cannot tell which is happening. Nothing is
+         emailed until they act on the page. The real sequence is tap, confirm
+         your name, THEN a code arrives, so it now says that in that order.
+         (David spotted the contradiction on 2026-09-05.) -->
+    <p style="font-size:13px;line-height:1.6;color:rgba(245,239,228,0.5);margin-top:22px">You will confirm your name, then we will email you a code to sign in. There is no password to create. This link works only for this email address and expires in 14 days.</p>
     <p style="font-size:13px;color:rgba(245,239,228,0.35);margin-top:18px">One good day at a time.</p>
   </div>`;
 }
