@@ -38,15 +38,30 @@ export default function CodeVerify({ pending, onResend, onBack }) {
     } catch (err) {
       submitting.current = false
       setBusy(false)
-      const msg = /CodeMismatch|NotAuthorized|ExpiredCode|did not/i.test(err?.name || err?.message || '')
-        ? 'That code didn’t work. Check it and try again, or resend.'
-        : 'Something went wrong signing you in. Please try the code again, or resend.'
-      setError(msg)
+      // ⚠️ ALWAYS LOG THE REAL ERROR. This used to collapse CodeMismatch,
+      // NotAuthorized, ExpiredCode and "did not complete" into ONE message and
+      // log nothing, so a wrong code and a dead session were indistinguishable
+      // from the outside. That cost a diagnosis on 2026-09-05: three rejected
+      // codes with no way to tell which failure it was.
+      console.error('sign-in failed:', err?.name, err?.message)
+      const name = err?.name || ''
+      const text = err?.message || ''
+      // A stale or expired challenge needs a NEW code; retyping cannot fix it.
+      // Cognito says this several ways, including NotAuthorized "Invalid session".
+      const stale = /ExpiredCode|Invalid session|session is expired|NotAuthorized/i.test(`${name} ${text}`)
+      const mismatch = /CodeMismatch/i.test(name)
+      setError(
+        mismatch
+          ? 'That code didn’t match. Check it and try again.'
+          : stale
+            ? 'That code has expired. Tap Resend below for a fresh one, and use the newest email.'
+            : 'Something went wrong signing you in. Tap Resend below for a fresh code.',
+      )
     }
   }
 
   async function resend() {
-    setError(''); setResent(false)
+    setError(''); setResent(false); setCode('')
     try {
       const next = await onResend?.()
       if (next) setFlow(next) // the session rotates on a fresh sign-in code
@@ -73,8 +88,14 @@ export default function CodeVerify({ pending, onResend, onBack }) {
         {error && <div style={ui.error}>{error}</div>}
         <button style={ui.btn} disabled={busy}>{busy ? 'Verifying…' : 'Verify & sign in →'}</button>
       </form>
+      {/* ⚠️ Resend STAYS on screen after it is used. It used to be replaced by
+          "New code sent.", so the one control that fixes an expired code could
+          be used exactly once and then vanished, on the very screen where
+          someone is most likely to need it twice. */}
       <div style={ui.fine}>
-        {resent ? 'New code sent. ' : <>Didn’t get it? <button type="button" onClick={resend} style={linkBtn}>Resend</button>{'  ·  '}</>}
+        {resent ? 'New code sent. Use the newest email. ' : 'Didn’t get it? '}
+        <button type="button" onClick={resend} style={linkBtn}>Resend</button>
+        {'  ·  '}
         <button type="button" onClick={onBack} style={linkBtn}>Use a Different Email</button>
       </div>
     </AuthShell>
