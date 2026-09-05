@@ -656,6 +656,30 @@ async function rpcDischargePatient(client: Client, event: APIGatewayProxyEventV2
   return json(200, { ok: true });
 }
 
+async function rpcRevokeInvite(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const sub = requireSub(event);
+  const b = parseBody(event);
+  const email = typeof b.email === 'string' ? b.email.trim() : '';
+  if (!email) throw new HttpError(400, 'email_required');
+  await withUser(client, sub, async (c) => {
+    await c.query('select public.revoke_invite($1)', [email]);
+  });
+  return json(200, { ok: true });
+}
+
+// Permanent. The three guards (manager, already discharged, zero check-ins) are
+// all in the SQL, so they hold whatever any frontend does.
+async function rpcPurgePatient(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const sub = requireSub(event);
+  const b = parseBody(event);
+  const patientId = typeof b.patient_id === 'string' ? b.patient_id : '';
+  if (!patientId) throw new HttpError(400, 'patient_id_required');
+  await withUser(client, sub, async (c) => {
+    await c.query('select public.purge_patient($1)', [patientId]);
+  });
+  return json(200, { ok: true });
+}
+
 async function rpcRestorePatient(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const sub = requireSub(event);
   const b = parseBody(event);
@@ -751,6 +775,8 @@ const ROUTES: Record<string, Route> = {
   'POST /rpc/assign-therapist': rpcAssignTherapist,
   'POST /rpc/discharge-patient': rpcDischargePatient,
   'POST /rpc/restore-patient': rpcRestorePatient,
+  'POST /rpc/revoke-invite': rpcRevokeInvite,
+  'POST /rpc/purge-patient': rpcPurgePatient,
   'GET /admin/me': getAdminMe,
   'GET /admin/clinics': getAdminClinics,
   'POST /admin/clinics/activation': postAdminActivation,

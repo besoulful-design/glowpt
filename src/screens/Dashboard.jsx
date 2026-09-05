@@ -85,6 +85,10 @@ const s = {
   dischargedList: { marginTop: 6, background: '#1a2840', border: '1px solid rgba(245,239,228,0.08)', borderRadius: 6, padding: '6px 14px' },
   dischargedRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid rgba(245,239,228,0.05)', fontSize: 14, color: 'rgba(245,239,228,0.7)' },
   restoreBtn: { background: 'transparent', border: '1px solid rgba(245,168,26,0.4)', borderRadius: 4, padding: '4px 12px', color: '#FBC02D', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+  // Permanent actions are quieter than the reversible ones beside them, on
+  // purpose: Restore is the button you want people to reach for.
+  removeBtn: { background: 'transparent', border: '1px solid rgba(231,154,146,0.35)', borderRadius: 4, padding: '4px 12px', color: 'rgba(231,154,146,0.85)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+  cancelBtn: { background: 'transparent', border: '1px solid rgba(231,154,146,0.35)', color: 'rgba(231,154,146,0.85)', borderRadius: 4, padding: '4px 12px', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' },
 }
 
 // THE ROSTER'S COLUMNS, DECLARED ONCE. The header cells and the body cells are
@@ -199,7 +203,12 @@ export default function Dashboard() {
     const { patients, checkins } = await fetchClinicData()
     const active = patients.filter(p => !p.discharged_at)
     setRoster(buildRoster(active, checkins))
-    setDischarged(patients.filter(p => p.discharged_at).map(p => ({ id: p.id, name: p.full_name || 'Patient' })))
+    // hasHistory decides whether "Remove" is offered at all. The SQL enforces
+    // the same rule, so this only keeps the UI honest rather than being the guard.
+    const everCheckedIn = new Set(checkins.map(c => c.user_id))
+    setDischarged(patients.filter(p => p.discharged_at).map(p => ({
+      id: p.id, name: p.full_name || 'Patient', hasHistory: everCheckedIn.has(p.id),
+    })))
   }, [])
 
   useEffect(() => {
@@ -252,6 +261,34 @@ export default function Dashboard() {
       await assignTherapist(patientId, therapistId)
     } catch (err) {
       setRoster(prev); setNotice(`Couldn’t update assignment: ${err.message}`)
+    }
+  }
+
+  // Cancelling a pending invite. The commonest reason is a typo'd address, and
+  // until this existed that invite stayed live and claimable for 14 days.
+  async function handleCancelInvite(inv) {
+    if (!window.confirm(`Cancel the invite to ${inv.email}? Their link stops working immediately.`)) return
+    try {
+      await api.revokeInvite(inv.email)
+      setInvites(await fetchPendingInvites())
+      const msg = `Invite to ${inv.email} cancelled.`
+      if (inv.role === 'patient') setPatientNotice(msg); else setStaffNotice(msg)
+    } catch (err) {
+      const msg = `Couldn't cancel that invite: ${err.message}`
+      if (inv.role === 'patient') setPatientNotice(msg); else setStaffNotice(msg)
+    }
+  }
+
+  // Permanent, and deliberately wordy about it. Only offered for a discharged
+  // patient with no check-ins; the SQL refuses anyone else regardless.
+  async function handlePurge(patientId, name) {
+    if (!window.confirm(`Remove ${name} permanently? They have never checked in, so nothing is kept. This cannot be undone.`)) return
+    try {
+      await api.purgePatient(patientId)
+      await loadRoster()
+      setNotice(`${name} was removed.`)
+    } catch (err) {
+      setNotice(`Couldn't remove ${name}: ${err.message}`)
     }
   }
 
@@ -309,10 +346,15 @@ export default function Dashboard() {
         {people.map(i => (
           <div key={i.email} style={s.pendingRow}>
             <span>{i.full_name || '—'} · {i.email}</span>
-            <button type="button" style={s.resendBtn} disabled={resending === i.email}
-              onClick={() => resendInvite(i)}>
-              {resending === i.email ? 'Sending…' : 'Resend'}
-            </button>
+            <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="button" style={s.resendBtn} disabled={resending === i.email}
+                onClick={() => resendInvite(i)}>
+                {resending === i.email ? 'Sending…' : 'Resend'}
+              </button>
+              <button type="button" style={s.cancelBtn} onClick={() => handleCancelInvite(i)}>
+                Cancel
+              </button>
+            </span>
           </div>
         ))}
       </div>
@@ -595,7 +637,14 @@ export default function Dashboard() {
                 {discharged.map(d => (
                   <div key={d.id} style={s.dischargedRow}>
                     <span>{d.name}</span>
-                    <button style={s.restoreBtn} onClick={() => handleRestore(d.id)}>Restore</button>
+                    <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button style={s.restoreBtn} onClick={() => handleRestore(d.id)}>Restore</button>
+                      {/* Only for someone enrolled by mistake. A patient who has
+                          ever checked in keeps their record and gets no button. */}
+                      {!d.hasHistory && (
+                        <button style={s.removeBtn} onClick={() => handlePurge(d.id, d.name)}>Remove</button>
+                      )}
+                    </span>
                   </div>
                 ))}
               </div>

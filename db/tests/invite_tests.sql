@@ -298,4 +298,89 @@ begin
   exception when others then denied := (sqlerrm like '%Not authenticated%'); end;
   raise notice '% T48 ensure_self refuses an unauthenticated caller',
     case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- ── Cancelling an invite, and removing a patient enrolled by mistake ──────
+
+  -- T49 SECURITY: cancelling is a manager's power. A patient holding the app
+  -- role must not be able to tear down their clinic's invites.
+  perform set_config('app.user_id', newpat::text, true);
+  denied := false;
+  begin
+    perform revoke_invite('expired@a.com');
+  exception when others then denied := (sqlerrm like '%Only a clinic manager%'); end;
+  raise notice '% T49 a patient cannot cancel an invite',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T50 the manager cancels a pending invite and the row is gone. This is the
+  -- wrong-address case: until now that invite stayed live for 14 days.
+  perform set_config('app.user_id', mgr_a::text, true);
+  perform revoke_invite('expired@a.com');
+  select count(*) into n from staff_invites
+   where clinic_id = clinic_a and lower(email) = 'expired@a.com';
+  raise notice '% T50 a pending invite can be cancelled -> % rows left',
+    case when n = 0 then 'PASS:' else 'FAIL:' end, n;
+
+  -- T51 cancelling something that is not there says so, rather than silently
+  -- reporting success — the house's recurring silent-failure shape.
+  denied := false;
+  begin
+    perform revoke_invite('nobody@a.com');
+  exception when others then denied := (sqlerrm like '%No pending invite%'); end;
+  raise notice '% T51 cancelling a non-existent invite is refused',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T52 GUARD 2: a patient still on the roster cannot be removed. Discharge is
+  -- the deliberate first step, so this can never be one click from the roster.
+  denied := false;
+  begin
+    perform purge_patient(ghost);
+  exception when others then denied := (sqlerrm like '%Discharge this patient first%'); end;
+  raise notice '% T52 an active patient cannot be removed',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T53 GUARD 3, THE IMPORTANT ONE: a discharged patient WITH history is still
+  -- refused. This is what keeps the feature a purge of mistakes rather than a
+  -- delete of records.
+  perform set_config('app.user_id', newpat::text, true);
+  insert into checkins (user_id, clinic_id, feeling) values (newpat, clinic_a, 4);
+  perform set_config('app.user_id', mgr_a::text, true);
+  perform discharge_patient(newpat);
+  denied := false;
+  begin
+    perform purge_patient(newpat);
+  exception when others then denied := (sqlerrm like '%check-in(s), so their record is kept%'); end;
+  raise notice '% T53 a discharged patient with check-ins is NOT removed',
+    case when denied then 'PASS:' else 'FAIL:' end;
+  select count(*) into n from profiles where id = newpat;
+  raise notice '% T53b and they are still there -> % rows',
+    case when n = 1 then 'PASS:' else 'FAIL:' end, n;
+
+  -- T54 the case this exists for: discharged, never checked in, so removing is
+  -- clean. The users row goes and profiles cascades from it.
+  -- NOTE: asserted through profiles, not users. glowpt_app has no SELECT on
+  -- public.users at all — which is itself correct, and is why the first draft of
+  -- this test failed with "permission denied for table users" while the function
+  -- underneath had worked perfectly. Test what the app role can actually see.
+  perform discharge_patient(ghost);
+  perform purge_patient(ghost);
+  select count(*) into n from profiles where id = ghost;
+  raise notice '% T54 a discharged patient with no history is removed -> % rows',
+    case when n = 0 then 'PASS:' else 'FAIL:' end, n;
+  -- And genuinely gone rather than merely hidden by RLS: the function itself no
+  -- longer finds them in this clinic.
+  denied := false;
+  begin
+    perform purge_patient(ghost);
+  exception when others then denied := (sqlerrm like '%Patient not in your clinic%'); end;
+  raise notice '% T54b and gone for real, not just hidden',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T55 SECURITY: removing is a manager's power too.
+  perform set_config('app.user_id', wrongp::text, true);
+  denied := false;
+  begin
+    perform purge_patient(newpat);
+  exception when others then denied := (sqlerrm like '%Only a clinic manager%'); end;
+  raise notice '% T55 a non-manager cannot remove a patient',
+    case when denied then 'PASS:' else 'FAIL:' end;
 end $$;

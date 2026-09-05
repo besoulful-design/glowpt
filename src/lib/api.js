@@ -104,6 +104,14 @@ export const dischargePatient = (patientId) =>
   request('/rpc/discharge-patient', { method: 'POST', body: { patient_id: patientId } });
 export const restorePatient = (patientId) =>
   request('/rpc/restore-patient', { method: 'POST', body: { patient_id: patientId } });
+// Cancel a pending invite. Until this existed an invite sent to the wrong
+// address stayed live for its full 14 days with no way to shut it.
+export const revokeInvite = (email) =>
+  request('/rpc/revoke-invite', { method: 'POST', body: { email } });
+// Permanent, and only for someone enrolled by mistake: the SQL refuses anyone
+// who is not already discharged or who has ever checked in.
+export const purgePatient = (patientId) =>
+  request('/rpc/purge-patient', { method: 'POST', body: { patient_id: patientId } });
 
 // -- ai-response (the reflection; same shape as before: { prompt } -> { response }) --
 export const aiResponse = (prompt) =>
