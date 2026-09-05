@@ -271,7 +271,14 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     // 20px above the logo matches welcomeWrap and responseTop; it was 56px when
     // the date was the first thing on this screen.
     checkinHeader: { padding: '20px 28px 24px' },
-    checkinDate: { fontSize: LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '8px' },
+    // CARD_LABEL_SIZE, not LABEL_SIZE, deliberately. This is a timestamp, not a
+    // section label: it is the longest string in the small-label family (26
+    // characters), so at 22px it rendered as a 304px full-width band of brand
+    // amber and competed with the 32px question it introduces — the tier rule
+    // "a label must not outgrow what it introduces" failing in spirit rather
+    // than in arithmetic. It was 12px until the 2026-09-04 sweep; 15 matches
+    // "Body Check" further down the same screen.
+    checkinDate: { fontSize: CARD_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '8px' },
     checkinTitle: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '32px', lineHeight: 1.15, color: '#f5efe4', letterSpacing: '-0.02em' },
     checkinTitleEm: { fontStyle: 'italic', color: '#FBC02D' },
     checkinBody: { padding: '8px 28px 40px', display: 'flex', flexDirection: 'column', gap: '28px' },
