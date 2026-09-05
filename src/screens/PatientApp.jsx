@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import * as api from '../lib/api'
 import { useAuth } from '../auth'
 import { FEELINGS as feelingData } from '../lib/feelings'
+import { stripClauseDashes } from '../lib/houseVoice'
 import { LogoMark, BRAND, LABEL_SIZE, SECTION_LABEL_SIZE, CARD_LABEL_SIZE } from './AuthShell'
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] // Mon → Sun
@@ -36,7 +37,7 @@ function buildWeek(checkins) {
       word: f ? feelingData[f].word : '',
       movements: match?.movements ?? [],
       note: match?.note ?? '',
-      response: match?.ai_response ?? '',
+      response: stripClauseDashes(match?.ai_response ?? ''),
       done: !!match,
       today: sameLocalDay(date, today),
     }
@@ -201,7 +202,10 @@ Respond directly to ${firstName} in second person. Reference what they actually 
       // The reflection now comes from POST /ai-response (behind the Cognito
       // authorizer). Falls back gracefully on any error.
       const r = await api.aiResponse(prompt)
-      if (r?.response) response = r.response
+      // The house dash rule is enforced here rather than trusted to the prompt.
+      // See lib/houseVoice.js: the model has now ignored two versions of the
+      // instruction, most recently in a real patient's reflection.
+      if (r?.response) response = stripClauseDashes(r.response)
     } catch (err) {
       console.log('AI error:', err.message)
     }
