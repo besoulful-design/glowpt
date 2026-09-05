@@ -62,11 +62,28 @@ export default function NoClinic() {
       <div style={ui.title}>You’re not connected to a clinic yet.</div>
       <div style={ui.muted}>
         Your account is ready{user?.email ? ` for ${user.email}` : ''}, but it isn’t linked to a clinic,
-        so there’s nowhere for your check-ins to go. Ask your clinic to invite you, and you’ll get a
-        link by email that sets you up.
+        so there’s nowhere for your check-ins to go.
       </div>
-      <button style={ui.btn} onClick={signOut}>Sign Out</button>
-      <div style={ui.fine}>Already have an invite email? Open its link and sign in with this same address.</div>
+      {/* ⚠️ THE RECOVERY PATH LEADS, AND THE SIGN OUT NO LONGER DOES. Someone
+          who has been invited and signed in here (rather than opening their
+          link) is the COMMON case, not the rare one: they are stranded with a
+          live invite sitting in their inbox. That used to be fine print below
+          a big amber Sign Out button, so the most useful sentence on the page
+          was the quietest and the least useful action was the loudest. */}
+      <div style={{ ...ui.muted, marginBottom: 24 }}>
+        <strong style={{ color: '#f5efe4', fontWeight: 600 }}>Been invited already?</strong>{' '}
+        Open the link in that invite email and you’ll be set up in a moment. It works while
+        you’re signed in as this address.
+      </div>
+      <div style={ui.muted}>If your clinic hasn’t invited you yet, ask them to.</div>
+      <button
+        type="button"
+        onClick={signOut}
+        style={{ ...ui.fine, background: 'none', border: 'none', cursor: 'pointer',
+                 textDecoration: 'underline', marginTop: 6 }}
+      >
+        Sign Out
+      </button>
     </AuthShell>
   )
 }

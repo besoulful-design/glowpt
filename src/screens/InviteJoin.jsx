@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, Navigate } from 'react-router-dom'
+import { useParams, Navigate, useNavigate } from 'react-router-dom'
 import * as api from '../lib/api'
 import * as cognito from '../lib/cognito'
 import { savePendingStaff, savePendingPatientInvite, useAuth } from '../auth'
@@ -22,7 +22,8 @@ import CodeVerify from './CodeVerify'
 // forward, and the email below is deliberately fixed rather than an input.
 export default function InviteJoin() {
   const { token } = useParams()
-  const { session, loading: authLoading } = useAuth()
+  const { session, user, profile, loading: authLoading, refreshProfile, signOut } = useAuth()
+  const navigate = useNavigate()
   const [invite, setInvite] = useState(undefined) // undefined = loading, null = invalid
   const [loadFailed, setLoadFailed] = useState(false)
   const [fullName, setFullName] = useState('')
@@ -65,6 +66,26 @@ export default function InviteJoin() {
     })
   }
 
+  // Already signed in. No sign-up to do, so claim the invite directly with the
+  // session we already have. Same RPCs the post-confirmation Lambda calls.
+  async function claimAsSignedIn(e) {
+    e.preventDefault()
+    setError('')
+    if (!fullName.trim()) return setError('Please enter your name.')
+    if (isPatient && !consented) return setError('Please agree to the privacy notice to continue.')
+    setBusy(true)
+    try {
+      if (isPatient) await api.acceptPatientInvite(token, CONSENT_VERSION)
+      else await api.acceptStaffInvite(token)
+      if (fullName.trim()) { try { await api.updateMe(fullName.trim()) } catch { /* name is not worth failing the join over */ } }
+      await refreshProfile()
+      navigate('/', { replace: true })
+    } catch (err) {
+      setError(err?.message || 'Couldn’t finish joining just now. Try again.')
+      setBusy(false)
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
@@ -81,7 +102,17 @@ export default function InviteJoin() {
   }
 
   if (authLoading) return null
-  if (session) return <Navigate to="/dashboard" replace />
+
+  // ⚠️ THIS USED TO BE `if (session) return <Navigate to="/dashboard" />`, which
+  // made an invite link USELESS to anyone already signed in. An invited patient
+  // who signed in at /login first (rather than opening their link) has no
+  // pending attach in localStorage, and the blind safety net deliberately skips
+  // patient invites because it cannot record consent. So they landed on
+  // NoClinic, and clicking their invite link bounced them straight back to it.
+  // A closed loop with a live invite sitting unused. (Hit by David 2026-09-05.)
+  //
+  // Already attached: nothing to claim, send them on.
+  if (session && profile?.clinic_id) return <Navigate to="/dashboard" replace />
   if (invite === undefined) return <AuthShell><div style={ui.muted}>Loading…</div></AuthShell>
 
   // Unknown, expired, already used: all one message. Nothing here tells a
@@ -109,6 +140,27 @@ export default function InviteJoin() {
 
   if (pending) return <CodeVerify pending={pending} onResend={sendCode} onBack={() => setPending(null)} />
 
+  // Signed in as somebody else. Say so plainly rather than letting the database
+  // refuse them with a message they cannot act on.
+  const signedInAsSomeoneElse =
+    session && user?.email && user.email.toLowerCase() !== invite.email.toLowerCase()
+  if (signedInAsSomeoneElse) {
+    return (
+      <AuthShell>
+        <LogoMark size={116} />
+        <div style={ui.eyebrow}>{invite.clinic_name}</div>
+        <div style={ui.title}>This invite is for someone else.</div>
+        <div style={ui.muted}>
+          <div>It was sent to {invite.email}, and you’re signed in as {user.email}.</div>
+          <div>Sign out, then open this link again.</div>
+        </div>
+        <button style={ui.btn} onClick={signOut}>Sign Out</button>
+      </AuthShell>
+    )
+  }
+
+  const claiming = Boolean(session)
+
   const roleWord = invite.role === 'manager' ? 'a manager'
     : invite.role === 'patient' ? 'a patient' : 'a therapist'
 
@@ -121,14 +173,14 @@ export default function InviteJoin() {
         <div>{invite.clinic_name} invited you as {roleWord}.</div>
         <div>{isPatient ? 'Confirm your name to start checking in.' : 'Confirm your name to set up your account.'}</div>
       </div>
-      <form onSubmit={handleSubmit} style={ui.form}>
+      <form onSubmit={claiming ? claimAsSignedIn : handleSubmit} style={ui.form}>
         <input style={ui.input} placeholder="Your name" value={fullName}
           onChange={e => setFullName(e.target.value)} autoComplete="name" />
         {/* Fixed, not editable: the invite is FOR this address, and the database
             refuses the claim if the signed-up email differs. An editable field
             would invite people to type their own and hit a confusing refusal. */}
         <div style={s.fixedEmail}>
-          <div style={s.fixedEmailLabel}>Signing up as</div>
+          <div style={s.fixedEmailLabel}>{claiming ? 'Signed in as' : 'Signing up as'}</div>
           <div style={s.fixedEmailValue}>{invite.email}</div>
         </div>
         {isPatient && (
@@ -150,9 +202,17 @@ export default function InviteJoin() {
           </label>
         )}
         {error && <div style={ui.error}>{error}</div>}
-        <button style={ui.btn} disabled={busy}>{busy ? 'Sending…' : 'Send My Code →'}</button>
+        <button style={ui.btn} disabled={busy}>
+          {claiming
+            ? (busy ? 'Joining…' : `Join ${invite.clinic_name} →`)
+            : (busy ? 'Sending…' : 'Send My Code →')}
+        </button>
       </form>
-      <div style={ui.fine}>No password needed. We’ll email you a code.</div>
+      {/* Someone already signed in needs no code, so promising one would be the
+          same contradiction the invite email had. */}
+      <div style={ui.fine}>
+        {claiming ? 'You’re already signed in, so there’s nothing else to confirm.' : 'No password needed. We’ll email you a code.'}
+      </div>
 
       {showPrivacy && (
         <div style={s.overlay} onClick={() => setShowPrivacy(false)}>
