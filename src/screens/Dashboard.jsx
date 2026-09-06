@@ -76,7 +76,17 @@ const s = {
   // Each of the 7 trend days is an equal-width slot so emoji (which render wider
   // than their font-size) always fit the column and line up evenly.
   slot: { width: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1, cursor: 'default' },
-  noCheckin: { width: 12, height: 12, borderRadius: '50%', background: 'rgba(245,239,228,0.12)', display: 'inline-block', verticalAlign: 'middle' },
+  // ⚠️ A RING, NOT A FILLED DISC, AND BRIGHTER THAN IT WAS (David, 2026-09-06:
+  // "the light gray color blends with the blue background too much"). At 12%
+  // opacity it was cream on navy and all but invisible. The ring also says the
+  // right thing: every other slot in that column is a filled face, so an OUTLINE
+  // reads as an empty slot rather than as a fifth mood nobody can identify.
+  // boxSizing keeps it 12px across so it still lines up in the 20px trend slot.
+  noCheckin: {
+    width: 12, height: 12, borderRadius: '50%', boxSizing: 'border-box',
+    background: 'transparent', border: '1.5px solid rgba(245,239,228,0.45)',
+    display: 'inline-block', verticalAlign: 'middle',
+  },
   pill: (kind) => ({ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, marginRight: 6, display: 'inline-block',
     background: kind === 'low' ? 'rgba(192,85,77,0.18)' : 'rgba(245,168,26,0.16)',
     color: kind === 'low' ? '#e79a92' : '#FBC02D', border: `1px solid ${kind === 'low' ? 'rgba(192,85,77,0.4)' : 'rgba(245,168,26,0.4)'}` }),
@@ -85,7 +95,7 @@ const s = {
   // the render. textAlign is stated because s.page centres the whole screen.
   // maxWidth + auto margins match the roster block below, so the legend's left
   // edge sits over the Patient column rather than floating out to the page edge.
-  legendWrap: { padding: '0 16px 16px', textAlign: 'left', maxWidth: 708, margin: '0 auto', boxSizing: 'border-box' },
+  legendWrap: { padding: '0 16px 16px', textAlign: 'left', maxWidth: 688, margin: '0 auto', boxSizing: 'border-box' },
   legendHead: { display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 8 },
   legendLabel: { fontSize: 11.5, lineHeight: 1.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
   legendNone: { fontSize: 11.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.4)', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' },
@@ -168,9 +178,18 @@ const ROSTER_COLUMNS = [
   // cap was buying nothing and costing 16px of air on every row.
   // The cap still exists so that "James Okafor [Inactive]" (172px unwrapped)
   // wraps its pill to a second line, which is the deliberate 2026-09-05 choice.
-  // ⛔ fit-content(140px) WAS TRIED AND COLLAPSED THE TRACK TO 40px: the cell is
-  // a wrapping flex container, so its min-content contribution is one word wide.
-  { key: 'patient',   label: 'Patient',       w: 'minmax(100px,124px)', align: 'center', plain: true },
+  // ⛔ AUTO-SIZING THIS COLUMN IS NOT POSSIBLE, AND THE REAL REASON IS STRUCTURAL:
+  // EVERY ROW IS ITS OWN GRID. The header and each patient row are separate
+  // elements sharing only a template string, so fit-content() resolves PER ROW --
+  // the header would size to "Patient" (40px) while Charlie's row sized to 49 and
+  // a flagged row to 124, and the columns would no longer line up at all. (An
+  // earlier note here blamed min-content on the wrapping flex cell; that was the
+  // wrong diagnosis for the right conclusion.) So the width is fixed, and a fixed
+  // width has to hold the LONGEST name that must not wrap, across every clinic.
+  // 104 holds "Grace Bennett" (100px), the widest that exists. On a roster of
+  // Charlies and Timmys there will always be air, and the only way to remove it
+  // is to let real names wrap -- David's call, not a silent one.
+  { key: 'patient',   label: 'Patient',       w: 'minmax(90px,104px)',  align: 'center', plain: true },
   { key: 'avg',       label: 'Avg Mood',      w: '64px',                align: 'center' },
   // ⚠️ "3-Day Trend" WAS A LIE, MILDLY. This renders `cs.slice(0, 3)`, the last
   // three CHECK-INS, regardless of the dates on them: for a patient who checks in
@@ -204,7 +223,10 @@ const FLEX_ALIGN = { left: 'flex-start', center: 'center', right: 'flex-end' }
 
 function Trend({ last3 }) {
   const days = [...last3]
-  while (days.length < 3) days.unshift(null)
+  // ⛔ PUSH, NOT UNSHIFT. last3 is newest-first, so the slots a patient has not
+  // filled yet are the OLD ones and belong on the right. Reversing the order
+  // without moving the padding would put "no check-in" where today should be.
+  while (days.length < 3) days.push(null)
   return (
     <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
       {days.map((f, i) => (
@@ -856,9 +878,9 @@ export default function Dashboard() {
               </div>
             </div>
             <div style={s.scroll}>
-              {/* Manager total: 124+64+100+44+82+132+56 = 602 of columns,
-                  + 6 gaps of 12 = 72, + 32 padding = 706, + 2 for the ROW's 1px
-                  border, which the header does not have = 708.
+              {/* Manager total: 104+64+100+44+82+132+56 = 582 of columns,
+                  + 6 gaps of 12 = 72, + 32 padding = 686, + 2 for the ROW's 1px
+                  border, which the header does not have = 688.
                   ⚠️ THE +2 IS NOT PADDING-FOR-LUCK, and the old 780 carried slack
                   that hid it: at an exact fit the row's border eats 2px of its
                   content box, and the only track that can give it up is the
@@ -876,7 +898,7 @@ export default function Dashboard() {
                   complaint the tightening was for. margin auto centres it under a
                   centred page and resolves to 0 when the content is wider than the
                   scroll box, so it cannot push the left edge out of reach. */}
-              <div style={{ minWidth: isManager ? 708 : 560, maxWidth: isManager ? 708 : 560, margin: '0 auto' }}>
+              <div style={{ minWidth: isManager ? 688 : 560, maxWidth: isManager ? 688 : 560, margin: '0 auto' }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
                   {rosterColumns.map(c => <div key={c.key} style={{ textAlign: c.align }}>{c.label}</div>)}
                 </div>

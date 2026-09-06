@@ -67,7 +67,14 @@ export function buildRoster(patients, checkins) {
     // A stored value off the 1-5 scale (a 0 got in on 2026-09-05) is NOT a rating:
     // it must read as "no check-in", never as a low score. Testing `!= null` or
     // `typeof === 'number'` lets a 0 through, which is what blanked the dashboard.
-    const last3 = cs.slice(0, 3).map(c => (isFeeling(c.feeling) ? c.feeling : null)).reverse() // oldest→newest of the recent 3
+    // ⚠️ NEWEST FIRST (David, 2026-09-06). `cs` is already sorted desc, so this
+    // is simply not reversed any more. It used to render oldest→newest like a
+    // sparkline, which is the convention for a "trend" -- but the column is
+    // called "Last 3 Check-Ins" now, and the first thing a manager wants is the
+    // most recent day, not the oldest one.
+    // ⛔ THE PADDING IN `Trend` MUST MATCH: it pushes the empty slots to the END
+    // now, because the check-ins a patient does not have yet are the OLD ones.
+    const last3 = cs.slice(0, 3).map(c => (isFeeling(c.feeling) ? c.feeling : null)) // newest→oldest
     const rated = cs.map(c => c.feeling).filter(f => isFeeling(f))
     // Guaranteed null or a real 1-5 here, which is what lets the dashboard index
     // FEELINGS by Math.round(avg) without a lookup ever coming back undefined.
