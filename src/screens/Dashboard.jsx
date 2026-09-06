@@ -30,7 +30,6 @@ const s = {
   tileLabel: { fontSize: CARD_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: 8 },
   tileValue: { fontFamily: "'Fraunces', serif", fontSize: 32, fontWeight: 400, lineHeight: 1 },
   tileSub: { fontSize: 12, color: 'rgba(245,239,228,0.45)', marginTop: 5, fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
-  copyBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '10px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   // Shown to staff while no BAA is executed. It is a NOTICE, not a control —
   // nothing in the app stops a clinic adding real patients today.
   baaBanner: { background: 'rgba(245,168,26,0.09)', border: '1px solid rgba(245,168,26,0.35)', borderRadius: 6, padding: '14px 18px', marginBottom: 24, fontSize: 13.5, lineHeight: 1.6, color: 'rgba(245,239,228,0.85)' },
@@ -47,17 +46,21 @@ const s = {
   inviteBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '9px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   pending: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', marginTop: 12, lineHeight: 1.6 },
   pendingRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' },
+  // An email address has no natural break opportunity, so it needs telling that
+  // it may break anywhere or it runs off the card at phone width.
+  pendingWho: { flex: '1 1 180px', textAlign: 'left', overflowWrap: 'anywhere' },
+  // Filled, unlike Resend and Cancel beside it: of the three this is the one a
+  // manager reaches for most, and the only one that changes nothing.
+  copyLinkBtn: { background: '#F5A81A', color: '#0d1825', border: '1px solid #F5A81A', borderRadius: 4, padding: '4px 12px', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' },
   resendBtn: { background: 'transparent', border: '1px solid rgba(245,168,26,0.4)', color: '#F5A81A', borderRadius: 4, padding: '4px 12px', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' },
   notice: { fontSize: 13, color: '#9bb06a', marginTop: 12 },
-  inviteResult: { position: 'relative', marginTop: 14, padding: '14px 16px', background: 'rgba(245,168,26,0.07)', border: '1px solid rgba(245,168,26,0.3)', borderRadius: 6 },
-  inviteResultClose: { position: 'absolute', top: 6, right: 8, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'none', border: 'none', borderRadius: 4, color: 'rgba(245,239,228,0.45)', fontSize: 15, lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit' },
-  // ⚠️ overflowWrap is load-bearing: this line ends in an email address, which
-  // has no natural break, so at phone width it ran off the panel and under the
-  // ✕. paddingRight keeps it clear of that button once it wraps.
-  inviteResultHead: { fontSize: 14, lineHeight: 1.5, fontWeight: 600, color: '#f5efe4', marginBottom: 4, paddingRight: 26, overflowWrap: 'anywhere' },
-  inviteResultBody: { fontSize: 13, lineHeight: 1.6, color: 'rgba(245,239,228,0.65)', marginBottom: 10 },
-  inviteLinkRow: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' },
-  inviteLinkText: { flex: '1 1 220px', fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.8)', wordBreak: 'break-all' },
+  // ⚠️ A PROBLEM MUST NOT RENDER IN THE SUCCESS GREEN. This slot now carries
+  // "the email didn't send" and the form's own validation, and saying that in
+  // the same colour as "Invite emailed" tells the reader the opposite of what
+  // happened. Same red as the Low mood pill, so the page has one word for bad.
+  noticeBad: { fontSize: 13, color: '#e79a92', marginTop: 12 },
+  // Only shown when the clipboard refused: the manager copies it by hand.
+  noticeLink: { fontSize: 12.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.8)', marginTop: 6, wordBreak: 'break-all', textAlign: 'left' },
   emptyTeam: { fontSize: 13.5, color: 'rgba(245,239,228,0.5)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   greet: { fontSize: 14.5, color: '#FBC02D', fontWeight: 500, marginBottom: 6 },
   sel: { background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '6px 8px', color: '#f5efe4', fontSize: 13, fontFamily: 'inherit', maxWidth: '100%' },
@@ -67,14 +70,26 @@ const s = {
   // Each of the 7 trend days is an equal-width slot so emoji (which render wider
   // than their font-size) always fit the column and line up evenly.
   slot: { width: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, lineHeight: 1, cursor: 'default' },
-  noCheckin: { width: 12, height: 12, borderRadius: '50%', background: 'rgba(245,239,228,0.12)', display: 'inline-block' },
+  noCheckin: { width: 12, height: 12, borderRadius: '50%', background: 'rgba(245,239,228,0.12)', display: 'inline-block', verticalAlign: 'middle' },
   pill: (kind) => ({ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, marginRight: 6, display: 'inline-block',
     background: kind === 'low' ? 'rgba(192,85,77,0.18)' : 'rgba(245,168,26,0.16)',
     color: kind === 'low' ? '#e79a92' : '#FBC02D', border: `1px solid ${kind === 'low' ? 'rgba(192,85,77,0.4)' : 'rgba(245,168,26,0.4)'}` }),
   ok: { fontSize: 12, color: 'rgba(155,176,106,0.9)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
-  legend: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, padding: '0 16px 16px', fontSize: 12, color: 'rgba(245,239,228,0.55)' },
+  // ⚠️ NOT A FLEX ROW, DELIBERATELY -- see the note at the render. Flex can only
+  // wrap at its gaps; this needs to wrap between words. textAlign is stated
+  // because s.page centres the screen and inline text would otherwise follow it.
+  // lineHeight is stated because the 17px faces and the 12px dot share the line
+  // with 12px text, and because body sets an ABSOLUTE 26.1px that would inherit
+  // here unchanged (the trap recorded for the landing footer on 2026-09-03).
+  legend: { padding: '0 16px 16px', fontSize: 12, lineHeight: 1.9, color: 'rgba(245,239,228,0.55)', textAlign: 'left' },
   legendLabel: { fontSize: 11.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
-  legendItem: { display: 'inline-flex', alignItems: 'center', gap: 6 },
+  legendEnd: { color: 'rgba(245,239,228,0.45)' },
+  // Tight gap on purpose: the five read as one scale, not five separate items.
+  // Nowrap by nature (inline-flex), so the ramp never breaks across two lines.
+  legendFaces: { display: 'inline-flex', alignItems: 'center', gap: 3, verticalAlign: 'middle' },
+  // marginLeft replaces the 16px flex gap this item used to get for free.
+  // Without it "Feeling great" and "No check-in" run together on one line.
+  legendNone: { whiteSpace: 'nowrap', marginLeft: 16 },
   rosterHead: { display: 'grid', gap: 12, padding: '0 16px 10px', fontSize: 11.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
   row: { display: 'grid', gap: 12, alignItems: 'center', background: '#1a2840', border: '1px solid rgba(245,239,228,0.06)', borderRadius: 6, padding: '14px 16px', marginBottom: 8 },
   empty: { background: '#1a2840', border: '1px dashed rgba(245,168,26,0.3)', borderRadius: 8, padding: 32, textAlign: 'center', color: 'rgba(245,239,228,0.6)' },
@@ -177,6 +192,61 @@ function greetingName(full) {
   return parts[0]
 }
 
+// Module scope, not nested inside Dashboard: a component declared inside another
+// is a NEW component type on every render, so React unmounts and remounts it
+// (losing focus and any state) rather than updating it. It is also what makes it
+// renderable on its own for a visual check.
+//
+// One list for both kinds. Each row carries its own Copy Link, Resend and
+// Cancel, so nobody has to retype a name and address the clinic has already
+// given us once -- and so the link is reachable at ANY time, not only in the
+// seconds after the form was submitted.
+//
+// ⚠️ Copy Link and Resend are NOT the same thing and the difference matters:
+// Copy Link hands you the CURRENT link to send yourself, Resend mints a NEW
+// one and kills the old. Reach for Copy when the email went astray, Resend
+// when the link itself needs replacing.
+export function PendingList({ people, onCopied, onResend, onCancel, resending }) {
+  if (people.length === 0) return null
+  return (
+    <div style={s.pending}>
+      <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Invited (Waiting for First Sign-In):</strong>
+      {people.map(i => (
+        <div key={i.email} style={s.pendingRow}>
+          <span style={s.pendingWho}>{i.full_name || '—'} · {i.email}</span>
+          <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {/* ⚠️ A FAILED COPY MUST STILL LEAVE THE LINK ON SCREEN. The panel
+                this replaced printed the URL as selectable text, so a clipboard
+                write that did not happen was survivable. navigator.clipboard is
+                absent outside a secure context and can reject even inside one,
+                and the old code called it with `?.` and reported success either
+                way -- the silent-failure shape this app keeps relearning. */}
+            <button type="button" style={s.copyLinkBtn}
+              onClick={async () => {
+                const who = i.full_name || i.email
+                try {
+                  await navigator.clipboard.writeText(i.invite_url)
+                  onCopied({ text: `Invite link for ${who} copied.` })
+                } catch {
+                  onCopied({ text: `Couldn’t copy automatically. Here is the link for ${who}:`, link: i.invite_url, bad: true })
+                }
+              }}>
+              Copy Link
+            </button>
+            <button type="button" style={s.resendBtn} disabled={resending === i.email}
+              onClick={() => onResend(i)}>
+              {resending === i.email ? 'Sending…' : 'Resend'}
+            </button>
+            <button type="button" style={s.cancelBtn} onClick={() => onCancel(i)}>
+              Cancel
+            </button>
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { user, profile, signOut } = useAuth()
   const [clinic, setClinic] = useState(null)
@@ -199,8 +269,14 @@ export default function Dashboard() {
   // just blanked and nothing appeared to happen. Discharge, restore and
   // assignment reported their errors there too, nowhere near the control that
   // caused them. A message belongs beside the thing that produced it.
-  const [patientInvite, setPatientInvite] = useState(null) // { url, email, name, sent }
-  const [staffInvite, setStaffInvite] = useState(null)     // same shape
+  // ⚠️ THERE IS NO LONGER A ONE-SHOT RESULT PANEL. Until 2026-09-06 the invite
+  // link appeared ONLY in a panel rendered straight after the form, so it was
+  // gone the moment you dismissed it, invited someone else, or reloaded -- and
+  // the link a manager most wants to send is the one for a patient who has not
+  // signed in yet, which is precisely the case the panel had stopped showing.
+  // The link now lives on the pending row itself, where it stays until they
+  // join. (David: "a copy url button link unique to the patient that can always
+  // stay there and be copied at any time".)
   // ⚠️ "ARCHIVE" ON SCREEN IS `discharged_at` IN THE DATABASE, and the RPCs are
   // still discharge_patient / restore_patient. Renamed in the UI on 2026-09-06
   // because "Discharge" read as a clinical decision when all it does is clear
@@ -220,8 +296,12 @@ export default function Dashboard() {
   const [undo, setUndo] = useState(null)          // { id, name } after archiving
   const [removing, setRemoving] = useState(null)  // { id, name, checkins }
   const [removeText, setRemoveText] = useState('')
-  const [patientNotice, setPatientNotice] = useState('')
-  const [staffNotice, setStaffNotice] = useState('')
+  // ⚠️ A NOTICE CARRIES ITS KIND, because this slot now reports failures too:
+  // an invite whose email did not send, and the form's own validation. Those
+  // used to render in the same success green as "Invite emailed to X", which
+  // says the opposite of what happened. { text, bad } or null.
+  const [patientNotice, setPatientNotice] = useState(null)
+  const [staffNotice, setStaffNotice] = useState(null)
   const [pName, setPName] = useState('')
   const [pEmail, setPEmail] = useState('')
 
@@ -314,11 +394,11 @@ export default function Dashboard() {
     try {
       await api.revokeInvite(inv.email)
       setInvites(await fetchPendingInvites())
-      const msg = `Invite to ${inv.email} cancelled.`
-      if (inv.role === 'patient') setPatientNotice(msg); else setStaffNotice(msg)
+      const note = { text: `Invite to ${inv.email} cancelled.` }
+      if (inv.role === 'patient') setPatientNotice(note); else setStaffNotice(note)
     } catch (err) {
-      const msg = `Couldn't cancel that invite: ${err.message}`
-      if (inv.role === 'patient') setPatientNotice(msg); else setStaffNotice(msg)
+      const note = { text: `Couldn't cancel that invite: ${err.message}`, bad: true }
+      if (inv.role === 'patient') setPatientNotice(note); else setStaffNotice(note)
     }
   }
 
@@ -373,98 +453,43 @@ export default function Dashboard() {
   async function resendInvite(inv) {
     const patient = inv.role === 'patient'
     const setNote = patient ? setPatientNotice : setStaffNotice
-    const setResult = patient ? setPatientInvite : setStaffInvite
-    setNote(''); setResult(null); setResending(inv.email)
+    setNote(null); setResending(inv.email)
     try {
       const res = patient
         ? await api.invitePatient(inv.email, inv.full_name)
         : await api.inviteStaff(inv.email, inv.full_name, inv.role)
-      setResult({ url: res.invite_url, email: inv.email, name: inv.full_name || inv.email, sent: !!res.email_sent })
+      // The re-read matters more than usual here: a resend mints a FRESH token,
+      // so the copy link on the row below is stale until this lands.
       setInvites(await fetchPendingInvites())
+      setNote(res.email_sent
+        ? { text: `Invite resent to ${inv.email}. Their previous link no longer works.` }
+        : { text: `New link created for ${inv.email}, but the email didn’t send. Copy their link below and send it yourself.`, bad: true })
     } catch (err) {
-      setNote(`Couldn’t resend to ${inv.email}: ${err.message}`)
+      setNote({ text: `Couldn’t resend to ${inv.email}: ${err.message}`, bad: true })
     } finally {
       setResending('')
     }
   }
 
-  // One list for both kinds. Each row carries its own Resend, so nobody has to
-  // retype a name and address that the clinic has already given us once.
-  function PendingList({ people }) {
-    if (people.length === 0) return null
-    return (
-      <div style={s.pending}>
-        <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Invited (Waiting for First Sign-In):</strong>
-        {people.map(i => (
-          <div key={i.email} style={s.pendingRow}>
-            <span>{i.full_name || '—'} · {i.email}</span>
-            <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button type="button" style={s.resendBtn} disabled={resending === i.email}
-                onClick={() => resendInvite(i)}>
-                {resending === i.email ? 'Sending…' : 'Resend'}
-              </button>
-              <button type="button" style={s.cancelBtn} onClick={() => handleCancelInvite(i)}>
-                Cancel
-              </button>
-            </span>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  // Rendered directly under whichever form produced it. Both invite forms use
-  // this, so the two can never drift apart the way their message slots did.
-  function InviteResult({ result, kind }) {
-    if (!result) return null
-    const dismiss = () => {
-      if (kind === 'patient') { setPatientInvite(null); setPatientNotice('') }
-      else { setStaffInvite(null); setStaffNotice('') }
-    }
-    return (
-      <div style={s.inviteResult}>
-        {/* It had no way out until 2026-09-05: it sat there until you invited
-            someone else or reloaded the page. */}
-        <button type="button" style={s.inviteResultClose} onClick={dismiss} aria-label="Dismiss">✕</button>
-        <div style={s.inviteResultHead}>
-          {result.sent
-            ? `Invite emailed to ${result.email}.`
-            : `Invite created, but the email didn’t send.`}
-        </div>
-        <div style={s.inviteResultBody}>
-          {result.sent
-            ? `You can also send ${result.name} this link. It works only for their email address and expires in 14 days.`
-            : `Send ${result.name} this link instead. It works only for their email address and expires in 14 days.`}
-        </div>
-        <div style={s.inviteLinkRow}>
-          <div style={s.inviteLinkText}>{result.url}</div>
-          <button type="button" style={s.copyBtn}
-            onClick={() => {
-              navigator.clipboard?.writeText(result.url)
-              const msg = 'Invite link copied.'
-              if (kind === 'patient') setPatientNotice(msg); else setStaffNotice(msg)
-            }}>
-            Copy link
-          </button>
-        </div>
-      </div>
-    )
-  }
-
   async function handlePatientInvite(e) {
     e.preventDefault()
-    setPatientNotice(''); setPatientInvite(null)
+    setPatientNotice(null)
     const name = pName.trim(), email = pEmail.trim()
-    if (!name) return setPatientNotice('Enter the patient’s name.')
-    if (!email) return setPatientNotice('Enter the patient’s email.')
+    if (!name) return setPatientNotice({ text: 'Enter the patient’s name.', bad: true })
+    if (!email) return setPatientNotice({ text: 'Enter the patient’s email.', bad: true })
     let res
     try {
       res = await api.invitePatient(email, name)
     } catch (err) {
-      return setPatientNotice(`Couldn’t send invite: ${err.message}`)
+      return setPatientNotice({ text: `Couldn’t send invite: ${err.message}`, bad: true })
     }
     setPName(''); setPEmail('')
-    setPatientInvite({ url: res.invite_url, email, name, sent: !!res.email_sent })
+    // The link is no longer repeated here: it is on their pending row below, and
+    // it stays there. Either way the invite itself is already saved, so a failed
+    // send never loses it -- it just changes who does the sending.
+    setPatientNotice(res.email_sent
+      ? { text: `Invite emailed to ${name}. Their link is below until they join.` }
+      : { text: `Invite created for ${name}, but the email didn’t send. Copy their link below and send it yourself.`, bad: true })
     // ⚠️ THIS LINE WAS MISSING AND THE INVITE SIMPLY NEVER APPEARED UNDER
     // "Invited (Waiting for First Sign-In)" until the page was reloaded. The row
     // was created correctly every time -- the list just never re-read it, so
@@ -481,21 +506,23 @@ export default function Dashboard() {
 
   async function handleInvite(e) {
     e.preventDefault()
-    setStaffNotice(''); setStaffInvite(null)
+    setStaffNotice(null)
     const name = tName.trim(), email = tEmail.trim()
-    if (!name) return setStaffNotice('Enter the therapist’s name.')
-    if (!email) return setStaffNotice('Enter the therapist’s email.')
+    if (!name) return setStaffNotice({ text: 'Enter the therapist’s name.', bad: true })
+    if (!email) return setStaffNotice({ text: 'Enter the therapist’s email.', bad: true })
     let res
     try {
       res = await inviteTherapist(email, name)
     } catch (err) {
-      return setStaffNotice(`Couldn’t send invite: ${err.message}`)
+      return setStaffNotice({ text: `Couldn’t send invite: ${err.message}`, bad: true })
     }
     setTName(''); setTEmail('')
-    // The link is shown whether or not the email went. The send can fail for
-    // reasons that have nothing to do with the invite, which is already saved,
-    // and a manager who can see the link is never stuck.
-    setStaffInvite({ url: res.invite_url, email, name, sent: !!res.email_sent })
+    // Same shape as the patient handler. ⛔ DIFF THESE TWO AGAINST EACH OTHER
+    // whenever you touch one: the patient path keeps being built second and
+    // keeps missing a step this one already had.
+    setStaffNotice(res.email_sent
+      ? { text: `Invite emailed to ${name}. Their link is below until they join.` }
+      : { text: `Invite created for ${name}, but the email didn’t send. Copy their link below and send it yourself.`, bad: true })
     setInvites(await fetchPendingInvites())
   }
 
@@ -613,15 +640,20 @@ export default function Dashboard() {
                 {/* Typing the next patient clears the last result, so the card
                     is never showing one person's link above another's form. */}
                 <input style={s.inviteInput} placeholder="Patient name" value={pName}
-                  onChange={e => { setPName(e.target.value); setPatientInvite(null); setPatientNotice('') }} autoComplete="name" />
+                  onChange={e => { setPName(e.target.value); setPatientNotice(null) }} autoComplete="name" />
                 <input style={s.inviteInput} placeholder="Patient email" type="email" value={pEmail}
-                  onChange={e => { setPEmail(e.target.value); setPatientInvite(null); setPatientNotice('') }}
+                  onChange={e => { setPEmail(e.target.value); setPatientNotice(null) }}
                   autoComplete="off" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
                 <button style={s.inviteBtn} type="submit">Invite Patient →</button>
               </form>
-              {patientNotice && <div style={s.notice}>{patientNotice}</div>}
-              <InviteResult result={patientInvite} kind="patient" />
-              <PendingList people={pendingPatients} />
+              {patientNotice && (
+                <div style={patientNotice.bad ? s.noticeBad : s.notice}>
+                  {patientNotice.text}
+                  {patientNotice.link && <div style={s.noticeLink}>{patientNotice.link}</div>}
+                </div>
+              )}
+              <PendingList people={pendingPatients} onCopied={setPatientNotice}
+                onResend={resendInvite} onCancel={handleCancelInvite} resending={resending} />
             </div>
 
             {/* Care team — invite therapists and see how many patients each carries. */}
@@ -641,15 +673,20 @@ export default function Dashboard() {
               })}
               <form onSubmit={handleInvite} style={s.inviteForm}>
                 <input style={s.inviteInput} placeholder="Therapist name" value={tName}
-                  onChange={e => { setTName(e.target.value); setStaffInvite(null); setStaffNotice('') }} autoComplete="name" />
+                  onChange={e => { setTName(e.target.value); setStaffNotice(null) }} autoComplete="name" />
                 <input style={s.inviteInput} placeholder="Therapist email" type="email" value={tEmail}
-                  onChange={e => { setTEmail(e.target.value); setStaffInvite(null); setStaffNotice('') }}
+                  onChange={e => { setTEmail(e.target.value); setStaffNotice(null) }}
                   autoComplete="off" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
                 <button style={s.inviteBtn} type="submit">Invite Therapist →</button>
               </form>
-              {staffNotice && <div style={s.notice}>{staffNotice}</div>}
-              <InviteResult result={staffInvite} kind="staff" />
-              <PendingList people={pendingStaff} />
+              {staffNotice && (
+                <div style={staffNotice.bad ? s.noticeBad : s.notice}>
+                  {staffNotice.text}
+                  {staffNotice.link && <div style={s.noticeLink}>{staffNotice.link}</div>}
+                </div>
+              )}
+              <PendingList people={pendingStaff} onCopied={setStaffNotice}
+                onResend={resendInvite} onCancel={handleCancelInvite} resending={resending} />
             </div>
           </>
         )}
@@ -675,14 +712,28 @@ export default function Dashboard() {
 
         {!loading && roster.length > 0 && (
           <>
+            {/* ⚠️ ONE RUN OF FACES, NOT FIVE LABELLED ITEMS, AND FLOWING TEXT
+                RATHER THAN A FLEX ROW. Both halves were needed, and MEASURING is
+                what showed it: naming all five faces put seven items in a
+                wrap-happy flex row, but simply collapsing them to a scale changed
+                the height not at all below 393px -- a flex row can only break at
+                its 16px gaps, so a 251px scale that will not sit beside anything
+                takes a whole row either way. As inline text it breaks between
+                words instead, which halves it: 118px -> 62px at 375/390/393,
+                78 -> 39 on a desktop. The five faces stay one nowrap group so the
+                ramp itself can never split.
+                "3-Day Trend" left the label because the roster column header
+                immediately below already says it. */}
             <div style={s.legend}>
-              <span style={s.legendLabel}>3-Day Trend · Daily Feeling</span>
-              {[1, 2, 3, 4, 5].map(n => (
-                <span key={n} style={s.legendItem}>
-                  <span style={s.face}>{FEELINGS[n].emoji}</span> {FEELINGS[n].word}
-                </span>
-              ))}
-              <span style={s.legendItem}><span style={s.noCheckin} /> No check-in</span>
+              <span style={s.legendLabel}>Daily Feeling</span>{' '}
+              <span style={s.legendEnd}>{FEELINGS[1].word}</span>{' '}
+              <span style={s.legendFaces}>
+                {[1, 2, 3, 4, 5].map(n => (
+                  <span key={n} style={s.face} title={FEELINGS[n].word}>{FEELINGS[n].emoji}</span>
+                ))}
+              </span>{' '}
+              <span style={s.legendEnd}>{FEELINGS[5].word}</span>{' '}
+              <span style={s.legendNone}><span style={s.noCheckin} /> No check-in</span>
             </div>
             <div style={s.scroll}>
               {/* Manager total: 140+64+72+44+82+170+92 columns + 6 gaps of 12

@@ -211,6 +211,12 @@ async function withUserEnsured<T>(
 // ---------------------------------------------------------------------------
 const ses = new SESv2Client({ region: process.env.AWS_REGION || 'us-east-1' });
 const APP_URL = process.env.APP_URL || 'https://glowpt.app';
+
+// ONE definition of an invite's URL. The emailed link, the link the invite form
+// hands back, and the copy link on every pending row must all be the same
+// string, or a manager can send a patient a link that differs from the one in
+// their inbox.
+const inviteUrlFor = (token: string) => `${APP_URL}/invite/${token}`;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'GlowPT <no-reply@glowpt.app>';
 const SES_CONFIG_SET = process.env.SES_CONFIG_SET || '';
 
@@ -227,6 +233,16 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, fullNa
   // Title Case per the house label rule; "In" is a phrasal-verb particle, so it
   // is capitalised even though it is short.
   const cta = isPatient ? 'Start Checking In →' : 'Accept the Invitation →';
+  // ⚠️ WHERE TO COME BACK. Until 2026-09-06 nothing anywhere -- not this email,
+  // not the check-in screen, not the reflection -- ever told a patient how to
+  // reach GlowPT again. Their invite link was the only URL they had ever been
+  // given, and once used it 404'd and told them to ask the clinic for a new one,
+  // which is the wrong advice: they need to sign in. The link now offers that
+  // (see InviteJoin.jsx), and this names the address a person can actually hold
+  // in their head. Say the short one here; the long token link is for tapping.
+  const home = isPatient
+    ? `After today, your check-in lives at <a href="${APP_URL}" style="color:#F5A81A;text-decoration:none">glowpt.app</a>. Save it somewhere you will find it.`
+    : `Your clinic dashboard lives at <a href="${APP_URL}" style="color:#F5A81A;text-decoration:none">glowpt.app</a>.`;
   return `<div style="font-family:-apple-system,Segoe UI,sans-serif;background:#0d1825;color:#f5efe4;padding:32px;border-radius:8px;max-width:480px;margin:auto">
     <img src="${APP_URL}/apple-touch-icon.png" alt="GlowPT" width="56" height="56" style="display:block;width:56px;height:56px;border:0;border-radius:13px;margin-bottom:12px">
     <div style="font-size:26px;font-weight:600;margin-bottom:18px">Glow<span style="color:#F5A81A">PT</span></div>
@@ -241,6 +257,7 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, fullNa
          emailed until they act on the page. The real sequence is tap, confirm
          your name, THEN a code arrives, so it now says that in that order.
          (David spotted the contradiction on 2026-09-05.) -->
+    <p style="font-size:14px;line-height:1.6;color:rgba(245,239,228,0.7);margin-top:20px">${home}</p>
     <p style="font-size:13px;line-height:1.6;color:rgba(245,239,228,0.5);margin-top:22px">You will confirm your name, then we will email you a code to sign in. There is no password to create. This link works only for this email address and expires in 14 days.</p>
     <p style="font-size:13px;color:rgba(245,239,228,0.35);margin-top:18px">One good day at a time.</p>
   </div>`;
@@ -456,14 +473,25 @@ async function getTherapists(client: Client, event: APIGatewayProxyEventV2WithJW
 async function getInvites(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const sub = requireSub(event);
   const result = await withUser(client, sub, async (c) => {
+    // The token comes back so the dashboard can show a PERMANENT copy link on
+    // every pending row, rather than only in the one-shot panel the invite form
+    // produced. Safe: staff_invites_select_clinic scopes this table to the
+    // manager of its own clinic, so nobody else can read the row at all -- and
+    // the token is not a credential anyway (accept_*_invite still requires the
+    // signed-in user's VERIFIED email to match the invited address).
     const { rows } = await c.query(
-      `select email, full_name, role
+      `select email, full_name, role, token
          from public.staff_invites
         where consumed_at is null
           and expires_at > now()
         order by created_at desc`,
     );
-    return rows;
+    return rows.map((r) => ({
+      email: r.email,
+      full_name: r.full_name,
+      role: r.role,
+      invite_url: inviteUrlFor(r.token as string),
+    }));
   });
   return json(200, { invites: result });
 }
@@ -567,7 +595,7 @@ async function sendInvite(
   email: string,
   fullName: string | null,
 ) {
-  const inviteUrl = `${APP_URL}/invite/${token}`;
+  const inviteUrl = inviteUrlFor(token);
   let emailSent = false;
   let emailError: string | null = null;
   try {

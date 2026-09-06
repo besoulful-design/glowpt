@@ -403,6 +403,8 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     journalMovementLabel: { fontSize: '14px', color: 'rgba(245,239,228,0.7)', fontWeight: 500 },
     journalNote: { background: '#1a2840', border: '1px solid rgba(245,239,228,0.08)', borderRadius: '4px', padding: '18px', fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: '16px', lineHeight: 1.65, color: 'rgba(245,239,228,0.7)' },
     journalAI: { background: 'linear-gradient(135deg, rgba(245,168,26,0.08) 0%, rgba(13,24,37,0) 100%)', border: '1px solid rgba(245,168,26,0.2)', borderRadius: '4px', padding: '22px', position: 'relative', overflow: 'hidden' },
+    comeBack: { fontSize: '13px', lineHeight: 1.6, color: 'rgba(245,239,228,0.45)', marginTop: '6px', textAlign: 'center' },
+    comeBackHost: { color: '#F5A81A', fontWeight: 600 },
     journalAILabel: { fontSize: CARD_LABEL_SIZE, letterSpacing: '0.01em', color: '#F5A81A', fontWeight: 600, marginBottom: '14px' },
     journalAIText: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '19px', lineHeight: 1.55, color: '#f5efe4', letterSpacing: '-0.01em' },
     loadingWrap: { position: 'fixed', inset: 0, background: '#0d1825', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '24px', zIndex: 100 },
@@ -675,6 +677,25 @@ Respond directly to ${firstName} in second person. Reference what they actually 
 
             <div style={styles.responseBottom}>
               <button style={styles.btnPrimary} onClick={() => setScreen('welcome')}>Done for Today ✓</button>
+              {/* ⚠️ WHERE TO COME BACK. Until 2026-09-06 nothing in this app ever
+                  told a patient how to reach it again, and their invite link --
+                  the only GlowPT address they had ever been given -- stopped
+                  working the moment they used it. This is the moment it matters:
+                  they are about to close the tab, and their session will not last
+                  forever. (David: "we left them hanging at that point".)
+
+                  ⛔ IT IS DELIBERATELY NOT PERMANENT. Shown only while the habit
+                  is still forming, then it goes: a line that never leaves stops
+                  being read, and someone on their twentieth check-in has plainly
+                  worked out how to get here. Not a modal or a banner either --
+                  they have just finished, and the reflection is the point of this
+                  screen, not us. */}
+              {totalCheckins <= 3 && (
+                <div style={styles.comeBack}>
+                  Check in again tomorrow at <span style={styles.comeBackHost}>glowpt.app</span>.
+                  {' '}Save it to your home screen and it’s one tap.
+                </div>
+              )}
             </div>
           </div>
         )}

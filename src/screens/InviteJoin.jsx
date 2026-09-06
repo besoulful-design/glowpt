@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, Navigate, useNavigate } from 'react-router-dom'
+import { useParams, Navigate, useNavigate, Link } from 'react-router-dom'
 import * as api from '../lib/api'
 import * as cognito from '../lib/cognito'
 import { savePendingStaff, savePendingPatientInvite, useAuth } from '../auth'
@@ -116,24 +116,46 @@ export default function InviteJoin() {
   if (invite === undefined) return <AuthShell><div style={ui.muted}>Loading…</div></AuthShell>
 
   // Unknown, expired, already used: all one message. Nothing here tells a
-  // stranger whether a given token ever existed.
+  // stranger whether a given token ever existed, which is what makes an invite
+  // link safe to forward.
+  //
+  // ⚠️ THIS SCREEN USED TO BE A DEAD END, AND IT SENT PEOPLE THE WRONG WAY. It
+  // said only "ask your clinic to send you a new one" -- but by far the likeliest
+  // visitor to a used invite link is the person who used it. That link is the
+  // only GlowPT address they have ever been given, so it is what they bookmark
+  // and what they tap again next week; the invite is consumed by then, and we
+  // told them to go and ask for an invite they do not need. Nothing else in the
+  // app ever told a patient where to come back to, either. (David, 2026-09-06:
+  // "we left them hanging at that point".)
+  //
+  // So the returning patient's need is ranked FIRST and the newcomer's second --
+  // the same call as NoClinic. We cannot pre-fill their address, because working
+  // out who this token belonged to is exactly the leak the single message exists
+  // to prevent, so Sign In asks for it. One field, then the code they already
+  // know. The net effect is that ONE link, sent once, works forever: it joins
+  // them, then it signs them in.
   if (invite === null) {
     return (
       <AuthShell>
         <LogoMark size={116} />
         <div style={ui.title}>
-          {loadFailed ? 'We couldn’t load this invite.' : 'This invite isn’t valid.'}
+          {loadFailed ? 'We couldn’t load this invite.' : 'This link can’t be used to join.'}
         </div>
-        <div style={ui.muted}>
-          {loadFailed ? (
+        {loadFailed ? (
+          <div style={ui.muted}>
             <div>Something went wrong at our end. Please try the link again in a moment.</div>
-          ) : (
-            <>
-              <div>The link may have expired or already been used.</div>
-              <div>Ask your clinic to send you a new one.</div>
-            </>
-          )}
-        </div>
+          </div>
+        ) : (
+          <>
+            <div style={ui.muted}>
+              <div>If you’ve already joined, sign in with your email address.</div>
+            </div>
+            <Link to="/login" style={{ ...ui.btn, display: 'block', boxSizing: 'border-box', textAlign: 'center', textDecoration: 'none' }}>Sign In →</Link>
+            <div style={ui.fine}>
+              Haven’t joined yet? This link may have expired. Ask your clinic to send you a new one.
+            </div>
+          </>
+        )}
       </AuthShell>
     )
   }
