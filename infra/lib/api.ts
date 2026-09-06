@@ -137,10 +137,24 @@ export class Api extends Construct {
     // Without this, deleting a removed patient's login would simply hang until
     // the Lambda timed out.
     //
-    // 💲 IT COSTS ROUGHLY $15/mo (one ENI per AZ, two AZs). That is the price of
-    // "Remove" actually removing the person rather than just their rows. Dropping
-    // to a single subnet would halve it; the endpoint is reachable from the whole
-    // VPC either way.
+    // ⚠️ PINNED TO ONE AZ, AND THAT IS NOT A CHOICE. AWS does not offer the
+    // cognito-idp endpoint service in every availability zone: in us-east-1 it
+    // exists in 1b, 1c and 1d but NOT 1a, and this VPC's isolated subnets are in
+    // 1a and 1b. Asking for both fails the deploy outright with "does not support
+    // the availability zone of the subnet" (which is exactly what happened on
+    // 2026-09-06 -- the stack rolled back cleanly, nothing half-applied).
+    //
+    // Re-check before changing this, since the answer is per-service and moves:
+    //   aws ec2 describe-vpc-endpoint-services --region us-east-1 \
+    //     --service-names com.amazonaws.us-east-1.cognito-idp \
+    //     --query 'ServiceDetails[0].AvailabilityZones'
+    // (Compare: the SES endpoint weekly-summary uses is offered in all six, which
+    // is why THAT one could take the whole isolated subnet group.)
+    //
+    // 💲 One ENI, so roughly $7/mo rather than the ~$15 two AZs would cost. The
+    // trade is that if us-east-1b is down, removing a patient fails until it is
+    // back. Acceptable for a manager-only action, and there is no alternative.
+    const cognitoEndpointAz = 'us-east-1b';
     const cognitoEndpointSg = new ec2.SecurityGroup(this, 'CognitoEndpointSg', {
       vpc: props.vpc,
       description: 'GlowPT Cognito IDP VPC endpoint (api)',
@@ -153,7 +167,10 @@ export class Api extends Construct {
     );
     props.vpc.addInterfaceEndpoint('CognitoIdpEndpoint', {
       service: ec2.InterfaceVpcEndpointAwsService.COGNITO_IDP,
-      subnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      subnets: {
+        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+        availabilityZones: [cognitoEndpointAz],
+      },
       securityGroups: [cognitoEndpointSg],
       privateDnsEnabled: true,
       open: false,
