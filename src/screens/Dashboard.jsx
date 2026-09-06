@@ -5,6 +5,7 @@ import { useAuth } from '../auth'
 import { AuthShell, LogoMark, BrandLockup, BRAND, ui, SECTION_LABEL_SIZE, CARD_LABEL_SIZE } from './AuthShell'
 import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist, assignTherapist, dischargePatient, restorePatient, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
 import { FEELINGS } from '../lib/feelings'
+import FeelingScale from './FeelingScale'
 import { BAA_IS_EXECUTED } from '../lib/legal'
 import { CONTACT_EMAIL } from '../lib/marketing'
 
@@ -96,35 +97,21 @@ const s = {
     background: kind === 'low' ? 'rgba(192,85,77,0.18)' : 'rgba(245,168,26,0.16)',
     color: kind === 'low' ? '#e79a92' : '#FBC02D', border: `1px solid ${kind === 'low' ? 'rgba(192,85,77,0.4)' : 'rgba(245,168,26,0.4)'}` }),
   ok: { fontSize: 12, color: 'rgba(155,176,106,0.9)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
-  // The legend, shaped like the patient's own check-in scale -- see the note at
-  // the render. textAlign is stated because s.page centres the whole screen.
-  // maxWidth + auto margins match the roster block below, so the legend's left
-  // edge sits over the Patient column rather than floating out to the page edge.
-  legendWrap: { padding: '0 16px 16px', textAlign: 'left', maxWidth: 688, margin: '0 auto', boxSizing: 'border-box' },
-  legendHead: { display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 8 },
+  // THE LEGEND IS THE PATIENT'S OWN CHECK-IN SCALE, LITERALLY: the same
+  // FeelingScale component the patient taps, rendered static. It is centred
+  // like the patient screen and capped at the patient card's content width
+  // (430px shell minus 28px padding each side = 374; here 398 minus 12px each
+  // side, which also brings a phone's narrower page padding up to the patient
+  // screen's), so at every width the two scales are the same size and on a
+  // desktop it is a compact centred block above the centred roster. ⛔ Do not redraw the cells here. Every size lives in
+  // FeelingScale.jsx, and David asked three times why the two differed when
+  // they were two copies.
+  legendWrap: { padding: '0 12px 18px', maxWidth: 398, margin: '0 auto', boxSizing: 'border-box' },
+  // "No check-in" is the one value the trend renders that is NOT a rating, so
+  // it sits with the label as the exception to the scale, not as a sixth cell.
+  legendHead: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 10 },
   legendLabel: { fontSize: 11.5, lineHeight: 1.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
   legendNone: { fontSize: 11.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.4)', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' },
-  // ⛔ THIS IS A COPY OF PatientApp's `feelingScale`, DELIBERATELY, DOWN TO THE
-  // BORDER AND THE NUMBER. An earlier version matched only the ARRANGEMENT
-  // (faces above words, one row) and David said it had not changed at all --
-  // fairly, because "line up with the patient check in legend" means look like
-  // it, not merely be laid out like it.
-  // ⚠️ THE NUMBER IS NOT DECORATION: the roster's Avg Mood column reads
-  // "😊 4.0", so without it the legend explained the faces and left the figure
-  // beside them unexplained. With it, one legend explains both columns.
-  legendScale: { display: 'flex', gap: 8, maxWidth: 470 },
-  // No cursor and no hover: it explains the scale, it is not a control.
-  legendCell: {
-    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    gap: 4, padding: '10px 4px 8px', background: '#1a2840',
-    border: '1px solid rgba(245,239,228,0.12)', borderRadius: 6,
-  },
-  legendFace: { fontSize: 18, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 18 },
-  // Fraunces, as on the check-in card. Scaled down from that screen's 36px:
-  // it lives in a 430px shell with five cells, this in 560 with six.
-  legendNum: { fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 400, color: 'rgba(245,239,228,0.7)', lineHeight: 1 },
-  // 10px and centred, the same as the patient scale's own word.
-  legendWord: { fontSize: 10, lineHeight: 1.2, letterSpacing: '0.03em', color: 'rgba(245,239,228,0.4)', fontWeight: 500, textAlign: 'center' },
   rosterHead: { display: 'grid', gap: 12, padding: '0 16px 10px', fontSize: 11.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
   row: { display: 'grid', gap: 12, alignItems: 'center', background: '#1a2840', border: '1px solid rgba(245,239,228,0.06)', borderRadius: 6, padding: '14px 16px', marginBottom: 8 },
   empty: { background: '#1a2840', border: '1px dashed rgba(245,168,26,0.3)', borderRadius: 8, padding: 32, textAlign: 'center', color: 'rgba(245,239,228,0.6)' },
@@ -878,18 +865,14 @@ export default function Dashboard() {
 
         {!loading && roster.length > 0 && (
           <>
-            {/* ⛔ THIS IS THE PATIENT CHECK-IN SCALE, DELIBERATELY. Equal cells
-                across one row, face above word, exactly like the five buttons a
-                patient taps (PatientApp `feelingScale`). It has now been three
-                shapes in one morning -- five labelled flex items (three rows on a
-                phone), then flowing text (two rows) -- and David's answer was the
-                right one: make it look like the thing it is explaining. Staff and
-                patient already share the faces themselves (lib/feelings.js); this
-                makes them share the layout too, and it fits in ONE row at every
-                width because each cell wraps its own word.
-                ⚠️ SIX CELLS, NOT FIVE: "No check-in" is a value the trend really
-                renders, so it belongs in the scale rather than trailing after it
-                as a seventh loose item, which is what made the old versions wrap. */}
+            {/* THE LEGEND IS THE PATIENT'S CHECK-IN SCALE ITSELF (FeelingScale.jsx),
+                rendered static. It went through four shapes in two days -- five
+                labelled flex items, flowing text, a hand-made copy of the patient
+                cells -- and each time David asked why it did not match the patient
+                screen. It could not while it was a separate copy. One component
+                now; the two screens cannot drift. "No check-in" stays beside the
+                label as the exception to the scale, not as a sixth cell: the
+                patient scale has five, and a card with no number is not a rating. */}
             <div style={s.legendWrap}>
               {/* ⚠️ "No check-in" IS NOT A SIXTH CARD. It was one briefly, and it
                   was wrong twice over: the patient scale has FIVE cells, and a
@@ -902,15 +885,7 @@ export default function Dashboard() {
                 <span style={s.legendLabel}>Daily Feeling</span>
                 <span style={s.legendNone}><span style={s.noCheckin} /> No check-in</span>
               </div>
-              <div style={s.legendScale}>
-                {[1, 2, 3, 4, 5].map(n => (
-                  <div key={n} style={s.legendCell}>
-                    <div style={s.legendFace}>{FEELINGS[n].emoji}</div>
-                    <div style={s.legendNum}>{n}</div>
-                    <div style={s.legendWord}>{FEELINGS[n].word}</div>
-                  </div>
-                ))}
-              </div>
+              <FeelingScale />
             </div>
             <div style={s.scroll}>
               {/* Manager total: 104+64+100+44+82+132+56 = 582 of columns,

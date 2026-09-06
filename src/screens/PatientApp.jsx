@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import * as api from '../lib/api'
 import { useAuth } from '../auth'
 import { FEELINGS as feelingData, isFeeling } from '../lib/feelings'
+import FeelingScale from './FeelingScale'
 import { stripClauseDashes } from '../lib/houseVoice'
 import { LogoMark, BRAND, LABEL_SIZE, SECTION_LABEL_SIZE, CARD_LABEL_SIZE } from './AuthShell'
 
@@ -348,16 +349,11 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     qBlock: { display: 'flex', flexDirection: 'column', gap: '14px' },
     qLabel: { fontSize: CARD_LABEL_SIZE, fontWeight: 600, color: 'rgba(245,239,228,0.7)', letterSpacing: '0.01em' },
     qQuestion: { fontFamily: "'Fraunces', serif", fontWeight: 400, fontSize: '20px', lineHeight: 1.3, color: '#f5efe4', letterSpacing: '-0.01em' },
-    feelingScale: { display: 'flex', gap: '10px', justifyContent: 'space-between' },
-    feelingBtn: (selected) => ({ flex: 1, border: `1px solid ${selected ? '#F5A81A' : 'rgba(245,239,228,0.12)'}`, borderRadius: '6px', background: selected ? '#F5A81A' : '#1a2840', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '14px 6px 10px', gap: '6px', transform: selected ? 'scale(1.06)' : 'scale(1)', transition: 'all 0.2s', boxShadow: selected ? '0 4px 18px rgba(245,168,26,0.4)' : 'none' }),
-    feelingNum: (selected) => ({ fontFamily: "'Fraunces', serif", fontSize: '36px', fontWeight: selected ? 600 : 400, color: selected ? '#0d1825' : 'rgba(245,239,228,0.7)', lineHeight: 1 }),
-    feelingEmoji: { fontSize: '20px', lineHeight: 1 },
     saveFailed: { background: 'rgba(231,154,146,0.08)', border: '1px solid rgba(231,154,146,0.35)', borderRadius: '8px', padding: '16px 18px', margin: '0 0 22px', textAlign: 'left' },
     saveFailedTitle: { fontSize: '15px', fontWeight: 600, color: 'rgba(231,154,146,0.95)', marginBottom: '6px' },
     saveFailedBody: { fontSize: '13.5px', lineHeight: 1.5, color: 'rgba(245,239,228,0.6)', marginBottom: '14px' },
     saveFailedBtn: { background: 'transparent', border: '1px solid rgba(231,154,146,0.5)', borderRadius: '6px', padding: '10px 18px', color: 'rgba(231,154,146,0.95)', fontSize: '14px', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' },
     feelingRequired: { marginTop: '12px', fontSize: '13.5px', color: '#FBC02D', fontWeight: 500 },
-    feelingWord: (selected) => ({ fontSize: '10px', color: selected ? 'rgba(13,24,37,0.75)' : 'rgba(245,239,228,0.35)', fontWeight: 500, letterSpacing: '0.04em', textAlign: 'center', lineHeight: 1.2 }),
     movementList: { display: 'flex', flexDirection: 'column', gap: '10px' },
     movementItem: (checked) => ({ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: checked ? 'rgba(245,168,26,0.08)' : '#1a2840', border: `1px solid ${checked ? '#F5A81A' : 'rgba(245,239,228,0.08)'}`, borderRadius: '4px', cursor: 'pointer', transition: 'all 0.2s' }),
     checkBox: (checked) => ({ width: '22px', height: '22px', border: `1.5px solid ${checked ? '#F5A81A' : 'rgba(245,239,228,0.25)'}`, borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: checked ? '#F5A81A' : 'transparent', transition: 'all 0.2s' }),
@@ -492,18 +488,9 @@ Respond directly to ${firstName} in second person. Reference what they actually 
               <div style={styles.qBlock} ref={feelingRef}>
                 <div style={styles.qLabel}>Body Check</div>
                 <div style={styles.qQuestion}>How does your body feel right now?</div>
-                <div style={styles.feelingScale}>
-                  {[1, 2, 3, 4, 5].map(n => {
-                    const sel = selectedFeeling === n
-                    return (
-                      <div key={n} style={styles.feelingBtn(sel)} onClick={() => { setSelectedFeeling(n); setNeedsFeeling(false) }}>
-                        <div style={styles.feelingEmoji}>{feelingData[n].emoji}</div>
-                        <div style={styles.feelingNum(sel)}>{n}</div>
-                        <div style={styles.feelingWord(sel)}>{feelingData[n].word}</div>
-                      </div>
-                    )
-                  })}
-                </div>
+                {/* The scale itself lives in FeelingScale.jsx and is shared with
+                    the dashboard legend. Do not redraw it here. */}
+                <FeelingScale selected={selectedFeeling} onSelect={n => { setSelectedFeeling(n); setNeedsFeeling(false) }} />
                 {/* Deliberately NOT a disabled button. A dead control with no
                     explanation reads as "the app is broken"; this says which
                     answer is missing and scrolls it back into view. */}
