@@ -96,9 +96,15 @@ const s = {
     background: 'transparent', border: '1.5px solid rgba(245,239,228,0.45)',
     display: 'inline-block', verticalAlign: 'middle',
   },
-  // lineHeight is stated: body sets an ABSOLUTE 26.1px that inherits as-is, so
-  // without it an 11px pill was 34px tall (the landing-footer trap, 2026-09-03).
-  pill: (kind) => ({ fontSize: 11, fontWeight: 600, lineHeight: 1.4, padding: '3px 9px', borderRadius: 20, display: 'inline-block', whiteSpace: 'nowrap',
+  // ONE FIXED WIDTH FOR EVERY PILL (David, 2026-09-06 evening: "Why are the
+  // pills/flags under the names different sizes? ... Make them the same"). They
+  // were sized to their text, so "Low Mood" ran 12px wider than "Inactive" and
+  // two flagged rows read as two different badges. 60px holds "Low Mood" at
+  // 10px/600 (51px of text) with 4px each side; re-measure before adding a
+  // longer flag word. lineHeight is stated: body sets an ABSOLUTE 26.1px that
+  // inherits as-is, so without it an 11px pill was 34px tall (the
+  // landing-footer trap, 2026-09-03).
+  pill: (kind) => ({ fontSize: 10, fontWeight: 600, lineHeight: 1.4, padding: '2px 4px', width: 60, boxSizing: 'border-box', textAlign: 'center', borderRadius: 20, display: 'inline-block', whiteSpace: 'nowrap',
     background: kind === 'low' ? 'rgba(192,85,77,0.18)' : 'rgba(245,168,26,0.16)',
     color: kind === 'low' ? '#e79a92' : '#FBC02D', border: `1px solid ${kind === 'low' ? 'rgba(192,85,77,0.4)' : 'rgba(245,168,26,0.4)'}` }),
   ok: { fontSize: 12, color: 'rgba(155,176,106,0.9)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
@@ -188,10 +194,11 @@ const ROSTER_COLUMNS = [
   // It has to hold the widest single WORD and the widest PILL. Measured with the
   // real font against every real name on both clinics: "Peterson" 63px,
   // "Bennett" 56, "Dr. Sam" 53; the "Low Mood" pill is 74 and "Inactive" 62.
-  // So the pill sets it: 76. (104 was "Grace Bennett" on one line; "Miracle
-  // Peterson" wrapped anyway at 104, which is what made stacking all of them
-  // the consistent answer.) Re-measure before widening; the header is 40.
-  { key: 'patient',   label: 'Patient',       w: '76px',                align: 'center', plain: true },
+  // The pills are now a fixed 60, so the widest WORD sets it: "Peterson" 63,
+  // track 66. (104 was "Grace Bennett" on one line; "Miracle Peterson"
+  // wrapped anyway at 104, which is what made stacking all of them the
+  // consistent answer.) Re-measure before widening; the header is 40.
+  { key: 'patient',   label: 'Patient',       w: '66px',                align: 'center', plain: true },
   { key: 'avg',       label: 'Avg Mood',      w: '64px',                align: 'center' },
   // ⚠️ "3-Day Trend" WAS A LIE, MILDLY. This renders `cs.slice(0, 3)`, the last
   // three CHECK-INS, regardless of the dates on them: for a patient who checks in
@@ -1042,4 +1049,5 @@ export default function Dashboard() {
     </div>
   )
 }
+
 
