@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import * as api from '../lib/api'
 import { useAuth } from '../auth'
@@ -131,8 +131,15 @@ const ROSTER_COLUMNS = [
   { key: 'trend',     label: '3-Day Trend',   w: '72px',                align: 'center' },
   { key: 'streak',    label: 'Streak',        w: '44px',                align: 'center' },
   { key: 'last',      label: 'Last Check-In', w: '82px',                align: 'center' },
-  // Managers assign and discharge; a therapist sees their own caseload and neither.
+  // Managers assign and archive; a therapist sees their own caseload and neither.
   { key: 'therapist', label: 'Therapist',     w: 'minmax(150px,170px)', align: 'center', plain: true, managerOnly: true },
+  // ⚠️ ARCHIVE IS ITS OWN COLUMN, NOT A LINK UNDER THE THERAPIST DROPDOWN (David,
+  // 2026-09-06: "that looks crazy"). It was stacked under the select because both
+  // are manager-only, which is a reason they share a ROLE, not a reason they share
+  // a CELL: one sets who treats the patient, the other takes them off the roster.
+  // Blank header on purpose -- an action column labelled "Archive" above a button
+  // reading "Archive" is noise. 92px is the button's own width plus breathing room.
+  { key: 'archive',   label: '',              w: '92px',                align: 'center', plain: true, managerOnly: true },
 ]
 
 // text-align does not move flex items, so a flex cell needs the flex equivalent.
@@ -201,6 +208,15 @@ export default function Dashboard() {
   // 5-day flag. The database was deliberately NOT renamed: that means a patch
   // touching RLS policies, functions and tests for a vocabulary change. Same
   // call the invite functions got when they kept their staff_* names.
+  // ⚠️ TWO SLOTS, BECAUSE THEY WANT OPPOSITE LIFETIMES. `flash` is a confirmation
+  // of something that already happened ("Felix was removed.") and clears itself:
+  // the roster below it is the real proof, so leaving it up is just litter, and
+  // David watched one sit there until he refreshed the page. `notice` is an ERROR
+  // and must NEVER auto-clear -- a failure the user did not happen to be looking
+  // at is a failure they never saw, which is the silent-failure shape this app
+  // keeps relearning.
+  const [flash, setFlash] = useState('')
+  const flashTimer = useRef(null)
   const [undo, setUndo] = useState(null)          // { id, name } after archiving
   const [removing, setRemoving] = useState(null)  // { id, name, checkins }
   const [removeText, setRemoveText] = useState('')
@@ -208,6 +224,16 @@ export default function Dashboard() {
   const [staffNotice, setStaffNotice] = useState('')
   const [pName, setPName] = useState('')
   const [pEmail, setPEmail] = useState('')
+
+  // Show a self-clearing confirmation. Six seconds: long enough to read a short
+  // sentence twice, short enough that it is gone before it becomes furniture.
+  const showFlash = useCallback((msg) => {
+    setFlash(msg)
+    clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setFlash(''), 6000)
+  }, [])
+  // Cancel the pending timer on unmount, or it fires into a gone component.
+  useEffect(() => () => clearTimeout(flashTimer.current), [])
 
   const isManager = profile?.role === 'manager'
   const staffName = greetingName(profile?.full_name)
@@ -333,7 +359,7 @@ export default function Dashboard() {
       await api.purgePatient(id)
       setRemoving(null); setRemoveText(''); setUndo(null)
       await loadRoster()
-      setNotice(`${name} was removed.`)
+      showFlash(`${name} was removed.`)
     } catch (err) {
       setNotice(`Couldn’t remove ${name}: ${err.message}`)
     }
@@ -503,11 +529,16 @@ export default function Dashboard() {
       case 'streak': return r.streak > 0 ? `${r.streak}🔥` : '—'
       case 'therapist':
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: FLEX_ALIGN[c.align] }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: FLEX_ALIGN[c.align] }}>
             <select style={s.sel} value={r.therapistId || ''} onChange={e => handleAssign(r.id, e.target.value || null)}>
               <option value="">Unassigned</option>
               {therapists.map(t => <option key={t.id} value={t.id}>{t.full_name || 'Therapist'}</option>)}
             </select>
+          </div>
+        )
+      case 'archive':
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: FLEX_ALIGN[c.align] }}>
             <button style={s.dischargeBtn} onClick={() => handleArchive(r.id, r.name)}>Archive</button>
           </div>
         )
@@ -622,6 +653,7 @@ export default function Dashboard() {
         {/* Assignment, discharge and restore all report here, beside the roster
             they act on. This used to land in the Care Team card further down. */}
         {notice && <div style={s.notice}>{notice}</div>}
+        {flash && <div style={s.notice}>{flash}</div>}
         {undo && (
           <div style={s.notice}>
             Archived {undo.name}.{' '}
@@ -641,7 +673,11 @@ export default function Dashboard() {
               <span style={s.legendItem}><span style={s.noCheckin} /> No check-in</span>
             </div>
             <div style={s.scroll}>
-              <div style={{ minWidth: isManager ? 680 : 560 }}>
+              {/* Manager total: 140+64+72+44+82+170+92 columns + 6 gaps of 12
+                  + 32 padding = 780. A floor below the real width would let the
+                  grid squeeze columns instead of scrolling, which is what the
+                  measured ceilings exist to prevent. */}
+              <div style={{ minWidth: isManager ? 780 : 560 }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
                   {rosterColumns.map(c => <div key={c.key} style={{ textAlign: c.align }}>{c.label}</div>)}
                 </div>
