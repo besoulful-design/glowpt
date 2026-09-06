@@ -42,6 +42,12 @@ const s = {
   theraRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(245,239,228,0.06)', fontSize: 14.5 },
   theraCount: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   inviteForm: { display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' },
+  // Sign-in link card. The message is shown because it is what gets copied:
+  // a clipboard whose contents are a mystery is not a thing to hand a patient.
+  signInLead: { fontSize: 13.5, lineHeight: 1.6, color: 'rgba(245,239,228,0.55)', marginBottom: 14, textAlign: 'left' },
+  signInBox: { fontSize: 13.5, lineHeight: 1.65, color: '#f5efe4', background: '#0d1825', border: '1px solid rgba(245,239,228,0.12)', borderRadius: 4, padding: '12px 14px', textAlign: 'left', overflowWrap: 'anywhere', userSelect: 'text' },
+  signInRow: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 },
+  signInHint: { fontSize: 12.5, color: 'rgba(245,239,228,0.4)', textAlign: 'left' },
   inviteInput: { flex: '1 1 150px', background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '9px 12px', color: '#f5efe4', fontSize: 14, fontFamily: 'inherit' },
   inviteBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '9px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   pending: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', marginTop: 12, lineHeight: 1.6 },
@@ -94,9 +100,6 @@ const s = {
   row: { display: 'grid', gap: 12, alignItems: 'center', background: '#1a2840', border: '1px solid rgba(245,239,228,0.06)', borderRadius: 6, padding: '14px 16px', marginBottom: 8 },
   empty: { background: '#1a2840', border: '1px dashed rgba(245,168,26,0.3)', borderRadius: 8, padding: 32, textAlign: 'center', color: 'rgba(245,239,228,0.6)' },
   // Discharge (soft-delete) controls
-  // Quiet like Archive beside it, not a filled button: the roster is a table to
-  // read, and two solid buttons per row would shout over the data.
-  copyRowBtn: { background: 'transparent', border: 'none', padding: '2px 0', color: 'rgba(245,168,26,0.85)', fontSize: 11.5, fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '0.02em', whiteSpace: 'nowrap' },
   dischargeBtn: { background: 'transparent', border: 'none', padding: '2px 0', color: 'rgba(231,154,146,0.75)', fontSize: 11.5, fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '0.02em' },
   dischargedWrap: { marginTop: 18 },
   dischargedToggle: { background: 'transparent', border: 'none', color: 'rgba(245,239,228,0.5)', fontSize: 12.5, fontWeight: 600, letterSpacing: '0.04em', cursor: 'pointer', padding: '6px 0', fontFamily: 'inherit' },
@@ -151,20 +154,6 @@ const ROSTER_COLUMNS = [
   { key: 'last',      label: 'Last Check-In', w: '82px',                align: 'center' },
   // Managers assign and archive; a therapist sees their own caseload and neither.
   { key: 'therapist', label: 'Therapist',     w: 'minmax(150px,170px)', align: 'center', plain: true, managerOnly: true },
-  // ⚠️ THE LINK THIS COPIES IS THE SAME FOR EVERY PATIENT, AND THAT IS NOT AN
-  // OVERSIGHT -- IT IS THE ONLY HONEST ANSWER. A patient's invite token is
-  // CONSUMED the moment they join, so once they are on this roster there is no
-  // per-person URL left to copy. Minting them a permanent personal link was
-  // considered and rejected: resolving it would have to say which address it
-  // belongs to, and "this email address is a physical therapy patient" is
-  // individually identifiable health information sitting in a text message
-  // forever. The house rule against identifiers in URLs (db/schema.sql, and the
-  // migration plan's Rule) exists for exactly this. An invite link accepts that
-  // risk for 14 days because it has no choice; a permanent one has a choice.
-  // So this copies the sign-in address, which is all a returning patient needs.
-  // (David, 2026-09-06: "i want to always be able to access it for anytime i
-  // need to send it to the patient.")
-  { key: 'signin',    label: '',              w: '76px',                align: 'center', plain: true, managerOnly: true },
   // ⚠️ ARCHIVE IS ITS OWN COLUMN, NOT A LINK UNDER THE THERAPIST DROPDOWN (David,
   // 2026-09-06: "that looks crazy"). It was stacked under the select because both
   // are manager-only, which is a reason they share a ROLE, not a reason they share
@@ -329,8 +318,9 @@ export default function Dashboard() {
     clearTimeout(flashTimer.current)
     flashTimer.current = setTimeout(() => setFlash(''), 6000)
   }, [])
-  // Cancel the pending timer on unmount, or it fires into a gone component.
+  // Cancel the pending timers on unmount, or they fire into a gone component.
   useEffect(() => () => clearTimeout(flashTimer.current), [])
+  useEffect(() => () => clearTimeout(copyTimer.current), [])
 
   const isManager = profile?.role === 'manager'
   const staffName = greetingName(profile?.full_name)
@@ -434,22 +424,47 @@ export default function Dashboard() {
     }
   }
 
-  // Hand the manager the address a patient signs in at, so they can text it to
-  // someone who has lost their way back. Derived from the running origin rather
-  // than hardcoded, the same reason the onboard page derives its own link: there
-  // is then no URL to remember to update, and it is correct on localhost too.
+  // ⚠️ ONE CARD, NOT A COLUMN, BECAUSE IT IS THE SAME LINK FOR EVERY PATIENT.
+  // It briefly lived on each roster row and David was right that it was
+  // extraneous there: a per-row button implies a per-row link, and there is no
+  // such thing once a patient has joined -- their invite token is consumed at
+  // that moment. Minting them a permanent personal one was considered and
+  // REJECTED: resolving it would have to say WHICH ADDRESS it belongs to, and
+  // "this email address belongs to a physical therapy patient" is individually
+  // identifiable health information, sitting in a text message forever and
+  // logged by API Gateway every time it is opened. An invite link accepts that
+  // for 14 days because it has no choice; a permanent one has a choice.
   //
-  // ⚠️ A FAILED CLIPBOARD WRITE PUTS THE LINK ON SCREEN INSTEAD OF CLAIMING
-  // SUCCESS -- same as the pending rows. navigator.clipboard is absent outside a
-  // secure context and can reject inside one.
-  async function copySignInLink(name) {
-    const url = `${window.location.origin}/login`
+  // ⛔ IT COPIES THE INSTRUCTION, NOT A BARE URL, AND THAT IS THE POINT OF IT.
+  // David: "I only ever wanted a url to send after they joined, and with maybe
+  // the instruction for accessing the check in." Someone who has lost their way
+  // back does not only need the address, they need to know what happens when
+  // they get there. The exact text is rendered on the card, so what lands in the
+  // clipboard is never a surprise, and the URL inside it stays selectable for a
+  // manager who wants only that.
+  //
+  // Derived from the running origin, never hardcoded, the same reason the
+  // onboard page derives its own link: no URL to remember to update, and it is
+  // correct on localhost too.
+  const signInUrl = `${window.location.origin}/login`
+  const signInMessage =
+    `Check in with GlowPT at ${signInUrl}. Enter your email address and we’ll send you a code to sign in.`
+
+  // ⚠️ THE BUTTON REPORTS ITS OWN RESULT rather than writing to a message slot.
+  // There is one control on this card and the text it copies is already on
+  // screen, so a failed write leaves the manager able to select it by hand --
+  // which is the fallback the pending rows had to be given explicitly.
+  const [copyState, setCopyState] = useState('')
+  const copyTimer = useRef(null)
+  async function copySignInMessage() {
+    clearTimeout(copyTimer.current)
     try {
-      await navigator.clipboard.writeText(url)
-      showFlash(`Sign-in link copied. Send it to ${name} so they can check in.`)
+      await navigator.clipboard.writeText(signInMessage)
+      setCopyState('done')
     } catch {
-      setNotice(`Couldn’t copy automatically. The sign-in link is ${url}`)
+      setCopyState('failed')
     }
+    copyTimer.current = setTimeout(() => setCopyState(''), 4000)
   }
 
   async function handleRestore(patientId) {
@@ -610,13 +625,6 @@ export default function Dashboard() {
             </select>
           </div>
         )
-      case 'signin':
-        return (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: FLEX_ALIGN[c.align] }}>
-            <button style={s.copyRowBtn} title="Copy the GlowPT sign-in link to send to this patient"
-              onClick={() => copySignInLink(r.name)}>Copy Link</button>
-          </div>
-        )
       case 'archive':
         return (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: FLEX_ALIGN[c.align] }}>
@@ -696,6 +704,32 @@ export default function Dashboard() {
               )}
               <PendingList people={pendingPatients} onCopied={setPatientNotice}
                 onResend={resendInvite} onCancel={handleCancelInvite} resending={resending} />
+            </div>
+
+            {/* ⚠️ ITS OWN CARD, DIRECTLY UNDER THE INVITE FORM, BECAUSE IT DOES
+                THE OPPOSITE JOB. Inviting brings someone NEW in; this helps
+                someone who is ALREADY in and cannot find their way back. Folding
+                it into the invite card would put two different jobs under one
+                heading, and folding it into the roster implied a per-patient link
+                that does not exist. */}
+            <div style={s.care}>
+              <div style={s.careHead}>Patient Sign-In Link</div>
+              <div style={s.signInLead}>
+                For a patient who has already joined and needs to get back to their
+                check-in. The same link works for everyone, so there is nothing to
+                look up.
+              </div>
+              <div style={s.signInBox}>{signInMessage}</div>
+              <div style={s.signInRow}>
+                <button type="button" style={s.inviteBtn} onClick={copySignInMessage}>
+                  {copyState === 'done' ? 'Copied ✓' : copyState === 'failed' ? 'Couldn’t Copy' : 'Copy Message'}
+                </button>
+                <span style={s.signInHint}>
+                  {copyState === 'failed'
+                    ? 'Select the text above and copy it by hand.'
+                    : 'Paste it into a text or an email.'}
+                </span>
+              </div>
             </div>
 
             {/* Care team — invite therapists and see how many patients each carries. */}
@@ -778,18 +812,19 @@ export default function Dashboard() {
               <span style={s.legendNone}><span style={s.noCheckin} /> No check-in</span>
             </div>
             <div style={s.scroll}>
-              {/* Manager total: 140+64+72+44+82+170+76+92 = 740 of columns,
-                  + 7 gaps of 12 = 84, + 32 padding = 856, + 2 for the ROW's 1px
-                  border, which the header does not have = 858.
-                  ⚠️ THE +2 IS NOT PADDING-FOR-LUCK. At exactly 856 the row's
-                  border eats 2px of its content box, and the only track that can
-                  give it up is the Patient column's minmax -- so the header sat
-                  140 wide over a 138 cell. Measured, not guessed. (The old 780
-                  hid this because it carried 12px of slack.)
-                  ⚠️ AND IT HAS TO GROW WITH EVERY COLUMN ADDED. A floor below the
-                  real width lets the grid squeeze the columns instead of
+              {/* Manager total: 140+64+72+44+82+170+92 = 664 of columns,
+                  + 6 gaps of 12 = 72, + 32 padding = 768, + 2 for the ROW's 1px
+                  border, which the header does not have = 770.
+                  ⚠️ THE +2 IS NOT PADDING-FOR-LUCK, and the old 780 carried slack
+                  that hid it: at an exact fit the row's border eats 2px of its
+                  content box, and the only track that can give it up is the
+                  Patient column's minmax, so the header sits 140 wide over a 138
+                  cell. Measured on 2026-09-06, when an eighth column briefly made
+                  the fit exact and surfaced it.
+                  ⚠️ RECOMPUTE THIS WHENEVER A COLUMN IS ADDED OR REMOVED. Below
+                  the real width the grid squeezes the columns instead of
                   scrolling, which quietly undoes their measured ceilings. */}
-              <div style={{ minWidth: isManager ? 858 : 560 }}>
+              <div style={{ minWidth: isManager ? 770 : 560 }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
                   {rosterColumns.map(c => <div key={c.key} style={{ textAlign: c.align }}>{c.label}</div>)}
                 </div>
