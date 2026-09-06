@@ -10,12 +10,16 @@ import { FEELINGS } from '../lib/feelings'
 // component, so the two screens cannot drift. Same rule as lib/feelings.js and
 // LogoMark, and for the same reason.
 //
-// SIZES (David, 2026-09-06): the FACE is the hero and the number is secondary.
-// The check-in card used to run a 36px numeral over a 20px face, which put the
-// weight on the digit; he asked for the number smaller and the face bigger, on
-// BOTH screens. Change them here and only here.
-const FACE_SIZE = 30
-const NUM_SIZE = 22
+// SIZES (David, 2026-09-06). THE CARD IS THE OLD PATIENT CHECK-IN CARD: same
+// padding, same gaps, same height, same air. That is the one he called nice.
+// Inside it the FACE is now the hero at 36px, the size the numeral used to be,
+// and the numeral is one step down at 26. ⛔ THE FIRST ATTEMPT GOT THIS
+// BACKWARDS: it kept the old manager legend's small 22px numeral, nudged the
+// face to 30, and shrank the patient card to match, so BOTH screens ended up
+// looking like the cramped legend he had complained about. He said so, in
+// capitals. Do not shrink this card to make it "fit"; it fits.
+const FACE_SIZE = 36
+const NUM_SIZE = 26
 const WORD_SIZE = 10
 
 const styles = {
@@ -27,7 +31,7 @@ const styles = {
     background: selected ? '#F5A81A' : '#1a2840',
     cursor: interactive ? 'pointer' : 'default',
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    padding: '12px 4px 10px', gap: 6,
+    padding: '14px 6px 10px', gap: 6,
     transform: selected ? 'scale(1.06)' : 'scale(1)',
     transition: 'all 0.2s',
     boxShadow: selected ? '0 4px 18px rgba(245,168,26,0.4)' : 'none',
