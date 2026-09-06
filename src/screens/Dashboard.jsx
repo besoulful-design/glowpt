@@ -85,7 +85,7 @@ const s = {
   // the render. textAlign is stated because s.page centres the whole screen.
   // maxWidth + auto margins match the roster block below, so the legend's left
   // edge sits over the Patient column rather than floating out to the page edge.
-  legendWrap: { padding: '0 16px 16px', textAlign: 'left', maxWidth: 680, margin: '0 auto', boxSizing: 'border-box' },
+  legendWrap: { padding: '0 16px 16px', textAlign: 'left', maxWidth: 708, margin: '0 auto', boxSizing: 'border-box' },
   legendHead: { display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 8 },
   legendLabel: { fontSize: 11.5, lineHeight: 1.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
   legendNone: { fontSize: 11.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.4)', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' },
@@ -172,7 +172,14 @@ const ROSTER_COLUMNS = [
   // a wrapping flex container, so its min-content contribution is one word wide.
   { key: 'patient',   label: 'Patient',       w: 'minmax(100px,124px)', align: 'center', plain: true },
   { key: 'avg',       label: 'Avg Mood',      w: '64px',                align: 'center' },
-  { key: 'trend',     label: '3-Day Trend',   w: '72px',                align: 'center' },
+  // ⚠️ "3-Day Trend" WAS A LIE, MILDLY. This renders `cs.slice(0, 3)`, the last
+  // three CHECK-INS, regardless of the dates on them: for a patient who checks in
+  // daily the two are identical, but for a sporadic one those three faces can
+  // span a fortnight and nothing said so. Deliberate since 2026-07-15 ("cut from
+  // 7 faces to the last 3 check-ins"), but the header was never revisited.
+  // The label is longer than its own content needs (68px of slots), so this
+  // column is now header-bound rather than content-bound.
+  { key: 'trend',     label: 'Last 3 Check-Ins', w: '100px',             align: 'center' },
   { key: 'streak',    label: 'Streak',        w: '44px',                align: 'center' },
   { key: 'last',      label: 'Last Check-In', w: '82px',                align: 'center' },
   // Managers assign and archive; a therapist sees their own caseload and neither.
@@ -849,9 +856,9 @@ export default function Dashboard() {
               </div>
             </div>
             <div style={s.scroll}>
-              {/* Manager total: 124+64+72+44+82+132+56 = 574 of columns,
-                  + 6 gaps of 12 = 72, + 32 padding = 678, + 2 for the ROW's 1px
-                  border, which the header does not have = 680.
+              {/* Manager total: 124+64+100+44+82+132+56 = 602 of columns,
+                  + 6 gaps of 12 = 72, + 32 padding = 706, + 2 for the ROW's 1px
+                  border, which the header does not have = 708.
                   ⚠️ THE +2 IS NOT PADDING-FOR-LUCK, and the old 780 carried slack
                   that hid it: at an exact fit the row's border eats 2px of its
                   content box, and the only track that can give it up is the
@@ -869,7 +876,7 @@ export default function Dashboard() {
                   complaint the tightening was for. margin auto centres it under a
                   centred page and resolves to 0 when the content is wider than the
                   scroll box, so it cannot push the left edge out of reach. */}
-              <div style={{ minWidth: isManager ? 680 : 560, maxWidth: isManager ? 680 : 560, margin: '0 auto' }}>
+              <div style={{ minWidth: isManager ? 708 : 560, maxWidth: isManager ? 708 : 560, margin: '0 auto' }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
                   {rosterColumns.map(c => <div key={c.key} style={{ textAlign: c.align }}>{c.label}</div>)}
                 </div>
