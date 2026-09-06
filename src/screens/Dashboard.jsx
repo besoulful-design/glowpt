@@ -81,21 +81,22 @@ const s = {
     background: kind === 'low' ? 'rgba(192,85,77,0.18)' : 'rgba(245,168,26,0.16)',
     color: kind === 'low' ? '#e79a92' : '#FBC02D', border: `1px solid ${kind === 'low' ? 'rgba(192,85,77,0.4)' : 'rgba(245,168,26,0.4)'}` }),
   ok: { fontSize: 12, color: 'rgba(155,176,106,0.9)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
-  // ⚠️ NOT A FLEX ROW, DELIBERATELY -- see the note at the render. Flex can only
-  // wrap at its gaps; this needs to wrap between words. textAlign is stated
-  // because s.page centres the screen and inline text would otherwise follow it.
-  // lineHeight is stated because the 17px faces and the 12px dot share the line
-  // with 12px text, and because body sets an ABSOLUTE 26.1px that would inherit
-  // here unchanged (the trap recorded for the landing footer on 2026-09-03).
-  legend: { padding: '0 16px 16px', fontSize: 12, lineHeight: 1.9, color: 'rgba(245,239,228,0.55)', textAlign: 'left' },
-  legendLabel: { fontSize: 11.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
-  legendEnd: { color: 'rgba(245,239,228,0.45)' },
-  // Tight gap on purpose: the five read as one scale, not five separate items.
-  // Nowrap by nature (inline-flex), so the ramp never breaks across two lines.
-  legendFaces: { display: 'inline-flex', alignItems: 'center', gap: 3, verticalAlign: 'middle' },
-  // marginLeft replaces the 16px flex gap this item used to get for free.
-  // Without it "Feeling great" and "No check-in" run together on one line.
-  legendNone: { whiteSpace: 'nowrap', marginLeft: 16 },
+  // The legend, shaped like the patient's own check-in scale -- see the note at
+  // the render. textAlign is stated because s.page centres the whole screen.
+  // maxWidth + auto margins match the roster block below, so the legend's left
+  // edge sits over the Patient column rather than floating out to the page edge.
+  legendWrap: { padding: '0 16px 16px', textAlign: 'left', maxWidth: 680, margin: '0 auto', boxSizing: 'border-box' },
+  legendLabel: { fontSize: 11.5, lineHeight: 1.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600, marginBottom: 8 },
+  // flex + flex:1 cells, matching PatientApp's feelingScale. Equal columns mean
+  // the row can never wrap: each cell wraps its own word instead.
+  // ⚠️ maxWidth IS LOAD-BEARING. flex:1 cells across the full 980px wrap spread
+  // the six faces so far apart they stop reading as one scale. 560 keeps roughly
+  // the density of the patient's own check-in row, which lives in a 430px shell.
+  legendScale: { display: 'flex', gap: 8, maxWidth: 560 },
+  legendCell: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 },
+  legendFace: { fontSize: 18, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 18 },
+  // 10px and centred, the same as the patient scale's own word.
+  legendWord: { fontSize: 10, lineHeight: 1.2, letterSpacing: '0.03em', color: 'rgba(245,239,228,0.4)', fontWeight: 500, textAlign: 'center' },
   rosterHead: { display: 'grid', gap: 12, padding: '0 16px 10px', fontSize: 11.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
   row: { display: 'grid', gap: 12, alignItems: 'center', background: '#1a2840', border: '1px solid rgba(245,239,228,0.06)', borderRadius: 6, padding: '14px 16px', marginBottom: 8 },
   empty: { background: '#1a2840', border: '1px dashed rgba(245,168,26,0.3)', borderRadius: 8, padding: 32, textAlign: 'center', color: 'rgba(245,239,228,0.6)' },
@@ -147,20 +148,34 @@ const s = {
 // is on track, and a taller row suits one needing attention.
 // Re-measure before widening any of these.
 const ROSTER_COLUMNS = [
-  { key: 'patient',   label: 'Patient',       w: 'minmax(110px,140px)', align: 'center', plain: true },
+  // ⚠️ RE-MEASURED 2026-09-06 against the REAL Riverside names, not the two
+  // short RidgePT ones. Every name that exists is <= 100px ("Grace Bennett"),
+  // and 140 did NOT guarantee a long name fitted anyway -- "Christopher
+  // Alvarado" is 144 and wrapped at 140 exactly as it wraps at 124. So the old
+  // cap was buying nothing and costing 16px of air on every row.
+  // The cap still exists so that "James Okafor [Inactive]" (172px unwrapped)
+  // wraps its pill to a second line, which is the deliberate 2026-09-05 choice.
+  // ⛔ fit-content(140px) WAS TRIED AND COLLAPSED THE TRACK TO 40px: the cell is
+  // a wrapping flex container, so its min-content contribution is one word wide.
+  { key: 'patient',   label: 'Patient',       w: 'minmax(100px,124px)', align: 'center', plain: true },
   { key: 'avg',       label: 'Avg Mood',      w: '64px',                align: 'center' },
   { key: 'trend',     label: '3-Day Trend',   w: '72px',                align: 'center' },
   { key: 'streak',    label: 'Streak',        w: '44px',                align: 'center' },
   { key: 'last',      label: 'Last Check-In', w: '82px',                align: 'center' },
   // Managers assign and archive; a therapist sees their own caseload and neither.
-  { key: 'therapist', label: 'Therapist',     w: 'minmax(150px,170px)', align: 'center', plain: true, managerOnly: true },
+  // The select measures 107px for its longest option; 132 leaves room for a
+  // therapist with a longer name than "Sam Torres" without the option clipping.
+  // It no longer absorbs slack -- Archive ends the row now, not this.
+  { key: 'therapist', label: 'Therapist',     w: '132px',               align: 'center', plain: true, managerOnly: true },
   // ⚠️ ARCHIVE IS ITS OWN COLUMN, NOT A LINK UNDER THE THERAPIST DROPDOWN (David,
   // 2026-09-06: "that looks crazy"). It was stacked under the select because both
   // are manager-only, which is a reason they share a ROLE, not a reason they share
   // a CELL: one sets who treats the patient, the other takes them off the roster.
   // Blank header on purpose -- an action column labelled "Archive" above a button
   // reading "Archive" is noise. 92px is the button's own width plus breathing room.
-  { key: 'archive',   label: '',              w: '92px',                align: 'center', plain: true, managerOnly: true },
+  // The button itself is 40px and the header is blank, so 92 was more than
+  // double what anything in the column needed.
+  { key: 'archive',   label: '',              w: '56px',                align: 'center', plain: true, managerOnly: true },
 ]
 
 // text-align does not move flex items, so a flex cell needs the flex equivalent.
@@ -448,7 +463,7 @@ export default function Dashboard() {
   // correct on localhost too.
   const signInUrl = `${window.location.origin}/login`
   const signInMessage =
-    `Check in with GlowPT at ${signInUrl}. Enter your email address and we’ll send you a code to sign in.`
+    `Check in with GlowPT at ${signInUrl}. Enter your email address and we’ll email you a code to sign in.`
 
   // ⚠️ THE BUTTON REPORTS ITS OWN RESULT rather than writing to a message slot.
   // There is one control on this card and the text it copies is already on
@@ -715,9 +730,7 @@ export default function Dashboard() {
             <div style={s.care}>
               <div style={s.careHead}>Patient Sign-In Link</div>
               <div style={s.signInLead}>
-                For a patient who has already joined and needs to get back to their
-                check-in. The same link works for everyone, so there is nothing to
-                look up.
+                For a patient who has already joined and needs to get back to their check-in.
               </div>
               <div style={s.signInBox}>{signInMessage}</div>
               <div style={s.signInRow}>
@@ -788,33 +801,37 @@ export default function Dashboard() {
 
         {!loading && roster.length > 0 && (
           <>
-            {/* ⚠️ ONE RUN OF FACES, NOT FIVE LABELLED ITEMS, AND FLOWING TEXT
-                RATHER THAN A FLEX ROW. Both halves were needed, and MEASURING is
-                what showed it: naming all five faces put seven items in a
-                wrap-happy flex row, but simply collapsing them to a scale changed
-                the height not at all below 393px -- a flex row can only break at
-                its 16px gaps, so a 251px scale that will not sit beside anything
-                takes a whole row either way. As inline text it breaks between
-                words instead, which halves it: 118px -> 62px at 375/390/393,
-                78 -> 39 on a desktop. The five faces stay one nowrap group so the
-                ramp itself can never split.
-                "3-Day Trend" left the label because the roster column header
-                immediately below already says it. */}
-            <div style={s.legend}>
-              <span style={s.legendLabel}>Daily Feeling</span>{' '}
-              <span style={s.legendEnd}>{FEELINGS[1].word}</span>{' '}
-              <span style={s.legendFaces}>
+            {/* ⛔ THIS IS THE PATIENT CHECK-IN SCALE, DELIBERATELY. Equal cells
+                across one row, face above word, exactly like the five buttons a
+                patient taps (PatientApp `feelingScale`). It has now been three
+                shapes in one morning -- five labelled flex items (three rows on a
+                phone), then flowing text (two rows) -- and David's answer was the
+                right one: make it look like the thing it is explaining. Staff and
+                patient already share the faces themselves (lib/feelings.js); this
+                makes them share the layout too, and it fits in ONE row at every
+                width because each cell wraps its own word.
+                ⚠️ SIX CELLS, NOT FIVE: "No check-in" is a value the trend really
+                renders, so it belongs in the scale rather than trailing after it
+                as a seventh loose item, which is what made the old versions wrap. */}
+            <div style={s.legendWrap}>
+              <div style={s.legendLabel}>Daily Feeling</div>
+              <div style={s.legendScale}>
                 {[1, 2, 3, 4, 5].map(n => (
-                  <span key={n} style={s.face} title={FEELINGS[n].word}>{FEELINGS[n].emoji}</span>
+                  <div key={n} style={s.legendCell}>
+                    <div style={s.legendFace}>{FEELINGS[n].emoji}</div>
+                    <div style={s.legendWord}>{FEELINGS[n].word}</div>
+                  </div>
                 ))}
-              </span>{' '}
-              <span style={s.legendEnd}>{FEELINGS[5].word}</span>{' '}
-              <span style={s.legendNone}><span style={s.noCheckin} /> No check-in</span>
+                <div style={s.legendCell}>
+                  <div style={s.legendFace}><span style={s.noCheckin} /></div>
+                  <div style={s.legendWord}>No check-in</div>
+                </div>
+              </div>
             </div>
             <div style={s.scroll}>
-              {/* Manager total: 140+64+72+44+82+170+92 = 664 of columns,
-                  + 6 gaps of 12 = 72, + 32 padding = 768, + 2 for the ROW's 1px
-                  border, which the header does not have = 770.
+              {/* Manager total: 124+64+72+44+82+132+56 = 574 of columns,
+                  + 6 gaps of 12 = 72, + 32 padding = 678, + 2 for the ROW's 1px
+                  border, which the header does not have = 680.
                   ⚠️ THE +2 IS NOT PADDING-FOR-LUCK, and the old 780 carried slack
                   that hid it: at an exact fit the row's border eats 2px of its
                   content box, and the only track that can give it up is the
@@ -824,7 +841,15 @@ export default function Dashboard() {
                   ⚠️ RECOMPUTE THIS WHENEVER A COLUMN IS ADDED OR REMOVED. Below
                   the real width the grid squeezes the columns instead of
                   scrolling, which quietly undoes their measured ceilings. */}
-              <div style={{ minWidth: isManager ? 770 : 560 }}>
+              {/* ⚠️ maxWidth AS WELL AS minWidth. Every track is a fixed px, so
+                  nothing absorbs leftover space: without this the row BOX stretches
+                  to the full 980 wrap while its content stops at 680, leaving a
+                  quarter of every row empty on a desktop. That gap grew when the
+                  columns were tightened, which would have half-answered the very
+                  complaint the tightening was for. margin auto centres it under a
+                  centred page and resolves to 0 when the content is wider than the
+                  scroll box, so it cannot push the left edge out of reach. */}
+              <div style={{ minWidth: isManager ? 680 : 560, maxWidth: isManager ? 680 : 560, margin: '0 auto' }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
                   {rosterColumns.map(c => <div key={c.key} style={{ textAlign: c.align }}>{c.label}</div>)}
                 </div>

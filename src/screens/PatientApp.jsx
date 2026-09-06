@@ -219,6 +219,21 @@ export default function PatientApp() {
       const feelingWord = selectedFeeling ? feelingData[selectedFeeling].word : 'not rated'
       const isPlanningTo = movements.includes('Planning to do my exercises')
 
+      // ⚠️ THE SCORE IS STILL HANDED OVER, AND THE MODEL IS TOLD NOT TO SAY IT.
+      // The number is the clearest signal it has for pitching the TONE, so it
+      // stays in the data; what changed on 2026-09-06 is the instruction below,
+      // because a reflection that opens "I see you're at a 3 today" reads a
+      // patient their own metric back. The word is the app's shared language
+      // (lib/feelings.js) and is what the rest of the product says.
+      //
+      // ⛔ NOT NEW, and David asked: `Feeling score: N out of 5` has been in this
+      // prompt since the first V2 commit on 2026-07-12. Nothing ever told the
+      // model to avoid the digit, so it was always free to use it and sometimes
+      // did (a 2026-09-04 reflection read back "the 4-out-of-5" and was recorded
+      // approvingly at the time). This is a prompt instruction, so it is a
+      // request rather than a guarantee -- unlike the dash rule there is no
+      // deterministic backstop, because "you're at a 3" cannot be rewritten into
+      // prose by a regex. If it recurs, the answer is a firmer prompt, not code.
       const prompt = `You are GlowPT, a warm and encouraging wellness companion for physical therapy patients. Write a short, personal response (3-4 sentences max) for ${firstName} based on their daily check-in. Be warm, specific, and uplifting, never clinical. Use their name once.
 
 Their check-in today:
@@ -226,7 +241,7 @@ Their check-in today:
 - Movement: ${movementText}${isPlanningTo ? ' (note: they are planning to do their exercises later today, not done yet)' : ''}
 - Their note: "${noteText}"
 
-Respond directly to ${firstName} in second person. Reference what they actually shared. End with one gentle encouragement. Never join two clauses with a dash of any kind, not an em dash, an en dash or a hyphen. Use a period or a comma instead. Hyphens inside words like check-in are fine.`
+Respond directly to ${firstName} in second person. Reference what they actually shared. Refer to how they are feeling in WORDS, never by the number: write "a tougher day" or "getting there", never "you're at a 3". End with one gentle encouragement. Never join two clauses with a dash of any kind, not an em dash, an en dash or a hyphen. Use a period or a comma instead. Hyphens inside words like check-in are fine.`
 
       // The reflection now comes from POST /ai-response (behind the Cognito
       // authorizer). Falls back gracefully on any error.
