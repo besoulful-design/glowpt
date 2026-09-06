@@ -2,12 +2,36 @@ import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { InfraStack } from '../lib/infra-stack';
 
+const ENV = { account: '111111111111', region: 'us-east-1' };
+
+/**
+ * An App whose VPC gets the REAL us-east-1 availability zones.
+ *
+ * ⚠️ WITHOUT THIS THE WHOLE SUITE THROWS. A synth-only stack has no AZ lookup, so
+ * CDK hands it dummy1a/dummy1b/dummy1c -- and the Cognito interface endpoint is
+ * deliberately pinned to us-east-1b (AWS does not offer cognito-idp in every AZ;
+ * 1a is one of the ones it does not), so filtering the isolated subnets by that
+ * AZ found nothing and every test died on CannotCreateEndpointSubnets.
+ *
+ * ⛔ THE FIX BELONGS HERE, NOT IN lib/api.ts. Making the pin fall back to
+ * "whatever AZ this VPC happens to have" would turn a loud CloudFormation refusal
+ * into a silent deploy into an AZ where the endpoint does not exist. The pin is
+ * correct; the test simply has to model a real region.
+ */
+function app() {
+  return new cdk.App({
+    context: {
+      [`availability-zones:account=${ENV.account}:region=${ENV.region}`]: [
+        'us-east-1a', 'us-east-1b', 'us-east-1c',
+        'us-east-1d', 'us-east-1e', 'us-east-1f',
+      ],
+    },
+  });
+}
+
 // Smoke test: the stack synthesizes and contains the core pieces.
 test('foundation synthesizes with a Multi-AZ encrypted database and a proxy', () => {
-  const app = new cdk.App();
-  const stack = new InfraStack(app, 'TestStack', {
-    env: { account: '111111111111', region: 'us-east-1' },
-  });
+  const stack = new InfraStack(app(), 'TestStack', { env: ENV });
   const template = Template.fromStack(stack);
 
   template.hasResourceProperties('AWS::RDS::DBInstance', {
@@ -20,10 +44,7 @@ test('foundation synthesizes with a Multi-AZ encrypted database and a proxy', ()
 
 // Phase 3: the data API. The authorizer authenticates; RLS authorizes.
 test('data API: HTTP API with a Cognito JWT authorizer, one public route, scoped CORS', () => {
-  const app = new cdk.App();
-  const stack = new InfraStack(app, 'TestStack', {
-    env: { account: '111111111111', region: 'us-east-1' },
-  });
+  const stack = new InfraStack(app(), 'TestStack', { env: ENV });
   const template = Template.fromStack(stack);
 
   // Exactly one HTTP API, and its CORS is scoped to named origins, never '*'.
@@ -85,10 +106,7 @@ test('data API: HTTP API with a Cognito JWT authorizer, one public route, scoped
 
 // Phase 4: ai-response behind the same authorizer, but OUTSIDE the VPC.
 test('ai-response: POST /ai-response is JWT-protected and its Lambda is not in the VPC', () => {
-  const app = new cdk.App();
-  const stack = new InfraStack(app, 'TestStack', {
-    env: { account: '111111111111', region: 'us-east-1' },
-  });
+  const stack = new InfraStack(app(), 'TestStack', { env: ENV });
   const template = Template.fromStack(stack);
 
   // The route exists and requires the JWT authorizer (the old function's fix).
