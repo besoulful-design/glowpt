@@ -76,7 +76,10 @@ const s = {
   emptyTeam: { fontSize: 13.5, color: 'rgba(245,239,228,0.5)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   greet: { fontSize: 14.5, color: '#FBC02D', fontWeight: 500, marginBottom: 6 },
   sel: { background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '6px 8px', color: '#f5efe4', fontSize: 13, fontFamily: 'inherit', maxWidth: '100%' },
-  name: { fontSize: 15, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  // The cell is a column: the stacked name, then any flag pills under it.
+  // textAlign is stated because the stack is inline text inside a flex column.
+  name: { fontSize: 15, fontWeight: 500, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' },
+  nameStack: { display: 'flex', flexDirection: 'column', lineHeight: 1.25 },
   cell: { fontSize: 14, color: 'rgba(245,239,228,0.7)' },
   face: { fontSize: 17, lineHeight: 1 },
   // Each of the 7 trend days is an equal-width slot so emoji (which render wider
@@ -93,7 +96,9 @@ const s = {
     background: 'transparent', border: '1.5px solid rgba(245,239,228,0.45)',
     display: 'inline-block', verticalAlign: 'middle',
   },
-  pill: (kind) => ({ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, marginRight: 6, display: 'inline-block',
+  // lineHeight is stated: body sets an ABSOLUTE 26.1px that inherits as-is, so
+  // without it an 11px pill was 34px tall (the landing-footer trap, 2026-09-03).
+  pill: (kind) => ({ fontSize: 11, fontWeight: 600, lineHeight: 1.4, padding: '3px 9px', borderRadius: 20, display: 'inline-block', whiteSpace: 'nowrap',
     background: kind === 'low' ? 'rgba(192,85,77,0.18)' : 'rgba(245,168,26,0.16)',
     color: kind === 'low' ? '#e79a92' : '#FBC02D', border: `1px solid ${kind === 'low' ? 'rgba(192,85,77,0.4)' : 'rgba(245,168,26,0.4)'}` }),
   ok: { fontSize: 12, color: 'rgba(155,176,106,0.9)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
@@ -178,10 +183,15 @@ const ROSTER_COLUMNS = [
   // earlier note here blamed min-content on the wrapping flex cell; that was the
   // wrong diagnosis for the right conclusion.) So the width is fixed, and a fixed
   // width has to hold the LONGEST name that must not wrap, across every clinic.
-  // 104 holds "Grace Bennett" (100px), the widest that exists. On a roster of
-  // Charlies and Timmys there will always be air, and the only way to remove it
-  // is to let real names wrap -- David's call, not a silent one.
-  { key: 'patient',   label: 'Patient',       w: 'minmax(90px,104px)',  align: 'center', plain: true },
+  // ✅ 2026-09-06 EVENING, DAVID'S CALL: EVERY NAME IS STACKED, first name over
+  // the rest (see PatientName), so the width no longer has to hold a full name.
+  // It has to hold the widest single WORD and the widest PILL. Measured with the
+  // real font against every real name on both clinics: "Peterson" 63px,
+  // "Bennett" 56, "Dr. Sam" 53; the "Low Mood" pill is 74 and "Inactive" 62.
+  // So the pill sets it: 76. (104 was "Grace Bennett" on one line; "Miracle
+  // Peterson" wrapped anyway at 104, which is what made stacking all of them
+  // the consistent answer.) Re-measure before widening; the header is 40.
+  { key: 'patient',   label: 'Patient',       w: '76px',                align: 'center', plain: true },
   { key: 'avg',       label: 'Avg Mood',      w: '64px',                align: 'center' },
   // ⚠️ "3-Day Trend" WAS A LIE, MILDLY. This renders `cs.slice(0, 3)`, the last
   // three CHECK-INS, regardless of the dates on them: for a patient who checks in
@@ -209,6 +219,23 @@ const ROSTER_COLUMNS = [
   { key: 'archive',   label: '',              w: '56px',                align: 'center', plain: true, managerOnly: true },
 ]
 
+// THE SIDEWAYS-SCROLL FLOOR, COMPUTED FROM THE COLUMNS RATHER THAN TYPED.
+// It was a hand-kept number (780, 858, 770, 680, 708, 688 in two days) with a
+// "recompute whenever a column changes" warning that had to be obeyed by hand.
+// Now it cannot drift: every track's px, plus a 12px gap between each pair,
+// plus the row's 32px of horizontal padding, plus 2 for the row's 1px border
+// (which the header does not have -- at an exact fit the border eats 2px of
+// the content box and the columns stop lining up; measured 2026-09-06).
+// Below this width the grid squeezes the columns instead of scrolling, which
+// quietly undoes their measured ceilings; above it, maxWidth stops the row box
+// stretching past its own content.
+const ROSTER_GAP = 12
+const ROSTER_PAD = 32
+function rosterFloor(cols) {
+  const px = cols.reduce((sum, c) => sum + Number(c.w.match(/(\d+)px\)?$/)[1]), 0)
+  return px + ROSTER_GAP * (cols.length - 1) + ROSTER_PAD + 2
+}
+
 // text-align does not move flex items, so a flex cell needs the flex equivalent.
 // That mismatch IS the bug described above; keep the two in step.
 const FLEX_ALIGN = { left: 'flex-start', center: 'center', right: 'flex-end' }
@@ -230,7 +257,33 @@ function Trend({ last3 }) {
   )
 }
 
-// Flag pills shown inline next to the patient's name. Nothing renders when a
+// THE NAME IS STACKED, FIRST NAME OVER THE REST, ON EVERY ROW (David,
+// 2026-09-06 evening: "stack the first and last names so that you can make the
+// patient column smaller"). Until then the column was 104px, sized to hold
+// "Grace Bennett" on one line, and a longer name such as "Miracle Peterson"
+// wrapped anyway, so rows were inconsistent AND the column carried air on
+// every short name. Stacking every name makes the column's width the widest
+// single WORD, not the widest full name, and makes every row look the same.
+// A one-word name ("Charlie") is one line; a title stays with the first name
+// ("Dr. Sam" / "Torres") so it never sits alone on a line.
+const TITLES = new Set(['dr', 'dr.', 'mr', 'mr.', 'mrs', 'mrs.', 'ms', 'ms.', 'miss', 'prof', 'prof.'])
+function splitName(full) {
+  const parts = (full || '').trim().split(/\s+/).filter(Boolean)
+  if (parts.length <= 1) return [parts[0] || '', '']
+  const head = TITLES.has(parts[0].toLowerCase()) && parts.length > 2 ? parts.slice(0, 2) : parts.slice(0, 1)
+  return [head.join(' '), parts.slice(head.length).join(' ')]
+}
+function PatientName({ name }) {
+  const [first, rest] = splitName(name)
+  return (
+    <span style={s.nameStack}>
+      <span>{first}</span>
+      {rest && <span>{rest}</span>}
+    </span>
+  )
+}
+
+// Flag pills shown under the patient's name. Nothing renders when a
 // patient is on track — no news is good news.
 function NameFlags({ flags }) {
   if (!flags.length) return null
@@ -239,7 +292,6 @@ function NameFlags({ flags }) {
 
 // Friendly greeting name. Keep a leading title with the name ("Dr. Sam"), otherwise
 // just the first name ("David") so staff are greeted personally, not formally.
-const TITLES = new Set(['dr', 'dr.', 'mr', 'mr.', 'mrs', 'mrs.', 'ms', 'ms.', 'miss', 'prof', 'prof.'])
 function greetingName(full) {
   if (!full) return ''
   const parts = full.trim().split(/\s+/)
@@ -678,6 +730,7 @@ export default function Dashboard() {
 
   const rosterColumns = ROSTER_COLUMNS.filter(c => isManager || !c.managerOnly)
   const rosterCols = rosterColumns.map(c => c.w).join(' ')
+  const rosterWidth = rosterFloor(rosterColumns)
 
   // One cell renderer per column key. Only the CONTENT lives here; the width and
   // the alignment come from ROSTER_COLUMNS, so a cell can never disagree with
@@ -685,7 +738,7 @@ export default function Dashboard() {
   function rosterCell(c, r) {
     switch (c.key) {
       case 'patient':
-        return <div style={{ ...s.name, justifyContent: FLEX_ALIGN[c.align] }}><span>{r.name}</span><NameFlags flags={r.flags} /></div>
+        return <div style={{ ...s.name, alignItems: FLEX_ALIGN[c.align] }}><PatientName name={r.name} /><NameFlags flags={r.flags} /></div>
       case 'avg':
         return r.avg == null ? '—' : (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -888,18 +941,9 @@ export default function Dashboard() {
               <FeelingScale />
             </div>
             <div style={s.scroll}>
-              {/* Manager total: 104+64+100+44+82+132+56 = 582 of columns,
-                  + 6 gaps of 12 = 72, + 32 padding = 686, + 2 for the ROW's 1px
-                  border, which the header does not have = 688.
-                  ⚠️ THE +2 IS NOT PADDING-FOR-LUCK, and the old 780 carried slack
-                  that hid it: at an exact fit the row's border eats 2px of its
-                  content box, and the only track that can give it up is the
-                  Patient column's minmax, so the header sits 140 wide over a 138
-                  cell. Measured on 2026-09-06, when an eighth column briefly made
-                  the fit exact and surfaced it.
-                  ⚠️ RECOMPUTE THIS WHENEVER A COLUMN IS ADDED OR REMOVED. Below
-                  the real width the grid squeezes the columns instead of
-                  scrolling, which quietly undoes their measured ceilings. */}
+              {/* The width is rosterFloor(): computed from ROSTER_COLUMNS, so
+                  adding or removing a column can no longer leave a stale number
+                  here. See the note above rosterFloor. */}
               {/* ⚠️ maxWidth AS WELL AS minWidth. Every track is a fixed px, so
                   nothing absorbs leftover space: without this the row BOX stretches
                   to the full 980 wrap while its content stops at 680, leaving a
@@ -908,7 +952,7 @@ export default function Dashboard() {
                   complaint the tightening was for. margin auto centres it under a
                   centred page and resolves to 0 when the content is wider than the
                   scroll box, so it cannot push the left edge out of reach. */}
-              <div style={{ minWidth: isManager ? 688 : 560, maxWidth: isManager ? 688 : 560, margin: '0 auto' }}>
+              <div style={{ minWidth: rosterWidth, maxWidth: rosterWidth, margin: '0 auto' }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
                   {rosterColumns.map(c => <div key={c.key} style={{ textAlign: c.align }}>{c.label}</div>)}
                 </div>
@@ -998,3 +1042,4 @@ export default function Dashboard() {
     </div>
   )
 }
+
