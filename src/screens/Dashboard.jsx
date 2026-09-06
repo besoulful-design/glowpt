@@ -1092,5 +1092,3 @@ export default function Dashboard() {
 
 
 
-// TEMP-HARNESS-EXPORT
-export { ROSTER_COLUMNS, s as rosterStyles, Trend, NameFlags, PatientName, FLEX_ALIGN, rosterFloor, patientColumnWidth }
