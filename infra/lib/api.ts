@@ -109,13 +109,19 @@ export class Api extends Construct {
         DB_NAME: dbName,
         DB_PORT: '5432',
         SES_CONFIG_SET: props.configurationSetName,
+        USER_POOL_ID: props.userPool.userPoolId,
         APP_URL: props.appUrl ?? 'https://glowpt.app',
         FROM_EMAIL: 'GlowPT <no-reply@glowpt.app>',
       },
       bundling: {
         // pg + rds-signer as real node modules (pg's dynamic requires), the rest
         // esbuild-bundled. Same recipe proven by the post-confirmation Lambda.
-        nodeModules: ['pg', '@aws-sdk/rds-signer', '@aws-sdk/client-sesv2'],
+        nodeModules: [
+          'pg',
+          '@aws-sdk/rds-signer',
+          '@aws-sdk/client-sesv2',
+          '@aws-sdk/client-cognito-identity-provider',
+        ],
         target: 'node22',
       },
     });
@@ -124,6 +130,46 @@ export class Api extends Construct {
 
     // Mint an IAM auth token for exactly the glowpt_app DB user on this proxy.
     props.proxy.grantConnect(this.fn, dbUser);
+
+    // ⚠️ COGNITO REACHED THROUGH A VPC ENDPOINT, NOT THE INTERNET. This Lambda
+    // runs in isolated subnets with NO NAT, so every AWS call it makes needs its
+    // own interface endpoint -- the same reason weekly-summary owns an SES one.
+    // Without this, deleting a removed patient's login would simply hang until
+    // the Lambda timed out.
+    //
+    // 💲 IT COSTS ROUGHLY $15/mo (one ENI per AZ, two AZs). That is the price of
+    // "Remove" actually removing the person rather than just their rows. Dropping
+    // to a single subnet would halve it; the endpoint is reachable from the whole
+    // VPC either way.
+    const cognitoEndpointSg = new ec2.SecurityGroup(this, 'CognitoEndpointSg', {
+      vpc: props.vpc,
+      description: 'GlowPT Cognito IDP VPC endpoint (api)',
+      allowAllOutbound: true,
+    });
+    cognitoEndpointSg.addIngressRule(
+      lambdaSg,
+      ec2.Port.tcp(443),
+      'HTTPS to the Cognito user pools API from the api Lambda',
+    );
+    props.vpc.addInterfaceEndpoint('CognitoIdpEndpoint', {
+      service: ec2.InterfaceVpcEndpointAwsService.COGNITO_IDP,
+      subnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      securityGroups: [cognitoEndpointSg],
+      privateDnsEnabled: true,
+      open: false,
+    });
+
+    // ⛔ EXACTLY ONE COGNITO ACTION, ON EXACTLY ONE POOL. Removing a patient must
+    // delete their login, and nothing else here should ever touch Cognito. Do not
+    // widen this to AdminUpdateUserAttributes, AdminCreateUser or a wildcard: the
+    // API Lambda is the internet-facing surface, and the blast radius of a bug in
+    // it is bounded by this statement.
+    this.fn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['cognito-idp:AdminDeleteUser'],
+        resources: [props.userPool.userPoolArn],
+      }),
+    );
 
     // Send the staff invite email. Scoped to the one verified identity and the
     // one TLS-required config set, never a blanket ses:SendEmail on '*'.

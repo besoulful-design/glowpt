@@ -748,36 +748,88 @@ end $$;
 -- pool. That person keeps a login that now resolves to no clinic, so they land
 -- on the NoClinic screen and cannot see anything. Re-inviting the same address
 -- later works, because the invite flow already handles an existing account.
+-- purge_target: THE GUARDS FOR REMOVING A PATIENT, DECLARED ONCE, plus the two
+-- things the caller needs in order to act on them.
+--
+-- ⚠️ WHY THIS EXISTS SEPARATELY FROM purge_patient. Removing a patient has to
+-- delete their Cognito login as well as their rows, and only the API Lambda can
+-- call Cognito. Deleting the login FIRST is what makes the whole operation
+-- retryable: if the row delete then fails, the manager can press Remove again
+-- and the Cognito delete is a harmless no-op the second time. Doing it the other
+-- way round would leave records gone, a login behind, and no way to retry
+-- because the row the guards check has already been deleted.
+--
+-- It CHANGES NOTHING. It is the read half of the same operation, so the caller
+-- can learn the address under exactly the guards that will apply a moment later.
+-- purge_patient calls it too, so the rules cannot drift between the two halves.
+create or replace function public.purge_target(p_patient uuid)
+  returns table (email citext, clinic_id uuid)
+  language plpgsql security definer
+  set search_path = public set row_security = off
+as $$
+declare v_clinic uuid; v_discharged timestamptz; v_exists boolean;
+begin
+  select p.clinic_id from public.profiles p
+    where p.id = public.current_user_id() and p.role = 'manager' into v_clinic;
+  if v_clinic is null then raise exception 'Only a clinic manager can remove a patient'; end if;
+  if p_patient = public.current_user_id() then raise exception 'You cannot remove yourself'; end if;
+
+  select true, p.discharged_at from public.profiles p
+   where p.id = p_patient and p.clinic_id = v_clinic and p.role = 'patient'
+   into v_exists, v_discharged;
+  if v_exists is not true then raise exception 'Patient not in your clinic'; end if;
+
+  -- ⛔ ARCHIVE FIRST. Permanent removal is never one click from the live roster,
+  -- whatever a screen chooses to render. (The UI calls this state "Archived";
+  -- the column is still `discharged_at` -- see the note on discharge_patient.)
+  if v_discharged is null then
+    raise exception 'Archive this patient first. Removing is permanent.';
+  end if;
+
+  return query
+    select u.email, v_clinic from public.users u where u.id = p_patient;
+end $$;
+
+-- purge_patient: permanently remove an archived patient and everything they wrote.
+--
+-- ⚠️ THIS DELETES CHECK-INS. Until 2026-09-06 it refused any patient who had ever
+-- checked in, so it only ever cleared up mistakes. David's call: a manager must
+-- be able to remove a real patient too, because THE MANAGER IS THE COVERED ENTITY
+-- and that is their decision to make, not ours to block. GlowPT is the business
+-- associate and acts on their instruction. The deliberateness now lives in the
+-- screen (the manager types the patient's name) and in the archive-first guard
+-- here, rather than in a blanket refusal.
+--
+-- ⚠️ IT DOES NOT DELETE THE COGNITO LOGIN -- SQL cannot reach Cognito. The API
+-- handler deletes that first. Calling this function on its own therefore leaves
+-- the person able to sign in with no clinic, which was the state EVERY removal
+-- left behind before 2026-09-06. Go through the API route, not this function.
 create or replace function public.purge_patient(p_patient uuid)
   returns void
   language plpgsql security definer
   set search_path = public set row_security = off
 as $$
-declare v_clinic uuid; v_checkins integer; v_discharged timestamptz;
+declare v_email citext; v_clinic uuid;
 begin
-  select clinic_id from public.profiles
-    where id = public.current_user_id() and role = 'manager' into v_clinic;
-  if v_clinic is null then raise exception 'Only a clinic manager can remove a patient'; end if;
-  if p_patient = public.current_user_id() then raise exception 'You cannot remove yourself'; end if;
+  -- Guards live in purge_target and are re-applied HERE, inside this
+  -- transaction, because state can change between the API's two calls.
+  select t.email, t.clinic_id into v_email, v_clinic from public.purge_target(p_patient) t;
 
-  select discharged_at from public.profiles
-   where id = p_patient and clinic_id = v_clinic and role = 'patient' into v_discharged;
-  if not found then raise exception 'Patient not in your clinic'; end if;
-  if v_discharged is null then
-    raise exception 'Discharge this patient first. Removing is permanent.';
-  end if;
-
-  select count(*) from public.checkins where user_id = p_patient into v_checkins;
-  if v_checkins > 0 then
-    raise exception 'This patient has % check-in(s), so their record is kept. Leave them discharged instead.', v_checkins;
-  end if;
-
-  -- Cascades profiles and consents. Their pending/consumed invite row is keyed
-  -- by email and is removed too, so the address is clean to re-invite.
+  -- Cascades profiles, checkins, consents and their access_log rows as actor.
+  -- Their pending/consumed invite row is keyed by email and is removed too, so
+  -- the address is clean to re-invite.
   delete from public.staff_invites
-   where clinic_id = v_clinic
-     and lower(email) = (select lower(email) from public.users where id = p_patient);
+   where clinic_id = v_clinic and lower(email) = lower(v_email);
   delete from public.users where id = p_patient;
+
+  -- ⚠️ RECORDED, BUT WITHOUT NAMING THEM, AND THAT IS THE POINT. A permanent
+  -- deletion leaving no trace of who did it or when is the wrong shape for a
+  -- HIPAA product. But storing target_user_id here would keep a pointer to the
+  -- person we just deleted, and combined with the 35-day RDS backups that
+  -- re-identifies them -- which defeats the deletion the manager just asked for.
+  -- So: who did it, which clinic, when. Not who it was.
+  insert into public.access_log (actor_id, clinic_id, action)
+  values (public.current_user_id(), v_clinic, 'patient_removed');
 end $$;
 
 
@@ -1150,6 +1202,7 @@ grant execute on function
   public.restore_patient(uuid),
   public.revoke_invite(text),
   public.purge_patient(uuid),
+  public.purge_target(uuid),
   public.clinic_is_active(uuid),
   public.is_platform_admin(),
   public.admin_list_clinics(),
@@ -1228,6 +1281,7 @@ alter function public.admin_set_clinic_active(uuid, boolean)  owner to glowpt_au
 alter function public.admin_record_baa(uuid, text)            owner to glowpt_auth;
 alter function public.revoke_invite(text)                     owner to glowpt_auth;
 alter function public.purge_patient(uuid)                     owner to glowpt_auth;
+alter function public.purge_target(uuid)                      owner to glowpt_auth;
 
 
 -- ============================ INTEGRITY TIGHTENINGS (approved by David 2026-08-07) ============================

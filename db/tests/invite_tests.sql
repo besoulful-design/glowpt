@@ -329,42 +329,60 @@ begin
   raise notice '% T51 cancelling a non-existent invite is refused',
     case when denied then 'PASS:' else 'FAIL:' end;
 
-  -- T52 GUARD 2: a patient still on the roster cannot be removed. Discharge is
+  -- T52 GUARD 2: a patient still on the roster cannot be removed. Archiving is
   -- the deliberate first step, so this can never be one click from the roster.
+  -- (The UI calls it Archive; the column is still discharged_at.)
   denied := false;
   begin
     perform purge_patient(ghost);
-  exception when others then denied := (sqlerrm like '%Discharge this patient first%'); end;
+  exception when others then denied := (sqlerrm like '%Archive this patient first%'); end;
   raise notice '% T52 an active patient cannot be removed',
     case when denied then 'PASS:' else 'FAIL:' end;
 
-  -- T53 GUARD 3, THE IMPORTANT ONE: a discharged patient WITH history is still
-  -- refused. This is what keeps the feature a purge of mistakes rather than a
-  -- delete of records.
+  -- T53 ⚠️ THIS TEST INVERTED ON 2026-09-06 AND THE INVERSION IS THE POINT. It
+  -- used to assert that a patient with check-ins could NOT be removed. David's
+  -- call: the manager is the covered entity, so destroying a real record is
+  -- their decision, and the deliberateness lives in the typed-name confirmation
+  -- on screen and the archive-first guard, not in a blanket refusal here.
   perform set_config('app.user_id', newpat::text, true);
   insert into checkins (user_id, clinic_id, feeling) values (newpat, clinic_a, 4);
   perform set_config('app.user_id', mgr_a::text, true);
+  select count(*) into n from checkins where user_id = newpat;
+  raise notice '% T53pre the patient really does have history first -> % check-in(s)',
+    case when n = 1 then 'PASS:' else 'FAIL:' end, n;
   perform discharge_patient(newpat);
-  denied := false;
-  begin
-    perform purge_patient(newpat);
-  exception when others then denied := (sqlerrm like '%check-in(s), so their record is kept%'); end;
-  raise notice '% T53 a discharged patient with check-ins is NOT removed',
-    case when denied then 'PASS:' else 'FAIL:' end;
+  perform purge_patient(newpat);
   select count(*) into n from profiles where id = newpat;
-  raise notice '% T53b and they are still there -> % rows',
+  raise notice '% T53 a patient WITH check-ins is removed once archived -> % rows',
+    case when n = 0 then 'PASS:' else 'FAIL:' end, n;
+  -- Their check-ins go with them: the whole point of the change.
+  select count(*) into n from checkins where user_id = newpat;
+  raise notice '% T53b and their check-ins went too -> % rows',
+    case when n = 0 then 'PASS:' else 'FAIL:' end, n;
+  -- The removal is recorded, WITHOUT naming who was removed.
+  select count(*) into n from access_log
+   where action = 'patient_removed' and actor_id = mgr_a and target_user_id is null;
+  raise notice '% T53c the removal is audited, and does not name the patient -> % row',
     case when n = 1 then 'PASS:' else 'FAIL:' end, n;
 
-  -- T54 the case this exists for: discharged, never checked in, so removing is
-  -- clean. The users row goes and profiles cascades from it.
+  -- T54 the original case: archived, never checked in, so removing is clean.
+  -- The users row goes and profiles cascades from it.
   -- NOTE: asserted through profiles, not users. glowpt_app has no SELECT on
   -- public.users at all — which is itself correct, and is why the first draft of
   -- this test failed with "permission denied for table users" while the function
   -- underneath had worked perfectly. Test what the app role can actually see.
   perform discharge_patient(ghost);
+  -- purge_target is the read half the API calls first, to learn the address for
+  -- the Cognito delete. It must answer under the SAME guards and change nothing.
+  select count(*) into n from public.purge_target(ghost);
+  raise notice '% T54pre purge_target answers for a removable patient -> % row',
+    case when n = 1 then 'PASS:' else 'FAIL:' end, n;
+  select count(*) into n from profiles where id = ghost;
+  raise notice '% T54pre2 and purge_target changed nothing -> % row still there',
+    case when n = 1 then 'PASS:' else 'FAIL:' end, n;
   perform purge_patient(ghost);
   select count(*) into n from profiles where id = ghost;
-  raise notice '% T54 a discharged patient with no history is removed -> % rows',
+  raise notice '% T54 an archived patient with no history is removed -> % rows',
     case when n = 0 then 'PASS:' else 'FAIL:' end, n;
   -- And genuinely gone rather than merely hidden by RLS: the function itself no
   -- longer finds them in this clinic.
@@ -382,5 +400,15 @@ begin
     perform purge_patient(newpat);
   exception when others then denied := (sqlerrm like '%Only a clinic manager%'); end;
   raise notice '% T55 a non-manager cannot remove a patient',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T55b the read half must be locked down exactly as hard. It hands back an
+  -- email address, so if it were laxer than purge_patient it would be a way for
+  -- any signed-in patient to look up another person's address.
+  denied := false;
+  begin
+    perform public.purge_target(ghost);
+  exception when others then denied := (sqlerrm like '%Only a clinic manager%'); end;
+  raise notice '% T55b a non-manager cannot read a purge target either',
     case when denied then 'PASS:' else 'FAIL:' end;
 end $$;

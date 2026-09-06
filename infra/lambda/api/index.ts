@@ -1,6 +1,11 @@
 import { Signer } from '@aws-sdk/rds-signer';
 import { Client } from 'pg';
 import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
+import {
+  CognitoIdentityProviderClient,
+  AdminDeleteUserCommand,
+  UserNotFoundException,
+} from '@aws-sdk/client-cognito-identity-provider';
 import type {
   APIGatewayProxyEventV2WithJWTAuthorizer,
   APIGatewayProxyResultV2,
@@ -678,11 +683,52 @@ async function rpcRevokeInvite(client: Client, event: APIGatewayProxyEventV2With
 
 // Permanent. The three guards (manager, already discharged, zero check-ins) are
 // all in the SQL, so they hold whatever any frontend does.
+// Reused across invocations; the SDK client is cheap to hold and expensive to
+// rebuild per request.
+const cognito = new CognitoIdentityProviderClient({});
+
+// Permanently remove an archived patient: their Cognito login AND their rows.
+//
+// ⚠️ THE ORDER IS LOGIN FIRST, AND IT IS THE WHOLE DESIGN. Until 2026-09-06 the
+// login was never deleted at all, so "Remove" wiped the records and left the
+// person able to sign in, with their email address (which in this context says
+// they were a physical therapy patient) sitting in the pool forever.
+//
+// Doing the rows first would mean that a failure on the Cognito call left the
+// records gone, the login behind, and NO WAY TO RETRY -- the guards read the very
+// row that had just been deleted. Login first inverts that: every step is
+// re-runnable, because a second attempt finds the user already gone (treated as
+// success) and then re-runs the row delete under guards that still apply.
 async function rpcPurgePatient(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const sub = requireSub(event);
   const b = parseBody(event);
   const patientId = typeof b.patient_id === 'string' ? b.patient_id : '';
   if (!patientId) throw new HttpError(400, 'patient_id_required');
+
+  // 1. Learn the address under the SAME guards that will delete the rows, and
+  //    change nothing. Raises if the caller is not this patient's manager, or
+  //    the patient is not archived yet.
+  const email = await withUser(client, sub, async (c) => {
+    const { rows } = await c.query('select email from public.purge_target($1)', [patientId]);
+    return rows[0]?.email as string | undefined;
+  });
+  // The email never leaves this function: it goes to Cognito and nowhere else,
+  // and is deliberately not echoed back to the caller.
+  if (!email) throw new HttpError(404, 'patient_not_found');
+
+  // 2. The login.
+  const userPoolId = process.env.USER_POOL_ID;
+  if (!userPoolId) throw new Error('USER_POOL_ID is not set');
+  try {
+    await cognito.send(new AdminDeleteUserCommand({ UserPoolId: userPoolId, Username: email }));
+  } catch (err) {
+    // Already gone is the success case, not an error: it is exactly what a
+    // retry of a half-finished removal looks like.
+    if (!(err instanceof UserNotFoundException)) throw err;
+  }
+
+  // 3. The rows. Guards re-applied inside this transaction, since state could
+  //    have changed between step 1 and here.
   await withUser(client, sub, async (c) => {
     await c.query('select public.purge_patient($1)', [patientId]);
   });

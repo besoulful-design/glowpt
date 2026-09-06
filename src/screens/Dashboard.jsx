@@ -88,6 +88,12 @@ const s = {
   // Permanent actions are quieter than the reversible ones beside them, on
   // purpose: Restore is the button you want people to reach for.
   removeBtn: { background: 'transparent', border: '1px solid rgba(231,154,146,0.35)', borderRadius: 4, padding: '4px 12px', color: 'rgba(231,154,146,0.85)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' },
+  undoLink: { background: 'transparent', border: 'none', color: '#FBC02D', fontSize: 'inherit', fontFamily: 'inherit', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', padding: 0 },
+  removeConfirm: { background: 'rgba(231,154,146,0.06)', border: '1px solid rgba(231,154,146,0.35)', borderRadius: 6, padding: '14px 16px', margin: '4px 0 10px', textAlign: 'left' },
+  removeConfirmHead: { fontSize: 14.5, fontWeight: 600, color: 'rgba(231,154,146,0.95)', marginBottom: 6 },
+  removeConfirmBody: { fontSize: 13, lineHeight: 1.5, color: 'rgba(245,239,228,0.6)', marginBottom: 12 },
+  removeConfirmLabel: { display: 'block', fontSize: 12.5, color: 'rgba(245,239,228,0.5)', marginBottom: 6 },
+  removeConfirmInput: { width: '100%', maxWidth: 260, background: 'rgba(245,239,228,0.06)', border: '1px solid rgba(245,168,26,0.3)', borderRadius: 4, padding: '9px 12px', color: '#f5efe4', fontFamily: 'inherit', fontSize: 14, outline: 'none', boxSizing: 'border-box' },
   cancelBtn: { background: 'transparent', border: '1px solid rgba(231,154,146,0.35)', color: 'rgba(231,154,146,0.85)', borderRadius: 4, padding: '4px 12px', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' },
 }
 
@@ -188,6 +194,16 @@ export default function Dashboard() {
   // caused them. A message belongs beside the thing that produced it.
   const [patientInvite, setPatientInvite] = useState(null) // { url, email, name, sent }
   const [staffInvite, setStaffInvite] = useState(null)     // same shape
+  // ⚠️ "ARCHIVE" ON SCREEN IS `discharged_at` IN THE DATABASE, and the RPCs are
+  // still discharge_patient / restore_patient. Renamed in the UI on 2026-09-06
+  // because "Discharge" read as a clinical decision when all it does is clear
+  // the roster, and because "Inactive" was already taken by the automatic
+  // 5-day flag. The database was deliberately NOT renamed: that means a patch
+  // touching RLS policies, functions and tests for a vocabulary change. Same
+  // call the invite functions got when they kept their staff_* names.
+  const [undo, setUndo] = useState(null)          // { id, name } after archiving
+  const [removing, setRemoving] = useState(null)  // { id, name, checkins }
+  const [removeText, setRemoveText] = useState('')
   const [patientNotice, setPatientNotice] = useState('')
   const [staffNotice, setStaffNotice] = useState('')
   const [pName, setPName] = useState('')
@@ -203,11 +219,12 @@ export default function Dashboard() {
     const { patients, checkins } = await fetchClinicData()
     const active = patients.filter(p => !p.discharged_at)
     setRoster(buildRoster(active, checkins))
-    // hasHistory decides whether "Remove" is offered at all. The SQL enforces
-    // the same rule, so this only keeps the UI honest rather than being the guard.
-    const everCheckedIn = new Set(checkins.map(c => c.user_id))
+    // The check-in COUNT, not a yes/no: since 2026-09-06 a patient with history
+    // can be removed too, so the number is no longer a gate. It is there so the
+    // confirmation can tell the manager exactly what they are about to destroy.
+    const counts = checkins.reduce((m, c) => m.set(c.user_id, (m.get(c.user_id) || 0) + 1), new Map())
     setDischarged(patients.filter(p => p.discharged_at).map(p => ({
-      id: p.id, name: p.full_name || 'Patient', hasHistory: everCheckedIn.has(p.id),
+      id: p.id, name: p.full_name || 'Patient', checkins: counts.get(p.id) || 0,
     })))
   }, [])
 
@@ -279,37 +296,46 @@ export default function Dashboard() {
     }
   }
 
-  // Permanent, and deliberately wordy about it. Only offered for a discharged
-  // patient with no check-ins; the SQL refuses anyone else regardless.
-  async function handlePurge(patientId, name) {
-    if (!window.confirm(`Remove ${name} permanently? They have never checked in, so nothing is kept. This cannot be undone.`)) return
-    try {
-      await api.purgePatient(patientId)
-      await loadRoster()
-      setNotice(`${name} was removed.`)
-    } catch (err) {
-      setNotice(`Couldn't remove ${name}: ${err.message}`)
-    }
-  }
-
-  async function handleDischarge(patientId, name) {
-    if (!window.confirm(`Discharge ${name}? They’ll be hidden from your roster, but their check-ins are kept and you can restore them anytime.`)) return
+  // ⛔ NO window.confirm HERE, AND THAT IS DELIBERATE. Archiving destroys
+  // nothing and is reversible in one click, so a confirmation dialog is friction
+  // for its own sake. Undo is the honest pattern for a reversible action, and it
+  // is kinder than a modal that has to be dismissed every single time.
+  async function handleArchive(patientId, name) {
     setNotice('')
     try {
       await dischargePatient(patientId)
       await loadRoster()
+      setUndo({ id: patientId, name })
     } catch (err) {
-      setNotice(`Couldn’t discharge ${name}: ${err.message}`)
+      setNotice(`Couldn’t archive ${name}: ${err.message}`)
     }
   }
 
   async function handleRestore(patientId) {
     setNotice('')
+    setUndo(null)
     try {
       await restorePatient(patientId)
       await loadRoster()
     } catch (err) {
       setNotice(`Couldn’t restore: ${err.message}`)
+    }
+  }
+
+  // Permanent: their records AND their sign-in. Gated on the manager typing the
+  // patient's name, which is the only deliberateness left now that having
+  // check-ins no longer blocks removal. A yes/no dialog is too easy to click
+  // through for something with no undo.
+  async function handleRemove() {
+    if (!removing) return
+    const { id, name } = removing
+    try {
+      await api.purgePatient(id)
+      setRemoving(null); setRemoveText(''); setUndo(null)
+      await loadRoster()
+      setNotice(`${name} was removed.`)
+    } catch (err) {
+      setNotice(`Couldn’t remove ${name}: ${err.message}`)
     }
   }
 
@@ -482,7 +508,7 @@ export default function Dashboard() {
               <option value="">Unassigned</option>
               {therapists.map(t => <option key={t.id} value={t.id}>{t.full_name || 'Therapist'}</option>)}
             </select>
-            <button style={s.dischargeBtn} onClick={() => handleDischarge(r.id, r.name)}>Discharge</button>
+            <button style={s.dischargeBtn} onClick={() => handleArchive(r.id, r.name)}>Archive</button>
           </div>
         )
       default: return null
@@ -596,6 +622,12 @@ export default function Dashboard() {
         {/* Assignment, discharge and restore all report here, beside the roster
             they act on. This used to land in the Care Team card further down. */}
         {notice && <div style={s.notice}>{notice}</div>}
+        {undo && (
+          <div style={s.notice}>
+            Archived {undo.name}.{' '}
+            <button type="button" style={s.undoLink} onClick={() => handleRestore(undo.id)}>Undo</button>
+          </div>
+        )}
 
         {!loading && roster.length > 0 && (
           <>
@@ -630,21 +662,65 @@ export default function Dashboard() {
         {isManager && discharged.length > 0 && (
           <div style={s.dischargedWrap}>
             <button style={s.dischargedToggle} onClick={() => setShowDischarged(v => !v)}>
-              {showDischarged ? '▾' : '▸'} Discharged ({discharged.length})
+              {showDischarged ? '▾' : '▸'} Archived ({discharged.length})
             </button>
             {showDischarged && (
               <div style={s.dischargedList}>
                 {discharged.map(d => (
-                  <div key={d.id} style={s.dischargedRow}>
-                    <span>{d.name}</span>
-                    <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button style={s.restoreBtn} onClick={() => handleRestore(d.id)}>Restore</button>
-                      {/* Only for someone enrolled by mistake. A patient who has
-                          ever checked in keeps their record and gets no button. */}
-                      {!d.hasHistory && (
-                        <button style={s.removeBtn} onClick={() => handlePurge(d.id, d.name)}>Remove</button>
-                      )}
-                    </span>
+                  <div key={d.id}>
+                    <div style={s.dischargedRow}>
+                      <span>{d.name}</span>
+                      <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button style={s.restoreBtn} onClick={() => handleRestore(d.id)}>Restore</button>
+                        {/* Offered for everyone since 2026-09-06, including a
+                            patient with check-ins. The deliberateness is the
+                            typed name below, not the absence of the button. */}
+                        <button
+                          style={s.removeBtn}
+                          onClick={() => { setRemoving({ id: d.id, name: d.name, checkins: d.checkins }); setRemoveText('') }}
+                        >
+                          Remove
+                        </button>
+                      </span>
+                    </div>
+                    {removing?.id === d.id && (
+                      <div style={s.removeConfirm}>
+                        <div style={s.removeConfirmHead}>Remove {d.name} permanently?</div>
+                        <div style={s.removeConfirmBody}>
+                          {/* Says the number out loud. "Their records" is easy to
+                              click past; "47 check-ins" is not. */}
+                          {d.checkins === 0
+                            ? 'They have no check-ins. This deletes their consent record and their GlowPT sign-in.'
+                            : `This deletes their ${d.checkins} check-in${d.checkins === 1 ? '' : 's'}, their consent record and their GlowPT sign-in.`}
+                          {' '}It cannot be undone. Backups hold a copy for 35 days, then it is gone for good.
+                        </div>
+                        <label style={s.removeConfirmLabel} htmlFor={`rm-${d.id}`}>
+                          Type {d.name} to confirm.
+                        </label>
+                        <input
+                          id={`rm-${d.id}`}
+                          style={s.removeConfirmInput}
+                          value={removeText}
+                          onChange={e => setRemoveText(e.target.value)}
+                          autoComplete="off"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
+                        />
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                          <button
+                            style={{ ...s.removeBtn, opacity: removeText.trim().toLowerCase() === d.name.trim().toLowerCase() ? 1 : 0.4 }}
+                            disabled={removeText.trim().toLowerCase() !== d.name.trim().toLowerCase()}
+                            onClick={handleRemove}
+                          >
+                            Remove Permanently
+                          </button>
+                          <button style={s.restoreBtn} onClick={() => { setRemoving(null); setRemoveText('') }}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
