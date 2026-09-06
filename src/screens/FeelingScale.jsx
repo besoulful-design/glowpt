@@ -30,7 +30,15 @@ const styles = {
     borderRadius: 6,
     background: selected ? '#F5A81A' : '#1a2840',
     cursor: interactive ? 'pointer' : 'default',
-    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    // ⛔ justifyContent is flex-START, NOT center, and the word has a fixed
+    // two-line slot below. With center, a cell whose word fits on one line
+    // ("Hard day", "Good day") is shorter inside, so its face and number sit
+    // ~7px LOWER than its neighbours' and the row zigzags: high, low, high,
+    // low, high. That zigzag is what David meant by "nothing is centered or
+    // lined up", twice, and it hid on his phone only because at that width
+    // every word wrapped. Anchoring to the top puts all five faces on one
+    // line and all five numbers on one line at every width.
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
     padding: '14px 6px 10px', gap: 6,
     transform: selected ? 'scale(1.06)' : 'scale(1)',
     transition: 'all 0.2s',
@@ -45,8 +53,11 @@ const styles = {
     fontWeight: selected ? 600 : 400,
     color: selected ? '#0d1825' : 'rgba(245,239,228,0.7)',
   }),
+  // Two lines tall whether the word takes one or two, so every cell is the
+  // same height and the face/number above never move. See the cell note.
   word: (selected) => ({
     fontSize: WORD_SIZE, lineHeight: 1.2, letterSpacing: '0.04em', fontWeight: 500, textAlign: 'center',
+    minHeight: WORD_SIZE * 1.2 * 2,
     color: selected ? 'rgba(13,24,37,0.75)' : 'rgba(245,239,228,0.4)',
   }),
 }
