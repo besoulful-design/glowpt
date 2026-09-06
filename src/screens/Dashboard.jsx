@@ -465,6 +465,18 @@ export default function Dashboard() {
     }
     setPName(''); setPEmail('')
     setPatientInvite({ url: res.invite_url, email, name, sent: !!res.email_sent })
+    // ⚠️ THIS LINE WAS MISSING AND THE INVITE SIMPLY NEVER APPEARED UNDER
+    // "Invited (Waiting for First Sign-In)" until the page was reloaded. The row
+    // was created correctly every time -- the list just never re-read it, so
+    // Resend and Cancel were unreachable for the invite you had only just sent,
+    // which is exactly when you want them.
+    //
+    // ⛔ THE STAFF HANDLER HAS ALWAYS HAD IT. That asymmetry is the recurring
+    // bug in this file, not a one-off: the patient invite path keeps being built
+    // second and keeps missing a step the staff path already had (2026-09-05 it
+    // was the message slot, reporting into the Care Team card). WHEN YOU TOUCH
+    // ONE OF THESE TWO HANDLERS, DIFF IT AGAINST THE OTHER.
+    setInvites(await fetchPendingInvites())
   }
 
   async function handleInvite(e) {
