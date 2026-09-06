@@ -86,15 +86,28 @@ const s = {
   // maxWidth + auto margins match the roster block below, so the legend's left
   // edge sits over the Patient column rather than floating out to the page edge.
   legendWrap: { padding: '0 16px 16px', textAlign: 'left', maxWidth: 680, margin: '0 auto', boxSizing: 'border-box' },
-  legendLabel: { fontSize: 11.5, lineHeight: 1.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600, marginBottom: 8 },
-  // flex + flex:1 cells, matching PatientApp's feelingScale. Equal columns mean
-  // the row can never wrap: each cell wraps its own word instead.
-  // ⚠️ maxWidth IS LOAD-BEARING. flex:1 cells across the full 980px wrap spread
-  // the six faces so far apart they stop reading as one scale. 560 keeps roughly
-  // the density of the patient's own check-in row, which lives in a 430px shell.
-  legendScale: { display: 'flex', gap: 8, maxWidth: 560 },
-  legendCell: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 },
+  legendHead: { display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 8 },
+  legendLabel: { fontSize: 11.5, lineHeight: 1.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
+  legendNone: { fontSize: 11.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.4)', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' },
+  // ⛔ THIS IS A COPY OF PatientApp's `feelingScale`, DELIBERATELY, DOWN TO THE
+  // BORDER AND THE NUMBER. An earlier version matched only the ARRANGEMENT
+  // (faces above words, one row) and David said it had not changed at all --
+  // fairly, because "line up with the patient check in legend" means look like
+  // it, not merely be laid out like it.
+  // ⚠️ THE NUMBER IS NOT DECORATION: the roster's Avg Mood column reads
+  // "😊 4.0", so without it the legend explained the faces and left the figure
+  // beside them unexplained. With it, one legend explains both columns.
+  legendScale: { display: 'flex', gap: 8, maxWidth: 470 },
+  // No cursor and no hover: it explains the scale, it is not a control.
+  legendCell: {
+    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    gap: 4, padding: '10px 4px 8px', background: '#1a2840',
+    border: '1px solid rgba(245,239,228,0.12)', borderRadius: 6,
+  },
   legendFace: { fontSize: 18, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 18 },
+  // Fraunces, as on the check-in card. Scaled down from that screen's 36px:
+  // it lives in a 430px shell with five cells, this in 560 with six.
+  legendNum: { fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 400, color: 'rgba(245,239,228,0.7)', lineHeight: 1 },
   // 10px and centred, the same as the patient scale's own word.
   legendWord: { fontSize: 10, lineHeight: 1.2, letterSpacing: '0.03em', color: 'rgba(245,239,228,0.4)', fontWeight: 500, textAlign: 'center' },
   rosterHead: { display: 'grid', gap: 12, padding: '0 16px 10px', fontSize: 11.5, letterSpacing: '0.01em', color: 'rgba(245,239,228,0.4)', fontWeight: 600 },
@@ -814,18 +827,25 @@ export default function Dashboard() {
                 renders, so it belongs in the scale rather than trailing after it
                 as a seventh loose item, which is what made the old versions wrap. */}
             <div style={s.legendWrap}>
-              <div style={s.legendLabel}>Daily Feeling</div>
+              {/* ⚠️ "No check-in" IS NOT A SIXTH CARD. It was one briefly, and it
+                  was wrong twice over: the patient scale has FIVE cells, and a
+                  card with a dash where its number should be is not a rating.
+                  It also made the row three words tall on a phone, since the
+                  narrower cell broke "check-in" at its own hyphen. It belongs
+                  beside the label, as the exception to the scale rather than a
+                  step in it. */}
+              <div style={s.legendHead}>
+                <span style={s.legendLabel}>Daily Feeling</span>
+                <span style={s.legendNone}><span style={s.noCheckin} /> No check-in</span>
+              </div>
               <div style={s.legendScale}>
                 {[1, 2, 3, 4, 5].map(n => (
                   <div key={n} style={s.legendCell}>
                     <div style={s.legendFace}>{FEELINGS[n].emoji}</div>
+                    <div style={s.legendNum}>{n}</div>
                     <div style={s.legendWord}>{FEELINGS[n].word}</div>
                   </div>
                 ))}
-                <div style={s.legendCell}>
-                  <div style={s.legendFace}><span style={s.noCheckin} /></div>
-                  <div style={s.legendWord}>No check-in</div>
-                </div>
               </div>
             </div>
             <div style={s.scroll}>
