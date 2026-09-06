@@ -226,9 +226,10 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, fullNa
   const roleWord = role === 'manager' ? 'a manager' : role === 'patient' ? 'a patient' : 'a therapist';
   // Two audiences, one shell. A patient is being asked to use the app daily; a
   // clinician is being asked to watch a roster. Saying the same thing to both
-  // would sell neither.
+  // would sell neither. American English: it said "how you are getting on"
+  // until David caught it in a real invite on 2026-09-06.
   const pitch = isPatient
-    ? `GlowPT is a 30-second check-in you do each day between visits. It takes a moment, and your care team can see how you are getting on.`
+    ? `GlowPT is a 30-second check-in you do each day between visits. It takes a moment, and your care team can see how you are doing.`
     : `GlowPT is a daily check-in your patients use between visits. You will see how they are doing, without any extra work.`;
   // Title Case per the house label rule; "In" is a phrasal-verb particle, so it
   // is capitalised even though it is short.
