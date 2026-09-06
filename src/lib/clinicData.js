@@ -99,11 +99,21 @@ export function buildRoster(patients, checkins) {
       avg,
       flags,
     }
-  }).sort((a, b) => {
-    // most-concerning first: flagged, then least recently active
-    if (a.flags.length !== b.flags.length) return b.flags.length - a.flags.length
-    return (b.daysSince ?? 999) - (a.daysSince ?? 999)
-  })
+  }).sort(byFirstName)
+}
+
+// ALPHABETICAL BY FIRST NAME (David, 2026-09-06). Until then the roster was
+// "most concerning first": flagged patients on top, then whoever had gone
+// longest without a check-in. That was deliberate triage from 2026-07-13, but
+// the Low Mood / Inactive pills now sit under every flagged name, so trouble
+// is visible wherever the row lands, and a manager looking for a specific
+// person finds them faster in a list that has a predictable order. The whole
+// name breaks ties so "Sam Torres" and "Sam Park" stay stable. Case- and
+// accent-insensitive, so "álvarez" sorts with "Alvarez".
+function byFirstName(a, b) {
+  const fa = (a.name || '').trim().split(/\s+/)[0]
+  const fb = (b.name || '').trim().split(/\s+/)[0]
+  return fa.localeCompare(fb, 'en', { sensitivity: 'base' }) || (a.name || '').localeCompare(b.name || '', 'en', { sensitivity: 'base' })
 }
 
 export function clinicStats(roster) {
