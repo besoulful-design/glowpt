@@ -66,7 +66,12 @@ const s = {
   // happened. Same red as the Low mood pill, so the page has one word for bad.
   noticeBad: { fontSize: 13, color: '#e79a92', marginTop: 12 },
   // Only shown when the clipboard refused: the manager copies it by hand.
-  noticeLink: { fontSize: 12.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.8)', marginTop: 6, wordBreak: 'break-all', textAlign: 'left' },
+  // ⚠️ overflowWrap:'anywhere', NOT wordBreak:'break-all'. This slot used to
+  // hold a bare URL, where break-all was right. It now holds a whole invite
+  // message, and break-all would hack ordinary words apart mid-letter. 'anywhere'
+  // breaks only where a word genuinely cannot fit, so the prose wraps normally
+  // and the 64-character token still breaks instead of overflowing.
+  noticeLink: { fontSize: 12.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.8)', marginTop: 6, overflowWrap: 'anywhere', textAlign: 'left' },
   emptyTeam: { fontSize: 13.5, color: 'rgba(245,239,228,0.5)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   greet: { fontSize: 14.5, color: '#FBC02D', fontWeight: 500, marginBottom: 6 },
   sel: { background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '6px 8px', color: '#f5efe4', fontSize: 13, fontFamily: 'inherit', maxWidth: '100%' },
@@ -260,16 +265,42 @@ function greetingName(full) {
 // (losing focus and any state) rather than updating it. It is also what makes it
 // renderable on its own for a visual check.
 //
-// One list for both kinds. Each row carries its own Copy Link, Resend and
+// One list for both kinds. Each row carries its own Copy Invite, Resend and
 // Cancel, so nobody has to retype a name and address the clinic has already
 // given us once -- and so the link is reachable at ANY time, not only in the
 // seconds after the form was submitted.
 //
-// ⚠️ Copy Link and Resend are NOT the same thing and the difference matters:
-// Copy Link hands you the CURRENT link to send yourself, Resend mints a NEW
-// one and kills the old. Reach for Copy when the email went astray, Resend
-// when the link itself needs replacing.
-export function PendingList({ people, onCopied, onResend, onCancel, resending }) {
+// ⚠️ Copy Invite and Resend are NOT the same thing and the difference matters:
+// Copy Invite hands you the CURRENT link to send yourself, Resend mints a NEW
+// one and kills the old. Reach for Copy when email is not the right channel or
+// is not working for that person, Resend when the link itself needs replacing.
+//
+// ⛔ COPY INVITE COPIES A MESSAGE, NOT A BARE URL, AND THAT IS THE WHOLE POINT
+// OF IT. It shipped copying the raw link and David asked, fairly, what he was
+// meant to do with it: to send it he had to write the explanation himself every
+// time, while the Copy Message button on the very next card handed him a
+// finished sentence. Two buttons on one screen behaving differently was the
+// real fault, not the button existing. He texts patients at work and says it is
+// the preferred channel, so this exists to make texting an invite one action.
+//
+// ⚠️ IT ENDS WITH THE BARE URL AND NO TRAILING PUNCTUATION, DELIBERATELY. Some
+// SMS and chat clients swallow a trailing period into the link they auto-detect,
+// which produces a 404 for a link that was built correctly. Do not "tidy" this
+// by adding a full stop, and do not move the URL into the middle of the message.
+//
+// ⚠️ IT BRANCHES ON THE ROW'S OWN role, NOT on which card rendered it. One list
+// serves both invite cards, and a therapist told about "a 30-second check-in you
+// do each day" would be sold the wrong product entirely. The wording mirrors the
+// two pitches in the invite email (infra/lambda/api/index.ts); keep them in step.
+export function inviteMessage(invite, clinicName) {
+  const who = clinicName ? `${clinicName} invited you` : 'You have been invited'
+  const pitch = invite.role === 'patient'
+    ? 'a 30-second check-in you do each day between visits'
+    : 'a daily check-in your patients use between visits'
+  return `${who} to GlowPT, ${pitch}. This link is just for you: ${invite.invite_url}`
+}
+
+export function PendingList({ people, clinicName, onCopied, onResend, onCancel, resending }) {
   if (people.length === 0) return null
   return (
     <div style={s.pending}>
@@ -278,23 +309,27 @@ export function PendingList({ people, onCopied, onResend, onCancel, resending })
         <div key={i.email} style={s.pendingRow}>
           <span style={s.pendingWho}>{i.full_name || '—'} · {i.email}</span>
           <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {/* ⚠️ A FAILED COPY MUST STILL LEAVE THE LINK ON SCREEN. The panel
+            {/* ⚠️ A FAILED COPY MUST STILL LEAVE THE MESSAGE ON SCREEN. The panel
                 this replaced printed the URL as selectable text, so a clipboard
                 write that did not happen was survivable. navigator.clipboard is
                 absent outside a secure context and can reject even inside one,
                 and the old code called it with `?.` and reported success either
-                way -- the silent-failure shape this app keeps relearning. */}
+                way -- the silent-failure shape this app keeps relearning.
+                The fallback shows the WHOLE message rather than just the link,
+                because the message is what was being copied and the link is
+                inside it, so nothing is lost either way. */}
             <button type="button" style={s.copyLinkBtn}
               onClick={async () => {
                 const who = i.full_name || i.email
+                const message = inviteMessage(i, clinicName)
                 try {
-                  await navigator.clipboard.writeText(i.invite_url)
-                  onCopied({ text: `Invite link for ${who} copied.` })
+                  await navigator.clipboard.writeText(message)
+                  onCopied({ text: `Invite message for ${who} copied. Paste it into a text or an email.` })
                 } catch {
-                  onCopied({ text: `Couldn’t copy automatically. Here is the link for ${who}:`, link: i.invite_url, bad: true })
+                  onCopied({ text: `Couldn’t copy automatically. Here is the invite message for ${who}:`, link: message, bad: true })
                 }
               }}>
-              Copy Link
+              Copy Invite
             </button>
             <button type="button" style={s.resendBtn} disabled={resending === i.email}
               onClick={() => onResend(i)}>
@@ -759,7 +794,7 @@ export default function Dashboard() {
                   {patientNotice.link && <div style={s.noticeLink}>{patientNotice.link}</div>}
                 </div>
               )}
-              <PendingList people={pendingPatients} onCopied={setPatientNotice}
+              <PendingList people={pendingPatients} clinicName={clinic?.name} onCopied={setPatientNotice}
                 onResend={resendInvite} onCancel={handleCancelInvite} resending={resending} />
             </div>
 
@@ -816,7 +851,7 @@ export default function Dashboard() {
                   {staffNotice.link && <div style={s.noticeLink}>{staffNotice.link}</div>}
                 </div>
               )}
-              <PendingList people={pendingStaff} onCopied={setStaffNotice}
+              <PendingList people={pendingStaff} clinicName={clinic?.name} onCopied={setStaffNotice}
                 onResend={resendInvite} onCancel={handleCancelInvite} resending={resending} />
             </div>
           </>
