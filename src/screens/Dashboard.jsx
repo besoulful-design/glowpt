@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import * as api from '../lib/api'
 import { useAuth } from '../auth'
@@ -79,7 +79,10 @@ const s = {
   // The cell is a column: the stacked name, then any flag pills under it.
   // textAlign is stated because the stack is inline text inside a flex column.
   name: { fontSize: 15, fontWeight: 500, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' },
-  nameStack: { display: 'flex', flexDirection: 'column', lineHeight: 1.25 },
+  // overflowWrap is the LAST resort: the column grows to the widest word (see
+  // patientColumnWidth), so this only fires past that ceiling, where a word
+  // breaks mid-letter rather than spilling into the Avg Mood column.
+  nameStack: { display: 'flex', flexDirection: 'column', lineHeight: 1.25, overflowWrap: 'anywhere', maxWidth: '100%' },
   cell: { fontSize: 14, color: 'rgba(245,239,228,0.7)' },
   face: { fontSize: 17, lineHeight: 1 },
   // Each of the 7 trend days is an equal-width slot so emoji (which render wider
@@ -194,10 +197,12 @@ const ROSTER_COLUMNS = [
   // It has to hold the widest single WORD and the widest PILL. Measured with the
   // real font against every real name on both clinics: "Peterson" 63px,
   // "Bennett" 56, "Dr. Sam" 53; the "Low Mood" pill is 74 and "Inactive" 62.
-  // The pills are now a fixed 60, so the widest WORD sets it: "Peterson" 63,
-  // track 66. (104 was "Grace Bennett" on one line; "Miracle Peterson"
-  // wrapped anyway at 104, which is what made stacking all of them the
-  // consistent answer.) Re-measure before widening; the header is 40.
+  // ⚠️ 66 IS A FLOOR, NOT THE WIDTH. The real width is patientColumnWidth():
+  // the widest single word on THIS roster, measured in the real font at
+  // render, so a "Vandenberg" grows the column and a roster of Charlies keeps
+  // it at 66 (which holds the 60px pill and "Peterson" at 63). One number is
+  // computed and every row and the header share it, which is why this can
+  // auto-size when fit-content() could not: fit-content resolves PER ROW.
   { key: 'patient',   label: 'Patient',       w: '66px',                align: 'center', plain: true },
   { key: 'avg',       label: 'Avg Mood',      w: '64px',                align: 'center' },
   // ⚠️ "3-Day Trend" WAS A LIE, MILDLY. This renders `cs.slice(0, 3)`, the last
@@ -241,6 +246,35 @@ const ROSTER_PAD = 32
 function rosterFloor(cols) {
   const px = cols.reduce((sum, c) => sum + Number(c.w.match(/(\d+)px\)?$/)[1]), 0)
   return px + ROSTER_GAP * (cols.length - 1) + ROSTER_PAD + 2
+}
+
+// THE PATIENT COLUMN GROWS TO THE WIDEST WORD ON THE ROSTER. David, 2026-09-06:
+// "what happens when a name is longer than Peterson? the column width should
+// adjust to fit the longest, right?" Right. Every name is stacked, so the
+// column only ever has to hold one word (or a title + first name, which
+// splitName keeps together) and the fixed 60px pill. This measures every such
+// unit in the row's real font on a canvas, takes the widest, adds the 3px
+// of breathing room the 66 floor gives "Peterson", and clamps it between the
+// floor and a ceiling. Past the ceiling (a 20-letter surname) nameStack's
+// overflowWrap breaks the word rather than letting it spill.
+// Measured with the row's own font string; re-measured once web fonts land
+// (see the fontsReady effect), because before that the fallback face is wider.
+const PATIENT_COL_MIN = 66
+const PATIENT_COL_MAX = 140
+const NAME_FONT = `500 15px 'DM Sans', sans-serif`
+let measureCtx = null
+function textWidth(text) {
+  if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d')
+  measureCtx.font = NAME_FONT
+  return measureCtx.measureText(text).width
+}
+function patientColumnWidth(names) {
+  let widest = 0
+  for (const n of names) {
+    const [first, rest] = splitName(n)
+    for (const unit of [first, ...rest.split(/\s+/)]) if (unit) widest = Math.max(widest, textWidth(unit))
+  }
+  return Math.min(PATIENT_COL_MAX, Math.max(PATIENT_COL_MIN, Math.ceil(widest) + 3))
 }
 
 // text-align does not move flex items, so a flex cell needs the flex equivalent.
@@ -735,7 +769,13 @@ export default function Dashboard() {
     )
   }
 
-  const rosterColumns = ROSTER_COLUMNS.filter(c => isManager || !c.managerOnly)
+  // Web fonts arrive after first paint; the width is measured again when they do.
+  const [fontsReady, setFontsReady] = useState(false)
+  useEffect(() => { document.fonts?.ready.then(() => setFontsReady(true)) }, [])
+  const patientW = useMemo(() => patientColumnWidth(roster.map(r => r.name)), [roster, fontsReady]) // eslint-disable-line react-hooks/exhaustive-deps
+  const rosterColumns = ROSTER_COLUMNS
+    .filter(c => isManager || !c.managerOnly)
+    .map(c => (c.key === 'patient' ? { ...c, w: `${patientW}px` } : c))
   const rosterCols = rosterColumns.map(c => c.w).join(' ')
   const rosterWidth = rosterFloor(rosterColumns)
 
@@ -1051,3 +1091,6 @@ export default function Dashboard() {
 }
 
 
+
+// TEMP-HARNESS-EXPORT
+export { ROSTER_COLUMNS, s as rosterStyles, Trend, NameFlags, PatientName, FLEX_ALIGN, rosterFloor, patientColumnWidth }
