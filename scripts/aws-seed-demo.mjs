@@ -158,15 +158,59 @@ async function resetDemo() {
   savedAdminEmails = adminRows.map(r => r.email);
   if (savedAdminEmails.length) console.log(`  preserving platform admin: ${savedAdminEmails.join(', ')}`);
 
+  // ⚠️ THIRD TRAP IN THIS SCRIPT, FOUND 2026-09-06, AND A NEW SHAPE. clinics.activated_by
+  // references users(id) with NO on-delete clause. David is the Riverside manager
+  // (a demo account this script destroys) AND the platform admin who pressed
+  // Switch On for RidgePT in /admin, so RidgePT.activated_by pointed at the very
+  // row we delete. The first two traps were columns this script SETS; this one is
+  // a column ANOTHER clinic sets, pointing at a user we destroy. Capture by
+  // (slug, email), null the references, and restore against the new ids after
+  // seeding -- the same shape as the platform_admins preservation above.
+  const { rows: actRows } = await db.query(
+    `select c.slug, u.email
+       from public.clinics c join public.users u on u.id = c.activated_by
+      where u.email = any($1::citext[])`,
+    [ALL_EMAILS],
+  );
+  savedActivators = actRows.map(r => ({ slug: r.slug, email: r.email }));
+  if (savedActivators.length) {
+    console.log(`  preserving activated_by: ${savedActivators.map(a => `${a.slug} <- ${a.email}`).join(', ')}`);
+  }
+
+  // ⚠️ PRE-FLIGHT BEFORE ANY COGNITO DELETE. On 2026-09-06 this script deleted all
+  // eight Riverside Cognito accounts and THEN had its DB delete refused by the FK
+  // above, leaving David unable to sign in while every DB row survived. The
+  // Cognito side cannot be rolled back, so the DB side is rehearsed inside a
+  // transaction that is always rolled back: if any constraint will refuse the
+  // delete, it refuses here, while nothing has been destroyed yet.
+  await db.query('begin');
+  try {
+    await clearDemoRows();
+  } finally {
+    await db.query('rollback');
+  }
+
   for (const email of ALL_EMAILS) await deleteCognitoUser(email);
-  // DB: deleting the users cascades to profiles/checkins/consents/access_log.
+  await clearDemoRows();
+  console.log('  cleared Cognito users + DB rows.');
+}
+
+// The three DB statements that clear the demo, in one place so the pre-flight
+// rehearsal and the real run cannot drift from each other.
+async function clearDemoRows() {
+  await db.query(
+    `update public.clinics set activated_by = null
+      where activated_by in (select id from public.users where email = any($1::citext[]))`,
+    [ALL_EMAILS],
+  );
+  // Deleting the users cascades to profiles/checkins/consents/access_log.
   await db.query('delete from public.users where email = any($1::citext[])', [ALL_EMAILS]);
   await db.query('delete from public.clinics where slug = $1', [CLINIC.slug]);
-  console.log('  cleared Cognito users + DB rows.');
 }
 
 // Set by resetDemo, consumed after seeding once the new identities exist.
 let savedAdminEmails = [];
+let savedActivators = [];
 
 async function restorePlatformAdmins() {
   if (!savedAdminEmails.length) return;
@@ -177,6 +221,20 @@ async function restorePlatformAdmins() {
     [savedAdminEmails],
   );
   console.log(`Platform admin restored (${rowCount} row${rowCount === 1 ? '' : 's'}).`);
+}
+
+async function restoreActivators() {
+  if (!savedActivators.length) return;
+  let restored = 0;
+  for (const a of savedActivators) {
+    const { rowCount } = await db.query(
+      `update public.clinics set activated_by = (select id from public.users where email = $2)
+        where slug = $1 and activated_by is null`,
+      [a.slug, a.email],
+    );
+    restored += rowCount;
+  }
+  console.log(`activated_by restored on ${restored} clinic${restored === 1 ? '' : 's'}.`);
 }
 
 async function seedDemo() {
@@ -263,6 +321,7 @@ async function main() {
     await resetDemo();
     await seedDemo();
     await restorePlatformAdmins();
+    await restoreActivators();
     console.log(`\nDone. Riverside PT is pristine.`);
     console.log(`  Manager sign-in:  ${MANAGER_EMAIL}`);
     console.log(`  Showcase patient: ${alias('grace')} (log in AS Grace for the Progress screen)`);
