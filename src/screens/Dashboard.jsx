@@ -94,6 +94,9 @@ const s = {
   row: { display: 'grid', gap: 12, alignItems: 'center', background: '#1a2840', border: '1px solid rgba(245,239,228,0.06)', borderRadius: 6, padding: '14px 16px', marginBottom: 8 },
   empty: { background: '#1a2840', border: '1px dashed rgba(245,168,26,0.3)', borderRadius: 8, padding: 32, textAlign: 'center', color: 'rgba(245,239,228,0.6)' },
   // Discharge (soft-delete) controls
+  // Quiet like Archive beside it, not a filled button: the roster is a table to
+  // read, and two solid buttons per row would shout over the data.
+  copyRowBtn: { background: 'transparent', border: 'none', padding: '2px 0', color: 'rgba(245,168,26,0.85)', fontSize: 11.5, fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '0.02em', whiteSpace: 'nowrap' },
   dischargeBtn: { background: 'transparent', border: 'none', padding: '2px 0', color: 'rgba(231,154,146,0.75)', fontSize: 11.5, fontFamily: 'inherit', cursor: 'pointer', letterSpacing: '0.02em' },
   dischargedWrap: { marginTop: 18 },
   dischargedToggle: { background: 'transparent', border: 'none', color: 'rgba(245,239,228,0.5)', fontSize: 12.5, fontWeight: 600, letterSpacing: '0.04em', cursor: 'pointer', padding: '6px 0', fontFamily: 'inherit' },
@@ -148,6 +151,20 @@ const ROSTER_COLUMNS = [
   { key: 'last',      label: 'Last Check-In', w: '82px',                align: 'center' },
   // Managers assign and archive; a therapist sees their own caseload and neither.
   { key: 'therapist', label: 'Therapist',     w: 'minmax(150px,170px)', align: 'center', plain: true, managerOnly: true },
+  // ⚠️ THE LINK THIS COPIES IS THE SAME FOR EVERY PATIENT, AND THAT IS NOT AN
+  // OVERSIGHT -- IT IS THE ONLY HONEST ANSWER. A patient's invite token is
+  // CONSUMED the moment they join, so once they are on this roster there is no
+  // per-person URL left to copy. Minting them a permanent personal link was
+  // considered and rejected: resolving it would have to say which address it
+  // belongs to, and "this email address is a physical therapy patient" is
+  // individually identifiable health information sitting in a text message
+  // forever. The house rule against identifiers in URLs (db/schema.sql, and the
+  // migration plan's Rule) exists for exactly this. An invite link accepts that
+  // risk for 14 days because it has no choice; a permanent one has a choice.
+  // So this copies the sign-in address, which is all a returning patient needs.
+  // (David, 2026-09-06: "i want to always be able to access it for anytime i
+  // need to send it to the patient.")
+  { key: 'signin',    label: '',              w: '76px',                align: 'center', plain: true, managerOnly: true },
   // ⚠️ ARCHIVE IS ITS OWN COLUMN, NOT A LINK UNDER THE THERAPIST DROPDOWN (David,
   // 2026-09-06: "that looks crazy"). It was stacked under the select because both
   // are manager-only, which is a reason they share a ROLE, not a reason they share
@@ -417,6 +434,24 @@ export default function Dashboard() {
     }
   }
 
+  // Hand the manager the address a patient signs in at, so they can text it to
+  // someone who has lost their way back. Derived from the running origin rather
+  // than hardcoded, the same reason the onboard page derives its own link: there
+  // is then no URL to remember to update, and it is correct on localhost too.
+  //
+  // ⚠️ A FAILED CLIPBOARD WRITE PUTS THE LINK ON SCREEN INSTEAD OF CLAIMING
+  // SUCCESS -- same as the pending rows. navigator.clipboard is absent outside a
+  // secure context and can reject inside one.
+  async function copySignInLink(name) {
+    const url = `${window.location.origin}/login`
+    try {
+      await navigator.clipboard.writeText(url)
+      showFlash(`Sign-in link copied. Send it to ${name} so they can check in.`)
+    } catch {
+      setNotice(`Couldn’t copy automatically. The sign-in link is ${url}`)
+    }
+  }
+
   async function handleRestore(patientId) {
     setNotice('')
     setUndo(null)
@@ -573,6 +608,13 @@ export default function Dashboard() {
               <option value="">Unassigned</option>
               {therapists.map(t => <option key={t.id} value={t.id}>{t.full_name || 'Therapist'}</option>)}
             </select>
+          </div>
+        )
+      case 'signin':
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: FLEX_ALIGN[c.align] }}>
+            <button style={s.copyRowBtn} title="Copy the GlowPT sign-in link to send to this patient"
+              onClick={() => copySignInLink(r.name)}>Copy Link</button>
           </div>
         )
       case 'archive':
@@ -736,11 +778,18 @@ export default function Dashboard() {
               <span style={s.legendNone}><span style={s.noCheckin} /> No check-in</span>
             </div>
             <div style={s.scroll}>
-              {/* Manager total: 140+64+72+44+82+170+92 columns + 6 gaps of 12
-                  + 32 padding = 780. A floor below the real width would let the
-                  grid squeeze columns instead of scrolling, which is what the
-                  measured ceilings exist to prevent. */}
-              <div style={{ minWidth: isManager ? 780 : 560 }}>
+              {/* Manager total: 140+64+72+44+82+170+76+92 = 740 of columns,
+                  + 7 gaps of 12 = 84, + 32 padding = 856, + 2 for the ROW's 1px
+                  border, which the header does not have = 858.
+                  ⚠️ THE +2 IS NOT PADDING-FOR-LUCK. At exactly 856 the row's
+                  border eats 2px of its content box, and the only track that can
+                  give it up is the Patient column's minmax -- so the header sat
+                  140 wide over a 138 cell. Measured, not guessed. (The old 780
+                  hid this because it carried 12px of slack.)
+                  ⚠️ AND IT HAS TO GROW WITH EVERY COLUMN ADDED. A floor below the
+                  real width lets the grid squeeze the columns instead of
+                  scrolling, which quietly undoes their measured ceilings. */}
+              <div style={{ minWidth: isManager ? 858 : 560 }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
                   {rosterColumns.map(c => <div key={c.key} style={{ textAlign: c.align }}>{c.label}</div>)}
                 </div>
