@@ -48,7 +48,7 @@ export default function Landing() {
     tick: { color: BRAND, flexShrink: 0 },
     // The modal body is textAlign:'left' so the bullets read as a list, but the
     // footer block is a closing statement under a rule, and the Close button below
-    // it is centred. Left-aligned text above a centred button read as a mistake.
+    // it is centered. Left-aligned text above a centered button read as a mistake.
     price: { fontSize: 14, lineHeight: 1.6, color: 'rgba(245,239,228,0.95)', fontWeight: 500, borderTop: '1px solid rgba(245,239,228,0.12)', paddingTop: 16, marginTop: 18, textAlign: 'center' },
     contact: { fontSize: 13, lineHeight: 1.6, color: 'rgba(245,239,228,0.6)', marginTop: 10, textAlign: 'center' },
     contactLink: { color: BRAND },

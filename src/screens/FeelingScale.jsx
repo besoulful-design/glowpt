@@ -6,7 +6,7 @@ import { FEELINGS } from '../lib/feelings'
 // same thing as the legend above the roster. Until 2026-09-06 those were TWO
 // hand-written copies (PatientApp `feelingScale`, Dashboard `legendScale`),
 // and David asked three times in two days why they did not look the same. They
-// could not: every size and colour was retyped in each file. Now there is one
+// could not: every size and color was retyped in each file. Now there is one
 // component, so the two screens cannot drift. Same rule as lib/feelings.js and
 // LogoMark, and for the same reason.
 //

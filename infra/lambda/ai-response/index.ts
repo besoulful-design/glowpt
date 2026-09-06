@@ -85,7 +85,7 @@ export const handler = async (
       : '{}';
     prompt = JSON.parse(raw)?.prompt;
   } catch {
-    // Match the old function's forgiving behaviour: never 500 the patient's
+    // Match the old function's forgiving behavior: never 500 the patient's
     // check-in over a bad reflection. Fall back gracefully.
     return json(200, { response: FALLBACK });
   }

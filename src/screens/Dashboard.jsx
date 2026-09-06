@@ -15,7 +15,7 @@ import { CONTACT_EMAIL } from '../lib/marketing'
 
 const s = {
   // textAlign is declared HERE, not inherited from #root — see the note in
-  // src/index.css. This screen is a centred layout; the roster inside it states
+  // src/index.css. This screen is a centered layout; the roster inside it states
   // its own alignment per column and does not rely on this.
   page: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", textAlign: 'center' },
   bar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', borderBottom: '1px solid rgba(245,239,228,0.08)', flexWrap: 'wrap', gap: 12 },
@@ -63,7 +63,7 @@ const s = {
   notice: { fontSize: 13, color: '#9bb06a', marginTop: 12 },
   // ⚠️ A PROBLEM MUST NOT RENDER IN THE SUCCESS GREEN. This slot now carries
   // "the email didn't send" and the form's own validation, and saying that in
-  // the same colour as "Invite emailed" tells the reader the opposite of what
+  // the same color as "Invite emailed" tells the reader the opposite of what
   // happened. Same red as the Low mood pill, so the page has one word for bad.
   noticeBad: { fontSize: 13, color: '#e79a92', marginTop: 12 },
   // Only shown when the clipboard refused: the manager copies it by hand.
@@ -112,12 +112,12 @@ const s = {
     color: kind === 'low' ? '#e79a92' : '#FBC02D', border: `1px solid ${kind === 'low' ? 'rgba(192,85,77,0.4)' : 'rgba(245,168,26,0.4)'}` }),
   ok: { fontSize: 12, color: 'rgba(155,176,106,0.9)', fontStyle: 'italic', fontFamily: "'Fraunces', serif" },
   // THE LEGEND IS THE PATIENT'S OWN CHECK-IN SCALE, LITERALLY: the same
-  // FeelingScale component the patient taps, rendered static. It is centred
+  // FeelingScale component the patient taps, rendered static. It is centered
   // like the patient screen and capped at the patient card's content width
   // (430px shell minus 28px padding each side = 374; here 398 minus 12px each
   // side, which also brings a phone's narrower page padding up to the patient
   // screen's), so at every width the two scales are the same size and on a
-  // desktop it is a compact centred block above the centred roster. ⛔ Do not redraw the cells here. Every size lives in
+  // desktop it is a compact centered block above the centered roster. ⛔ Do not redraw the cells here. Every size lives in
   // FeelingScale.jsx, and David asked three times why the two differed when
   // they were two copies.
   legendWrap: { padding: '0 12px 18px', maxWidth: 398, margin: '0 auto', boxSizing: 'border-box' },
@@ -156,7 +156,7 @@ const s = {
 // IT AS A NO-OP. `#root` in src/index.css sets `text-align: center`, which every
 // screen inherits. A plain text cell inherits it too, but the Patient and
 // Therapist cells are FLEX containers, and text-align does not move flex items,
-// so those two sat left while their headers sat centre — which read as the
+// so those two sat left while their headers sat center — which read as the
 // header being ~115px adrift on Patient and ~240px on Therapist. Stating the
 // alignment on BOTH halves, and translating it for flex cells via FLEX_ALIGN,
 // makes the roster immune to whatever it inherits.
@@ -996,8 +996,8 @@ export default function Dashboard() {
                   to the full 980 wrap while its content stops at 680, leaving a
                   quarter of every row empty on a desktop. That gap grew when the
                   columns were tightened, which would have half-answered the very
-                  complaint the tightening was for. margin auto centres it under a
-                  centred page and resolves to 0 when the content is wider than the
+                  complaint the tightening was for. margin auto centers it under a
+                  centered page and resolves to 0 when the content is wider than the
                   scroll box, so it cannot push the left edge out of reach. */}
               <div style={{ minWidth: rosterWidth, maxWidth: rosterWidth, margin: '0 auto' }}>
                 <div style={{ ...s.rosterHead, gridTemplateColumns: rosterCols }}>
