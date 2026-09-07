@@ -319,7 +319,6 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     screen: { maxWidth: '430px', margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '0' },
     welcomeWrap: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px 32px 48px', minHeight: '100vh' },
     welcomeTop: { display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '0px' },
-    logoFloat: { marginBottom: '16px', animation: 'float 4s ease-in-out infinite' },
     wordmark: { display: 'flex', alignItems: 'baseline', marginBottom: '12px' },
     logoGlow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '57px', color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
     logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '57px', color: BRAND, letterSpacing: '-0.02em', lineHeight: 1 },
@@ -426,7 +425,6 @@ Respond directly to ${firstName} in second person. Reference what they actually 
   }
 
   const fontStyle = `@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
-    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
     @keyframes breathe { 0%,100%{opacity:0.5} 50%{opacity:1} }
     @keyframes dotPulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
     @keyframes pulse { 0%,100%{transform:scale(1);opacity:0.8} 50%{transform:scale(1.15);opacity:0.4} }
@@ -457,7 +455,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
           <div style={styles.welcomeWrap}>
             <button style={styles.signOut} onClick={signOut}>Sign Out</button>
             <div style={styles.welcomeTop}>
-              <div style={styles.logoFloat}><LogoMark size={208} marginBottom={0} /></div>
+              <LogoMark size={208} marginBottom={16} />
               <div style={styles.wordmark}>
                 <span style={styles.logoGlow}>Glow</span>
                 <span style={styles.logoPT}>PT</span>

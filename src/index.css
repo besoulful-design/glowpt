@@ -54,6 +54,20 @@ body {
   margin: 0;
 }
 
+/* The logo's float. Declared ONCE, here, because it is applied by LogoMark in
+   src/screens/AuthShell.jsx and every screen renders that one component. It
+   used to live only inside PatientApp's welcome screen (its own @keyframes
+   plus a wrapper div), so the logo bobbed on that screen and sat still on
+   every other; David asked for all of them to move (2026-09-07). Amplitude
+   and period are the welcome screen's originals. */
+@keyframes glowpt-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glowpt-logo { animation: none !important; }
+}
+
 #root {
   width: 1126px;
   max-width: 100%;

@@ -23,12 +23,17 @@ export function Brand() {
 //
 // `size` is the tile's edge length in px — the mark is square, unlike the old
 // wide arc lockup, so call sites pass their own deliberate size.
-export function LogoMark({ size = 136, marginBottom = 20 }) {
+// `float` (default true) is the gentle up-and-down every hero logo does. The
+// keyframes are `glowpt-float` in src/index.css, declared once. The only
+// caller that passes false is BrandLockup's 34px app-bar mark, where a
+// bobbing icon beside a row of text would distract rather than welcome.
+export function LogoMark({ size = 136, marginBottom = 20, float = true }) {
   return (
     <img
       src="/favicon.svg"
       alt=""
       aria-hidden="true"
+      className="glowpt-logo"
       width={size}
       height={size}
       style={{
@@ -38,6 +43,7 @@ export function LogoMark({ size = 136, marginBottom = 20 }) {
         marginBottom,
         borderRadius: '23%', // matches the rx of the artwork's own corners
         boxShadow: `0 0 ${Math.round(size * 0.3)}px rgba(245,168,26,0.3)`,
+        animation: float ? 'glowpt-float 4s ease-in-out infinite' : undefined,
       }}
     />
   )
@@ -53,7 +59,7 @@ export function LogoMark({ size = 136, marginBottom = 20 }) {
 export function BrandLockup({ label }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <LogoMark size={34} marginBottom={0} />
+      <LogoMark size={34} marginBottom={0} float={false} />
       <span style={{ fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontSize: 26, color: '#f5efe4' }}>
         Glow<span style={{ fontFamily: "'DM Sans', sans-serif", fontStyle: 'normal', fontWeight: 600, color: BRAND }}>PT</span>
       </span>
