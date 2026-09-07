@@ -5,7 +5,7 @@ import { Client } from 'pg';
 /**
  * GlowPT weekly-summary Lambda (AWS rewrite of the old Supabase edge function).
  *
- * Fires from EventBridge every Monday at 08:00 America/New_York. It reads the
+ * Fires from EventBridge Scheduler every Sunday at 18:00 America/New_York. It reads the
  * whole mailing list in one cross-clinic query (weekly_summary_rows(), a
  * SECURITY DEFINER function callable ONLY by the dedicated glowpt_weekly role)
  * and sends two PHI-minimised email types via SES:
@@ -83,8 +83,8 @@ function shell(inner: string) {
 function patientEmail(name: string, count: number) {
   const line =
     count > 0
-      ? `You checked in <strong>${count}</strong> ${count === 1 ? 'day' : 'days'} last week.`
-      : `A fresh week is here. A good time to check back in.`;
+      ? `You checked in <strong>${count}</strong> ${count === 1 ? 'day' : 'days'} this week.`
+      : `A fresh week starts tomorrow. A good time to check back in.`;
   return shell(`
     <p style="font-size:17px;line-height:1.5">Hi ${name},</p>
     <p style="font-size:16px;line-height:1.6;color:rgba(245,239,228,0.8)">${line}</p>

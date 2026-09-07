@@ -131,3 +131,21 @@ test('ai-response: POST /ai-response is JWT-protected and its Lambda is not in t
     Name: 'glowpt/anthropic/api-key',
   });
 });
+
+// Weekly summary fires Sunday 6pm Eastern, year-round (David, 2026-09-07).
+// The fire time is the week's cutoff (the Lambda counts the 7 days ending
+// then), so the day and the time zone are product decisions, not plumbing.
+test('weekly-summary: fires Sunday 18:00 America/New_York via Scheduler, no UTC rule left', () => {
+  const stack = new InfraStack(app(), 'TestStack', { env: ENV });
+  const template = Template.fromStack(stack);
+
+  template.hasResourceProperties('AWS::Scheduler::Schedule', {
+    Name: 'glowpt-weekly-summary',
+    ScheduleExpression: 'cron(0 18 ? * SUN *)',
+    ScheduleExpressionTimezone: 'America/New_York',
+    State: 'ENABLED',
+  });
+  // The old UTC-only EventBridge rule (Monday 12:00 UTC) must be gone, or the
+  // job fires twice a week.
+  expect(Object.keys(template.findResources('AWS::Events::Rule'))).toEqual([]);
+});

@@ -73,7 +73,7 @@ export class InfraStack extends cdk.Stack {
 
     // Phase 4: the weekly-summary function. A VPC Lambda (it needs the private
     // database) that reaches SES through an interface VPC endpoint and fires from
-    // an EventBridge rule every Monday at 8am ET. PHI-minimised nudge emails.
+    // an EventBridge Scheduler schedule every Sunday at 6pm ET. PHI-minimised nudge emails.
     const weekly = new WeeklySummary(this, 'WeeklySummary', {
       vpc: network.vpc,
       proxy: database.proxy,

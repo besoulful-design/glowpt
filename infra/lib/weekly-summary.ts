@@ -6,8 +6,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNode from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as events from 'aws-cdk-lib/aws-events';
-import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as scheduler from 'aws-cdk-lib/aws-scheduler';
+import * as schedulerTargets from 'aws-cdk-lib/aws-scheduler-targets';
 import * as path from 'path';
 
 export interface WeeklySummaryProps {
@@ -23,7 +23,7 @@ export interface WeeklySummaryProps {
 }
 
 /**
- * The weekly-summary Lambda: PHI-minimised nudge emails, Mondays at 8am ET.
+ * The weekly-summary Lambda: PHI-minimised nudge emails, Sundays at 6pm ET.
  *
  * Unlike ai-response (which sits OUTSIDE the VPC because it needs the public
  * internet for Anthropic), this Lambda must reach the private database, so it
@@ -34,7 +34,8 @@ export interface WeeklySummaryProps {
  *     (= com.amazonaws.<region>.email, the SES API that SESv2 SendEmail calls),
  *     NOT EMAIL_SMTP / the deprecated SES constant (those are the SMTP interface).
  *
- * Trigger: an EventBridge rule on cron(0 12 ? * MON *) = 12:00 UTC = 8am EDT.
+ * Trigger: an EventBridge Scheduler schedule, cron(0 18 ? * SUN *) in
+ * America/New_York, so it is 6pm Eastern in both summer and winter.
  * Handler: lambda/weekly-summary/index.ts.
  */
 export class WeeklySummary extends Construct {
@@ -145,20 +146,41 @@ export class WeeklySummary extends Construct {
       }),
     );
 
-    // Monday 08:00 America/New_York. cron(0 12 ? * MON *) = 12:00 UTC = 8am EDT.
-    // (During EST/winter this lands at 7am; acceptable for a weekly nudge. A
-    // fixed local 8am year-round would need EventBridge Scheduler with a
-    // timezone, a later refinement if it matters.)
-    new events.Rule(this, 'WeeklyRule', {
-      ruleName: 'glowpt-weekly-summary',
-      description: 'GlowPT weekly-summary: Monday 08:00 America/New_York (12:00 UTC)',
-      schedule: events.Schedule.cron({ minute: '0', hour: '12', weekDay: 'MON' }),
-      targets: [new targets.LambdaFunction(this.fn)],
+    // Sunday 18:00 America/New_York, year-round.
+    //
+    // WHY SUNDAY EVENING (David, 2026-09-07): the Lambda counts each patient's
+    // check-ins in the 7 days ending at the moment it fires, so the fire time
+    // IS the week's cutoff. Clinics run Monday to Friday and a Monday patient
+    // can have a 7am appointment, so a Monday 8am email reached staff after the
+    // week had already started. Sunday evening gives the clinic its triage
+    // list before the first Monday appointment, gives the patient a nudge at
+    // the moment they are planning their week, and still counts almost all of
+    // the weekend's check-ins. Saturday or Sunday morning would cut the weekend
+    // off the count.
+    //
+    // WHY EventBridge SCHEDULER rather than an EventBridge RULE: a rule's cron
+    // is UTC only, so "6pm" drifted to 5pm every winter (the old Monday 8am
+    // rule was really 7am from November to March). Scheduler takes a real
+    // time zone. It invokes the Lambda through its own IAM role, created here.
+    new scheduler.Schedule(this, 'WeeklySchedule', {
+      scheduleName: 'glowpt-weekly-summary',
+      description: 'GlowPT weekly-summary: Sunday 18:00 America/New_York, year-round',
+      schedule: scheduler.ScheduleExpression.cron({
+        minute: '0',
+        hour: '18',
+        weekDay: 'SUN',
+        timeZone: cdk.TimeZone.AMERICA_NEW_YORK,
+      }),
+      // Explicit payload: the handler treats anything but { dryRun: true } as a
+      // real send, but saying so beats relying on Scheduler's default event.
+      target: new schedulerTargets.LambdaInvoke(this.fn, {
+        input: scheduler.ScheduleTargetInput.fromObject({ dryRun: false }),
+      }),
     });
 
     new cdk.CfnOutput(this, 'WeeklySummaryFnName', {
       value: this.fn.functionName,
-      description: 'Weekly-summary Lambda (EventBridge Monday 8am ET)',
+      description: 'Weekly-summary Lambda (EventBridge Scheduler, Sunday 6pm ET)',
     });
   }
 }
