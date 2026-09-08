@@ -89,7 +89,7 @@ function patientEmail(name: string, count: number) {
     <p style="font-size:17px;line-height:1.5">Hi ${name},</p>
     <p style="font-size:16px;line-height:1.6;color:rgba(245,239,228,0.8)">${line}</p>
     <p style="font-size:15px;line-height:1.6;color:rgba(245,239,228,0.6)">Open GlowPT to see your reflections and log today.</p>
-    <a href="${APP_URL}" style="display:inline-block;margin-top:14px;background:#F5A81A;color:#0d1825;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:4px">Open GlowPT →</a>
+    <a href="${APP_URL}/login" style="display:inline-block;margin-top:14px;background:#F5A81A;color:#0d1825;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:4px">Open GlowPT →</a>
     <p style="font-size:13px;color:rgba(245,239,228,0.35);margin-top:22px">One good day at a time.</p>`);
 }
 

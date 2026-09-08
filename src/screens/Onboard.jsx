@@ -113,7 +113,7 @@ export default function Onboard() {
 
   return (
     <AuthShell>
-      <LogoMark size={128} />
+      <LogoMark />
       {/* Explicit break: the natural wrap put "Your" on line 1 at desktop width
           and broke differently per browser. This pins it to Bring GlowPT to / Your Clinic. */}
       <div style={ui.title}>Bring <Brand /> to<br />Your Clinic</div>

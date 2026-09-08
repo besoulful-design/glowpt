@@ -761,7 +761,7 @@ export default function Dashboard() {
   if (!profile?.clinic_id) {
     return (
       <AuthShell>
-        <LogoMark size={116} />
+        <LogoMark />
         <div style={ui.title}>No clinic is linked yet.</div>
         <div style={ui.muted}>Your account isn’t attached to a clinic. If you’re setting one up, use the clinic onboarding page.</div>
         <button style={{ ...ui.btn, maxWidth: 200 }} onClick={signOut}>Sign Out</button>

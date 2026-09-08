@@ -137,7 +137,7 @@ export default function InviteJoin() {
   if (invite === null) {
     return (
       <AuthShell>
-        <LogoMark size={116} />
+        <LogoMark />
         <div style={ui.title}>
           {loadFailed ? 'We couldn’t load this invite.' : 'This link can’t be used to join.'}
         </div>
@@ -169,7 +169,7 @@ export default function InviteJoin() {
   if (signedInAsSomeoneElse) {
     return (
       <AuthShell>
-        <LogoMark size={116} />
+        <LogoMark />
         <div style={ui.eyebrow}>{invite.clinic_name}</div>
         <div style={ui.title}>This invite is for someone else.</div>
         <div style={ui.muted}>
@@ -188,7 +188,7 @@ export default function InviteJoin() {
 
   return (
     <AuthShell>
-      <LogoMark size={140} />
+      <LogoMark />
       <div style={ui.eyebrow}>{invite.clinic_name}</div>
       <div style={ui.title}>Join <Brand /></div>
       <div style={ui.muted}>

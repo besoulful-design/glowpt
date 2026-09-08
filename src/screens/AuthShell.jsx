@@ -23,11 +23,18 @@ export function Brand() {
 //
 // `size` is the tile's edge length in px — the mark is square, unlike the old
 // wide arc lockup, so call sites pass their own deliberate size.
+// Every hero logo is the same size, and this is the one place it is declared.
+// Screens do NOT pass `size`: on 2026-09-08 the call sites ranged 116 to 208
+// (welcome 208, landing 176, sign-in 140, onboard 128, code 120, dashboard
+// 116) and David asked for them all to match the check-in/reflection size.
+// The one exception is BrandLockup's 34px app-bar mark, which passes its own.
+export const LOGO_SIZE = 132
+
 // `float` (default true) is the gentle up-and-down every hero logo does. The
 // keyframes are `glowpt-float` in src/index.css, declared once. The only
 // caller that passes false is BrandLockup's 34px app-bar mark, where a
 // bobbing icon beside a row of text would distract rather than welcome.
-export function LogoMark({ size = 136, marginBottom = 20, float = true }) {
+export function LogoMark({ size = LOGO_SIZE, marginBottom = 20, float = true }) {
   return (
     <img
       src="/favicon.svg"

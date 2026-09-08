@@ -71,7 +71,7 @@ export default function Join() {
   if (clinic === null) {
     return (
       <AuthShell>
-        <LogoMark size={116} />
+        <LogoMark />
         <div style={ui.title}>That link wasn’t found.</div>
         <div style={ui.muted}>This clinic invite link isn’t valid. Please check with your clinic for the correct link.</div>
       </AuthShell>
@@ -84,7 +84,7 @@ export default function Join() {
   if (clinic.is_active === false) {
     return (
       <AuthShell>
-        <LogoMark size={116} />
+        <LogoMark />
         <div style={ui.eyebrow}>{clinic.name}</div>
         <div style={ui.title}>This clinic isn’t open yet.</div>
         <div style={ui.muted}>
@@ -100,7 +100,7 @@ export default function Join() {
   if (clinic.open_signup === false) {
     return (
       <AuthShell>
-        <LogoMark size={116} />
+        <LogoMark />
         <div style={ui.eyebrow}>{clinic.name}</div>
         <div style={ui.title}>You’ll need an invite.</div>
         <div style={ui.muted}>
@@ -116,7 +116,7 @@ export default function Join() {
 
   return (
     <AuthShell>
-      <LogoMark size={140} />
+      <LogoMark />
       <div style={ui.eyebrow}>{clinic.name}</div>
       <div style={ui.title}>Welcome to <Brand /></div>
       {/* Two sentences, two lines. As one string the wrap point was decided by

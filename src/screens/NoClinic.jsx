@@ -31,7 +31,7 @@ export default function NoClinic() {
   if (attachError) {
     return (
       <AuthShell>
-        <LogoMark size={140} />
+        <LogoMark />
         <div style={ui.title}>We couldn’t finish connecting you.</div>
         <div style={ui.muted}>
           You’re signed in{user?.email ? ` as ${user.email}` : ''}, but something went wrong while
@@ -58,7 +58,7 @@ export default function NoClinic() {
 
   return (
     <AuthShell>
-      <LogoMark size={140} />
+      <LogoMark />
       <div style={ui.title}>You’re not connected to a clinic yet.</div>
       <div style={ui.muted}>
         Your account is ready{user?.email ? ` for ${user.email}` : ''}, but it isn’t linked to a clinic,

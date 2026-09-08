@@ -110,13 +110,13 @@ export default function Admin() {
   }
 
   if (authLoading) {
-    return <AuthShell><LogoMark size={116} /><div style={ui.muted}>Loading…</div></AuthShell>
+    return <AuthShell><LogoMark /><div style={ui.muted}>Loading…</div></AuthShell>
   }
   // Signed-out first: the admin check never runs without a session, so `allowed`
   // would sit at undefined forever and this screen would spin.
   if (!session) return <Navigate to="/login" replace />
   if (allowed === undefined) {
-    return <AuthShell><LogoMark size={116} /><div style={ui.muted}>Loading…</div></AuthShell>
+    return <AuthShell><LogoMark /><div style={ui.muted}>Loading…</div></AuthShell>
   }
   if (!allowed) return <Navigate to="/" replace />
 
