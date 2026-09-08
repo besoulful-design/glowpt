@@ -317,17 +317,22 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     // Covers both branches of this screen, the loading splash and the app.
     app: { minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", WebkitFontSmoothing: 'antialiased', textAlign: 'center' },
     screen: { maxWidth: '430px', margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '0' },
-    welcomeWrap: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px 32px 48px', minHeight: '100vh' },
+    // No `justifyContent: space-between` and no `minHeight: 100vh` here, on
+    // purpose (2026-09-08). They spread the three blocks over the whole window,
+    // so every pixel of leftover height became the gap above the greeting: small
+    // on a phone, enormous on a desktop, and it grew when the logo shrank. Fixed
+    // gaps below instead, so the screen reads the same at every height.
+    welcomeWrap: { display: 'flex', flexDirection: 'column', padding: '20px 32px 48px' },
     welcomeTop: { display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '0px' },
     wordmark: { display: 'flex', alignItems: 'baseline', marginBottom: '12px' },
     logoGlow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '57px', color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
     logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '57px', color: BRAND, letterSpacing: '-0.02em', lineHeight: 1 },
     tagline: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '21px', color: 'rgba(245,168,26,0.85)', textAlign: 'center', letterSpacing: '0.01em', lineHeight: 1.2 },
-    welcomeMiddle: { textAlign: 'center', padding: '0 8px' },
+    welcomeMiddle: { textAlign: 'center', padding: '0 8px', marginTop: '40px' },
     greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '36px', letterSpacing: '-0.01em' },
     greetingEm: { color: '#FBC02D' },
     welcomeSub: { fontSize: '15px', lineHeight: 1.6, color: 'rgba(245,239,228,0.5)', maxWidth: '30ch', margin: '0 auto' },
-    welcomeBottom: { display: 'flex', flexDirection: 'column', gap: '14px' },
+    welcomeBottom: { display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '36px' },
     btnPrimary: { width: '100%', padding: '18px 24px', border: 'none', borderRadius: '4px', background: '#F5A81A', color: '#0d1825', fontFamily: "'DM Sans', sans-serif", fontSize: '16px', fontWeight: 600, cursor: 'pointer', letterSpacing: '0.01em' },
     btnSecondary: { width: '100%', padding: '18px 24px', border: '1px solid rgba(245,239,228,0.15)', borderRadius: '4px', background: 'transparent', color: 'rgba(245,239,228,0.7)', fontFamily: "'DM Sans', sans-serif", fontSize: '16px', fontWeight: 500, cursor: 'pointer' },
     btnGhost: { width: '100%', padding: '12px', border: 'none', background: 'transparent', color: 'rgba(245,239,228,0.5)', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', cursor: 'pointer' },
