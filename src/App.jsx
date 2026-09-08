@@ -12,7 +12,7 @@ import Dashboard from './screens/Dashboard'
 import Admin from './screens/Admin'
 
 function Splash() {
-  return <AuthShell><LogoMark size={132} /><div style={ui.muted}>Loading…</div></AuthShell>
+  return <AuthShell><LogoMark /><div style={ui.muted}>Loading…</div></AuthShell>
 }
 
 // Decides what a visitor sees at "/": the public landing page when logged out,
