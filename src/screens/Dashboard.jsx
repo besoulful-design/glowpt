@@ -846,7 +846,7 @@ export default function Dashboard() {
         )}
 
         {staffName && <div style={s.greet}>Welcome back, {staffName}</div>}
-        <div style={s.h1}>{isManager ? 'Clinic overview' : 'Your patients'}</div>
+        <div style={s.h1}>{isManager ? 'Clinic Overview' : 'Your Patients'}</div>
         <div style={s.sub}>
           {loading ? 'Loading…' : isManager
             ? 'Engagement across your patient roster this week.'

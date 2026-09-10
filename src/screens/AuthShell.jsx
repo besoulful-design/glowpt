@@ -29,6 +29,10 @@ export function Brand() {
 // 116) and David asked for them all to match the check-in/reflection size.
 // The one exception is BrandLockup's 34px app-bar mark, which passes its own.
 export const LOGO_SIZE = 132
+// The two FRONT DOORS (public landing page, signed-in welcome screen) share a
+// larger hero. 176 read as too big beside 132 and David asked for something in
+// between (2026-09-10); 154 is the midpoint. One constant so they cannot drift.
+export const FRONT_DOOR_LOGO_SIZE = 154
 
 // `float` (default true) is the gentle up-and-down every hero logo does. The
 // keyframes are `glowpt-float` in src/index.css, declared once. The only

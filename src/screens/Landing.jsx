@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { LogoMark, BRAND, ui, LABEL_SIZE } from './AuthShell'
+import { LogoMark, BRAND, ui, LABEL_SIZE, FRONT_DOOR_LOGO_SIZE } from './AuthShell'
 import { PRICE_LINE, PATIENTS_FREE_LINE, whatGlowptIs, CONTACT_EMAIL } from '../lib/marketing'
 import { useModal } from '../lib/useModal'
 
@@ -58,8 +58,7 @@ export default function Landing() {
     <div style={s.page}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap'); * { box-sizing: border-box; } body { margin: 0; background: #0d1825; } a:active { opacity: 0.85; }`}</style>
       <div style={s.wrap}>
-        {/* 176, not LOGO_SIZE: David kept the landing hero larger on purpose (2026-09-08). */}
-        <LogoMark size={176} />
+        <LogoMark size={FRONT_DOOR_LOGO_SIZE} />
         <div style={s.wordmark}>
           <span style={s.glow}>Glow</span><span style={s.pt}>PT</span>
         </div>

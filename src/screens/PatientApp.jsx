@@ -4,7 +4,7 @@ import { useAuth } from '../auth'
 import { FEELINGS as feelingData, isFeeling } from '../lib/feelings'
 import FeelingScale from './FeelingScale'
 import { stripClauseDashes } from '../lib/houseVoice'
-import { LogoMark, BRAND, LABEL_SIZE, SECTION_LABEL_SIZE, CARD_LABEL_SIZE } from './AuthShell'
+import { LogoMark, BRAND, LABEL_SIZE, SECTION_LABEL_SIZE, CARD_LABEL_SIZE, FRONT_DOOR_LOGO_SIZE } from './AuthShell'
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] // Mon → Sun
 
@@ -460,8 +460,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
           <div style={styles.welcomeWrap}>
             <button style={styles.signOut} onClick={signOut}>Sign Out</button>
             <div style={styles.welcomeTop}>
-              {/* 176 like the landing page, not LOGO_SIZE: the two front doors share the larger hero (David, 2026-09-08). */}
-              <LogoMark size={176} marginBottom={16} />
+              <LogoMark size={FRONT_DOOR_LOGO_SIZE} marginBottom={16} />
               <div style={styles.wordmark}>
                 <span style={styles.logoGlow}>Glow</span>
                 <span style={styles.logoPT}>PT</span>
