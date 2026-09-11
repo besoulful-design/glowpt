@@ -3,7 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Tints iOS Safari's toolbars and Android Chrome's status bar to the app's
+         navy. Without it Safari samples the page and can land on a lighter color,
+         which read as part of the white frame David reported (2026-09-11).
+         viewport-fit=cover above lets the navy run under the notch/home bar. -->
+    <meta name="theme-color" content="#0d1825" />
     <title>GlowPT</title>
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <meta name="apple-mobile-web-app-title" content="GlowPT">

@@ -1,25 +1,46 @@
+/* GlowPT is a FIXED DARK design. Navy #0d1825, at every width, in the phone's
+   light mode as well as its dark mode.
+
+   ⚠️ WHAT THIS FILE USED TO DO, because it looked harmless and was not
+   (fixed 2026-09-11, David: "the white trim looks awful"). It was still the
+   Vite scaffold, and three of its leftovers painted a light frame around the
+   app that only showed on a phone in LIGHT mode:
+     1. `background: var(--bg)` with `--bg: #fff` — the page canvas (html) was
+        WHITE. Every screen paints navy on its own container and three of them
+        also set `body`, but nothing set html, so white showed wherever a screen
+        did not reach: the overscroll bounce at the top and bottom, and the
+        whole page beyond 1126px on a desktop.
+     2. `#root { border-inline: 1px solid var(--border) }` — a literal 1px
+        #e5e4e7 line down the left and right edges. That was the "trim".
+     3. `color-scheme: light dark` — so in DARK mode the browser's own canvas
+        and controls went dark and hid all of it. That is exactly why David saw
+        it the day he turned dark mode off, and not before.
+   All three are gone. Keep it that way: this app has no light mode. */
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
+  /* The one place the shell colors are declared for the page canvas. The
+     screens carry their own copies of these literals in their style objects. */
+  --shell: #0d1825;
+  --ink: #f5efe4;
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
 
+  /* ⚠️ LOAD-BEARING, DO NOT RETUNE. 18px/145% is an ABSOLUTE 26.1px
+     line-height, and an absolute line-height INHERITS as-is instead of
+     rescaling to a child's font size. Several styles are tuned against that
+     (see the landing footer entry in CLAUDE.md, 2026-09-03). Changing the
+     number here shifts leading on every screen at once. */
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+
+  /* ⚠️ `dark`, NOT `light dark`. It is what keeps the browser's OWN surfaces
+     dark on a phone that is in light mode: the overscroll/bounce canvas, the
+     scrollbars, and native form controls (the therapist <select> and the
+     invite inputs on the dashboard). With `light dark` those all flipped to
+     light chrome inside a navy app. */
+  color-scheme: dark;
+  color: var(--ink);
+  background: var(--shell);
+
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -30,28 +51,12 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
+html,
 body {
   margin: 0;
+  /* Both, deliberately. A background on body alone does NOT propagate to the
+     page canvas once html has one of its own, which is how the white got in. */
+  background: var(--shell);
 }
 
 /* The logo's float. Declared ONCE, here, because it is applied by LogoMark in
@@ -69,9 +74,6 @@ body {
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
   /* ⚠️ NO `text-align` HERE, DELIBERATELY (removed 2026-09-05). It used to say
      `center`, and every screen inherited it invisibly. A plain text node obeyed
      it; a FLEX container did not, because text-align never moves flex items.
@@ -84,53 +86,13 @@ body {
      ⚠️ It is still CSS: a flex container ignores an inherited text-align. Where
      two structures must line up, state the alignment for BOTH and translate it
      for flex — see ROSTER_COLUMNS + FLEX_ALIGN in src/screens/Dashboard.jsx. */
-  border-inline: 1px solid var(--border);
+
+  /* ⚠️ NO `width`, NO `margin: 0 auto` and NO `border-inline` either, same
+     reason and same date as the file header above. The root fills the window
+     and the screens set their own max-widths (430 on the patient app, 520 on
+     landing, 980 on the dashboard), so the navy bleeds to all four edges. */
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
 }
