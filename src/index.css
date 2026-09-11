@@ -83,6 +83,30 @@ button:active {
   opacity: 0.85;
 }
 
+/* The focus ring, in ONE place at ONE value (2026-09-11, David: "make the focus
+   rings consistent, use 0.5"). It was rgba(...,0.5) in AuthShell and 0.4 in
+   PatientApp, and PatientApp's input rule was also missing the `outline: none`
+   its own textarea rule had. The Dashboard's invite fields and therapist
+   dropdown had no branded ring at all and now get the same one.
+
+   ⛔ THE CHECKBOX EXCLUSION IS NOT TIDINESS, IT IS THE WHOLE REASON THIS RULE IS
+   QUALIFIED. The old selector was a bare `input:focus`, so it also caught the
+   three CONSENT CHECKBOXES (Join, InviteJoin, Onboard). A native checkbox has
+   no author border for `border-color` to touch, so all those screens actually
+   did was `outline: none` — a keyboard user tabbing onto the Business Associate
+   Agreement checkbox got NO visible focus indicator whatsoever. Proven by
+   rendering a focused checkbox under both selectors. Leave checkboxes and
+   radios alone and they keep the platform's own ring.
+
+   `!important` is load-bearing: every one of these controls carries an inline
+   `border` shorthand from React, which would otherwise win. */
+input:not([type='checkbox']):not([type='radio']):focus,
+textarea:focus,
+select:focus {
+  border-color: rgba(245, 168, 26, 0.5) !important;
+  outline: none;
+}
+
 /* The logo's float. Declared ONCE, here, because it is applied by LogoMark in
    src/screens/AuthShell.jsx and every screen renders that one component. It
    used to live only inside PatientApp's welcome screen (its own @keyframes

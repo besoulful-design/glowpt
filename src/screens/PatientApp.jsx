@@ -442,9 +442,7 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     @keyframes dotPulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
     @keyframes pulse { 0%,100%{transform:scale(1);opacity:0.8} 50%{transform:scale(1.15);opacity:0.4} }
     textarea::placeholder { color: rgba(245,239,228,0.35); font-style: italic; font-family: 'Fraunces', serif; }
-    input::placeholder { color: rgba(245,239,228,0.35); font-style: italic; font-family: 'DM Sans', sans-serif; }
-    textarea:focus { border-color: rgba(245,168,26,0.4) !important; outline: none; }
-    input:focus { border-color: rgba(245,168,26,0.4) !important; }`
+    input::placeholder { color: rgba(245,239,228,0.35); font-style: italic; font-family: 'DM Sans', sans-serif; }`
 
   if (loading) return (
     <div style={styles.app}>
