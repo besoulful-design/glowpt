@@ -57,6 +57,30 @@ body {
   /* Both, deliberately. A background on body alone does NOT propagate to the
      page canvas once html has one of its own, which is how the white got in. */
   background: var(--shell);
+  /* A sideways scrollbar is always a bug in this app, never a design: the one
+     genuinely wide thing, the clinic roster, scrolls inside its OWN box. This
+     was declared on Dashboard and Admin only; it belongs to the shell.
+     ⚠️ It does NOT blind the house overflow test — `scrollWidth > innerWidth`
+     still reports the true content width through a hidden overflow. */
+  overflow-x: hidden;
+}
+
+html {
+  /* Stops iOS inflating body text when the phone is turned to landscape. It sat
+     on the Dashboard alone and has nothing to do with that screen. */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Was retyped in all five screen-level <style> tags, identically. */
+* {
+  box-sizing: border-box;
+}
+
+/* Tap feedback: three copies of one affordance across two selectors. Landing's
+   two calls to action are <a>, every other screen's are <button>. */
+a:active,
+button:active {
+  opacity: 0.85;
 }
 
 /* The logo's float. Declared ONCE, here, because it is applied by LogoMark in

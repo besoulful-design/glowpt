@@ -9,6 +9,17 @@
          which read as part of the white frame David reported (2026-09-11).
          viewport-fit=cover above lets the navy run under the notch/home bar. -->
     <meta name="theme-color" content="#0d1825" />
+    <!-- THE app's fonts, in ONE place (2026-09-11). Five screens each carried
+         their own @import inside a React-injected <style>, and they had drifted
+         into three DIFFERENT requests: Landing, Admin and Dashboard loaded only
+         two Fraunces instances (upright-300, italic-400) while asking for
+         upright-400 on screen, and PatientApp downloaded the whole Cormorant
+         Garamond family, which nothing has ever used.
+         A <link> in <head> also starts the download immediately, where an
+         @import inside injected CSS could not begin until React had mounted. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap" />
     <title>GlowPT</title>
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <meta name="apple-mobile-web-app-title" content="GlowPT">

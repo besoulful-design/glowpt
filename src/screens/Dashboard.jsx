@@ -816,7 +816,6 @@ export default function Dashboard() {
 
   return (
     <div style={s.page}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap'); * { box-sizing: border-box; } html { -webkit-text-size-adjust: 100%; } html, body { margin: 0; background: #0d1825; overflow-x: hidden; }`}</style>
       {Bar}
       <div style={s.wrap}>
         {/* Two different facts, so two different messages. A closed clinic is a

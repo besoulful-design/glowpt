@@ -432,16 +432,19 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     signOut: { position: 'absolute', top: 18, right: 20, fontSize: 12, color: 'rgba(245,239,228,0.4)', background: 'transparent', border: 'none', cursor: 'pointer', letterSpacing: '0.04em' },
   }
 
-  const fontStyle = `@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+  // This screen's OWN animations and form styling only. The fonts, the reset,
+  // the page background and button:active moved to src/index.css + index.html
+  // (2026-09-11): they were retyped in five screens and had drifted three ways.
+  // The @import here also pulled the whole Cormorant Garamond family, which
+  // nothing in the app has ever referenced.
+  const fontStyle = `
     @keyframes breathe { 0%,100%{opacity:0.5} 50%{opacity:1} }
     @keyframes dotPulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
     @keyframes pulse { 0%,100%{transform:scale(1);opacity:0.8} 50%{transform:scale(1.15);opacity:0.4} }
-    * { box-sizing: border-box; } body { margin: 0; background: #0d1825; }
     textarea::placeholder { color: rgba(245,239,228,0.35); font-style: italic; font-family: 'Fraunces', serif; }
     input::placeholder { color: rgba(245,239,228,0.35); font-style: italic; font-family: 'DM Sans', sans-serif; }
     textarea:focus { border-color: rgba(245,168,26,0.4) !important; outline: none; }
-    input:focus { border-color: rgba(245,168,26,0.4) !important; }
-    button:active { opacity: 0.85; }`
+    input:focus { border-color: rgba(245,168,26,0.4) !important; }`
 
   if (loading) return (
     <div style={styles.app}>

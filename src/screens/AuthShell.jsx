@@ -86,11 +86,12 @@ export function BrandLockup({ label }) {
 export function AuthShell({ children }) {
   return (
     <div style={{ minHeight: '100vh', background: '#0d1825', color: '#f5efe4', fontFamily: "'DM Sans', sans-serif", display: 'flex', justifyContent: 'center' }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,0,400;9..144,1,300;9..144,1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
-        * { box-sizing: border-box; } body { margin: 0; background: #0d1825; }
+      {/* Only this shell's OWN form styling. The fonts, the reset, the page
+          background and button:active are all in src/index.css + index.html
+          now (2026-09-11) — they were retyped in five screens and had drifted. */}
+      <style>{`
         input::placeholder { color: rgba(245,239,228,0.35); }
-        input:focus { border-color: rgba(245,168,26,0.5) !important; outline: none; }
-        button:active { opacity: 0.85; }`}</style>
+        input:focus { border-color: rgba(245,168,26,0.5) !important; outline: none; }`}</style>
       <div style={{ maxWidth: 430, width: '100%', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '32px 32px 48px' }}>
         {children}
       </div>

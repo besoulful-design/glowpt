@@ -56,7 +56,6 @@ export default function Landing() {
 
   return (
     <div style={s.page}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,300;9..144,1,400&family=DM+Sans:wght@400;500;600&display=swap'); * { box-sizing: border-box; } body { margin: 0; background: #0d1825; } a:active { opacity: 0.85; }`}</style>
       <div style={s.wrap}>
         <LogoMark size={FRONT_DOOR_LOGO_SIZE} />
         <div style={s.wordmark}>
