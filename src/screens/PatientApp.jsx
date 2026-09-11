@@ -322,10 +322,10 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     // so every pixel of leftover height became the gap above the greeting: small
     // on a phone, enormous on a desktop, and it grew when the logo shrank. Fixed
     // gaps below instead, so the screen reads the same at every height.
-    // 56px top. Was 20 (too close to the top once the 100vh spread was
-    // removed), then 40 to match the landing page, then David asked for a
-    // little more the same day (2026-09-11).
-    welcomeWrap: { display: 'flex', flexDirection: 'column', padding: '56px 32px 48px' },
+    // 72px top. Was 20 (too close to the top once the 100vh spread was
+    // removed), then 40 to match the landing page, then 56, then 72, David
+    // nudging it up by eye on the live screen (2026-09-11).
+    welcomeWrap: { display: 'flex', flexDirection: 'column', padding: '72px 32px 48px' },
     welcomeTop: { display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '0px' },
     wordmark: { display: 'flex', alignItems: 'baseline', marginBottom: '12px' },
     logoGlow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '57px', color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
