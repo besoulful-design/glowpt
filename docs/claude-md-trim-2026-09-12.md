@@ -47,29 +47,22 @@ lives in `docs/history.md`.
 ## Plan
 
 - [x] 0. Write this note and commit it, so a dead thread loses nothing
-- [x] 1. Create `docs/history.md` with the FULL current Status & backlog + the old
+- [ ] 1. Create `docs/history.md` with the FULL current Status & backlog + the old
       "Previously updated" header chain, verbatim
-- [x] 2. Distil durable rules from pre-08-29 entries into a RULES section in CLAUDE.md
-- [x] 3. Trim CLAUDE.md: keep sections 1-4 (with the header chain cut to ~2 weeks),
+- [ ] 2. Distil durable rules from pre-08-29 entries into a RULES section in CLAUDE.md
+- [ ] 3. Trim CLAUDE.md: keep sections 1-4 (with the header chain cut to ~2 weeks),
       keep backlog entries dated 2026-08-29+, drop the rest (now in history.md)
-- [x] 4. Archive the superseded Bedrock investigation history (it is explicitly marked
+- [ ] 4. Archive the superseded Bedrock investigation history (it is explicitly marked
       `[HISTORICAL]` / `superseded` in the doc and runs ~26 KB)
-- [x] 5. Add a "what may be added to this file" rule at the top, so it cannot regrow
-- [x] 6. Verify: every archived byte is present in history.md; measure before/after
-- [x] 7. Commit + push; show David the result
+- [ ] 5. Add a "what may be added to this file" rule at the top, so it cannot regrow
+- [ ] 6. Verify: every archived byte is present in history.md; measure before/after
+- [ ] 7. Commit + push; show David the result
 
 ## Progress log
 
 - 2026-09-12 09:00 — plan written and committed. CLAUDE.md at 478 KB / ~135k tokens.
-- 2026-09-12 09:20 — history.md written (352 KB), CLAUDE.md trimmed to 118 KB / ~33k
-  tokens. Rules section added. Verified: every archived entry present in the archive.
-- 2026-09-12 09:30 — DONE. Committed and pushed.
+  **Steps 1-7 NOT started.**
 
 ## Result
 
-**CLAUDE.md 478 KB → 118 KB. ~135,000 tokens → ~33,000.** A new thread now starts at
-roughly 3% of the window instead of 14% (and this session showed the file can be read
-twice, which was ~270k of a 447k window).
-
-Nothing was deleted. `docs/history.md` holds the full pre-2026-08-29 narrative and the
-superseded Bedrock investigation, verbatim.
+_(Not done yet. This section gets filled in when step 6 verifies.)_
