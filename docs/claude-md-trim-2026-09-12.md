@@ -97,7 +97,7 @@ So the remaining choice, with real numbers:
 
 David: *"yes go ahead and condense the two weeks too."*
 
-**Status: IN PROGRESS.** If a thread died here, check `git log` — if the commit
+**Status: DONE 2026-09-12.** If a thread died here, check `git log` — if the commit
 "CLAUDE.md: condense the last two weeks" exists, phase 2 is done.
 
 **Done first, so nothing can be lost:** the FULL original text of all 82 post-08-29
@@ -111,3 +111,31 @@ The 29 entries under 1.5 KB (28 KB) are already short and are left alone.
 **⛔ WHAT MUST SURVIVE CONDENSING:** every ⛔ and ⚠️ rule, every live id/number/threshold,
 every "do not put this back" warning. Those are the lines that have actually saved
 sessions. If in doubt, keep the rule and drop the story around it.
+
+
+## Phase 2 result
+
+**CLAUDE.md 332 KB -> 183 KB. Across both phases: 478 -> 183 KB, ~135,000 -> ~52,000
+tokens, 60% smaller.** A thread now starts at **~5% of a 1M window instead of ~13%**.
+
+53 entries condensed (196 KB -> 47 KB); the 29 already under 1.5 KB were left alone.
+The full original text of all 82 is in `docs/history.md` section 10, verbatim.
+
+**Verified by probing for 30 specific durable rules** — the day key and `to_char`, the
+viewport-fit and scroll-lock warnings, the focus-ring checkbox bug, `FeelingScale`,
+`patientColumnWidth`, the seed-script rehearsal order, the no-OG-tags rule, `isFeeling`,
+the email guard failing open, `ensure_self`, the namespace-import guard, the invite token
+not being a credential, the 8-vs-6 digit tell, the test runner hiding errors, the DB
+secret name, the bastion id. **All 30 present.**
+
+## What to do next time it grows
+
+Trim at ~150 KB. The method that worked, in order:
+1. **Bank the full text into `docs/history.md` FIRST**, so nothing can be lost.
+2. Archive whole sections that are unambiguously complete (a finished migration, a
+   resolved incident) — that is the cheap half and needs no judgment.
+3. **Check that live operational facts did not leave with the history around them.**
+   The DB secret name did, and it cannot be looked up at runtime.
+4. Condense recent entries to headline + what broke + rule + what was observed.
+5. **Probe the result for the specific rules that must survive.** A diff will not tell
+   you a rule is gone; only asking for it by name will.
