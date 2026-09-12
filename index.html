@@ -3,11 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Tints iOS Safari's toolbars and Android Chrome's status bar to the app's
-         navy. Without it Safari samples the page and can land on a lighter color,
-         which read as part of the white frame David reported (2026-09-11).
-         viewport-fit=cover above lets the navy run under the notch/home bar. -->
+         navy, instead of Safari sampling the page and landing on something
+         lighter. This alone is what fixes the white frame (2026-09-11).
+
+         ⛔ DO NOT ADD `viewport-fit=cover` TO THE VIEWPORT TAG ABOVE. It was
+         added here on 2026-09-11 and removed on 2026-09-12 because it broke
+         every screen on David's iPhone: it extends the page UNDER the status
+         bar and the home indicator, and NOTHING in this app uses
+         env(safe-area-inset-*) to compensate. So the status bar ate the top
+         padding (the welcome and landing logos sat on the very top edge, and
+         the dashboard's Sign Out could not be tapped at all) and the home
+         indicator ate the bottom. It buys only navy behind the notch, which
+         theme-color already handles. If it is ever wanted again, every
+         top-level screen container needs safe-area padding FIRST. -->
     <meta name="theme-color" content="#0d1825" />
     <!-- THE app's fonts, in ONE place (2026-09-11). Five screens each carried
          their own @import inside a React-injected <style>, and they had drifted
