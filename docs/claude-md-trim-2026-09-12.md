@@ -47,22 +47,45 @@ lives in `docs/history.md`.
 ## Plan
 
 - [x] 0. Write this note and commit it, so a dead thread loses nothing
-- [ ] 1. Create `docs/history.md` with the FULL current Status & backlog + the old
+- [x] 1. Create `docs/history.md` with the FULL current Status & backlog + the old
       "Previously updated" header chain, verbatim
-- [ ] 2. Distil durable rules from pre-08-29 entries into a RULES section in CLAUDE.md
-- [ ] 3. Trim CLAUDE.md: keep sections 1-4 (with the header chain cut to ~2 weeks),
+- [x] 2. Distil durable rules from pre-08-29 entries into a RULES section in CLAUDE.md
+- [x] 3. Trim CLAUDE.md: keep sections 1-4 (with the header chain cut to ~2 weeks),
       keep backlog entries dated 2026-08-29+, drop the rest (now in history.md)
-- [ ] 4. Archive the superseded Bedrock investigation history (it is explicitly marked
+- [x] 4. Archive the superseded Bedrock investigation history (it is explicitly marked
       `[HISTORICAL]` / `superseded` in the doc and runs ~26 KB)
-- [ ] 5. Add a "what may be added to this file" rule at the top, so it cannot regrow
-- [ ] 6. Verify: every archived byte is present in history.md; measure before/after
+- [x] 5. Add a "what may be added to this file" rule at the top, so it cannot regrow
+- [x] 6. Verify: every archived byte is present in history.md; measure before/after
 - [ ] 7. Commit + push; show David the result
 
 ## Progress log
 
-- 2026-09-12 09:00 — plan written and committed. CLAUDE.md at 478 KB / ~135k tokens.
-  **Steps 1-7 NOT started.**
+- 2026-09-12 09:00 — plan written and committed.
+- 2026-09-12 09:40 — steps 1-6 done. CLAUDE.md **473 KB -> 332 KB**, ~134,500 -> ~94,300
+  tokens. `docs/history.md` (156 KB) holds everything removed, verbatim.
+  - **⚠️ One real loss caught by the verification and restored: the RDS runbook and the
+    DB secret name** lived inside the archived migration log. That name cannot be looked
+    up at runtime (`list-secrets` is classifier-blocked), so losing it would have cost a
+    session. It is back in CLAUDE.md under "Live infrastructure and the DB runbook".
+    **A verification pass that only checks "is it in the archive" is not enough — also
+    check that live operational facts did not leave with the history around them.**
+- 2026-09-12 09:45 — step 7: committed and pushed.
 
-## Result
+## Result, and the honest shortfall
 
-_(Not done yet. This section gets filled in when step 6 verifies.)_
+**478 -> 332 KB. ~135,000 -> ~94,300 tokens.** A thread now starts at ~9% of the window
+instead of ~14%.
+
+**⚠️ THAT IS LESS THAN IT SHOULD BE, AND DAVID SHOULD DECIDE THE NEXT STEP.** Keeping the
+last two weeks byte-intact was his instruction and it was followed — but **those two
+weeks ARE the bulk**: 82 entries, **224 KB**, because 2026-09-04 to 09-12 was an
+extremely busy stretch. Everything else in the file now totals ~108 KB.
+
+So the remaining choice, with real numbers:
+- **Leave it.** 332 KB. Buys a few weeks before the same conversation recurs.
+- **Condense the two-week entries too** — keep every entry, cut each to its rule, what
+  broke, and the verification line, dropping the investigation narrative (which is in the
+  commit messages anyway). 82 entries averaging 2.7 KB would land near 35 KB, taking the
+  file to roughly **140 KB / ~40,000 tokens**. That buys months.
+
+**Not done, because it was not what David approved.** Put it to him.
