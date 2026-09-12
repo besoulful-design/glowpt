@@ -8,8 +8,8 @@ This file does not load automatically — read it when you need the reasoning be
 old decision, or grep it. `git log` carries much of the same detail.
 
 **Why:** CLAUDE.md had reached 478 KB / ~135,000 tokens and was doubling every ten days,
-so every thread began ~14% full. Method and reasoning:
-`docs/claude-md-trim-2026-09-12.md`.
+so every thread began ~14% full. Method: the "WHAT MAY BE ADDED TO THIS FILE" section of CLAUDE.md. The record of the
+day itself is section 11 at the foot of this file.
 
 ⚠️ **Backlog entries dated 2026-08-29 or later were NOT moved** — they remain in
 CLAUDE.md in full, at David's instruction. This file holds what came before, plus the
