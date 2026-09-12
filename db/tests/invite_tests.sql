@@ -345,7 +345,7 @@ begin
   -- their decision, and the deliberateness lives in the typed-name confirmation
   -- on screen and the archive-first guard, not in a blanket refusal here.
   perform set_config('app.user_id', newpat::text, true);
-  insert into checkins (user_id, clinic_id, feeling) values (newpat, clinic_a, 4);
+  insert into checkins (user_id, clinic_id, feeling, local_date) values (newpat, clinic_a, 4, current_date);
   perform set_config('app.user_id', mgr_a::text, true);
   select count(*) into n from checkins where user_id = newpat;
   raise notice '% T53pre the patient really does have history first -> % check-in(s)',

@@ -345,7 +345,7 @@ async function getMyCheckins(client: Client, event: APIGatewayProxyEventV2WithJW
   const since = event.queryStringParameters?.since; // ISO timestamp, computed client-side
   const result = await withUser(client, sub, async (c) => {
     const list = await c.query(
-      `select feeling, feeling_word, movements, other_movement, note, ai_response, created_at
+      `select feeling, feeling_word, movements, other_movement, note, ai_response, created_at, to_char(local_date,'YYYY-MM-DD') as local_date
          from public.checkins
         where user_id = public.current_user_id()
           and ($1::timestamptz is null or created_at >= $1::timestamptz)
@@ -362,6 +362,54 @@ async function getMyCheckins(client: Client, event: APIGatewayProxyEventV2WithJW
 
 // -- Check-ins: record today's check-in. The database enforces one row per user
 //    per UTC day (checkins_one_per_day), so this is a clean upsert on that key
+// -- WHICH DAY A CHECK-IN BELONGS TO -------------------------------------------
+// The client sends the calendar date its own device is living in, as
+// 'YYYY-MM-DD'. That, not the server's clock, is the day the patient thinks
+// they are in -- which is the only sane day key for a daily-habit product.
+//
+// ⚠️ DO NOT derive the day from created_at again. Doing so is what let a
+// check-in made after 8pm Eastern be filed under the next UTC day, where the
+// following morning's check-in overwrote it (2026-09-12).
+//
+// Returns null when the client did not send a usable date, and the SQL then
+// falls back to the UTC date -- exactly the old behaviour. That path exists for
+// a browser still running a cached pre-2026-09-12 bundle; it is not a
+// long-term mode and it never rejects a check-in, because losing a real
+// check-in to a clock quibble is worse than filing it a few hours off.
+// ⚠️ EVERY read of local_date goes through to_char(local_date,'YYYY-MM-DD'), and
+// that is load-bearing twice over. (1) node-postgres parses a `date` column into
+// a JS Date, which JSON-serialises to a full ISO timestamp
+// ("2026-09-11T00:00:00.000Z") -- the frontend's day comparison would never
+// match and every screen would render as though the patient had never checked in
+// at all. (2) to_char rather than ::text because ::text renders through the
+// session's DateStyle; to_char is the same string whatever DateStyle says.
+// Do not "simplify" either half away.
+const LOCAL_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function resolveLocalDate(raw: unknown): string | null {
+  if (typeof raw !== 'string' || !LOCAL_DATE_RE.test(raw)) {
+    if (raw !== undefined && raw !== null) console.warn('local_date ignored, not YYYY-MM-DD:', raw);
+    return null;
+  }
+  // Reject a date that is not a real calendar day (2026-02-30, 2026-13-01).
+  const asUtc = new Date(`${raw}T00:00:00Z`);
+  if (Number.isNaN(asUtc.getTime()) || asUtc.toISOString().slice(0, 10) !== raw) {
+    console.warn('local_date ignored, not a real date:', raw);
+    return null;
+  }
+  // Sanity bound. Real time zones run UTC-12 to UTC+14, so a correct device is
+  // never more than one day either side of the server's UTC date. Anything
+  // further out is a wrong clock or a tampered body, and must not be allowed to
+  // write a check-in into next year and sit there inflating a streak.
+  const serverUtcDays = Math.floor(Date.now() / 86400000);
+  const claimedDays = Math.floor(asUtc.getTime() / 86400000);
+  if (Math.abs(claimedDays - serverUtcDays) > 1) {
+    console.warn('local_date ignored, more than a day from the server:', raw);
+    return null;
+  }
+  return raw;
+}
+
 //    instead of the old read-then-write race. clinic_id is derived server-side
 //    from the caller's profile (RLS also requires clinic_id = auth_clinic_id()).
 async function postMyCheckin(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
@@ -385,14 +433,16 @@ async function postMyCheckin(client: Client, event: APIGatewayProxyEventV2WithJW
   const otherMovement = typeof b.other_movement === 'string' ? b.other_movement : null;
   const note = typeof b.note === 'string' ? b.note : null;
   const aiResponse = typeof b.ai_response === 'string' ? b.ai_response : null;
+  const localDate = resolveLocalDate(b.local_date);
 
   const row = await withUser(client, sub, async (c) => {
     const { rows } = await c.query(
       `insert into public.checkins
-         (user_id, clinic_id, feeling, feeling_word, movements, other_movement, note, ai_response)
+         (user_id, clinic_id, feeling, feeling_word, movements, other_movement, note, ai_response, local_date)
        values
-         (public.current_user_id(), public.auth_clinic_id(), $1, $2, $3, $4, $5, $6)
-       on conflict (user_id, public.utc_date(created_at)) do update
+         (public.current_user_id(), public.auth_clinic_id(), $1, $2, $3, $4, $5, $6,
+          coalesce($7::date, public.utc_date(now())))
+       on conflict (user_id, local_date) do update
          set feeling        = excluded.feeling,
              feeling_word   = excluded.feeling_word,
              movements      = excluded.movements,
@@ -400,7 +450,7 @@ async function postMyCheckin(client: Client, event: APIGatewayProxyEventV2WithJW
              note           = excluded.note,
              ai_response    = excluded.ai_response
        returning id`,
-      [feeling, feelingWord, movements, otherMovement, note, aiResponse],
+      [feeling, feelingWord, movements, otherMovement, note, aiResponse, localDate],
     );
     return rows[0];
   });
@@ -434,7 +484,7 @@ async function getRoster(client: Client, event: APIGatewayProxyEventV2WithJWTAut
         where role = 'patient'`,
     );
     const checkins = await c.query(
-      `select user_id, feeling, feeling_word, note, created_at
+      `select user_id, feeling, feeling_word, note, created_at, to_char(local_date,'YYYY-MM-DD') as local_date
          from public.checkins
         order by created_at desc`,
     );

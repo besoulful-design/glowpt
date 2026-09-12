@@ -4,6 +4,7 @@ import { useAuth } from '../auth'
 import { FEELINGS as feelingData, isFeeling } from '../lib/feelings'
 import FeelingScale from './FeelingScale'
 import { stripClauseDashes } from '../lib/houseVoice'
+import { localDateString } from '../lib/localDay'
 import { LogoMark, BRAND, LABEL_SIZE, SECTION_LABEL_SIZE, CARD_LABEL_SIZE, FRONT_DOOR_LOGO_SIZE } from './AuthShell'
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] // Mon → Sun
@@ -16,10 +17,6 @@ function startOfWeek(d) {
   return date
 }
 
-function sameLocalDay(a, b) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-}
-
 // Build the current Mon–Sun week from real check-in rows.
 function buildWeek(checkins) {
   const monday = startOfWeek(new Date())
@@ -27,7 +24,11 @@ function buildWeek(checkins) {
   return Array.from({ length: 7 }, (_, i) => {
     const date = new Date(monday)
     date.setDate(monday.getDate() + i)
-    const match = checkins.find(c => sameLocalDay(new Date(c.created_at), date))
+    // ⚠️ MATCH ON THE STORED local_date, never on created_at. The row carries the
+    // day the PATIENT was in when they saved it; re-deriving a day from the
+    // timestamp is what filed a 10pm check-in under tomorrow (2026-09-12).
+    const key = localDateString(date)
+    const match = checkins.find(c => c.local_date === key)
     const f = match?.feeling
     return {
       id: i,
@@ -40,7 +41,7 @@ function buildWeek(checkins) {
       note: match?.note ?? '',
       response: stripClauseDashes(match?.ai_response ?? ''),
       done: !!match,
-      today: sameLocalDay(date, today),
+      today: key === localDateString(today),
     }
   })
 }
@@ -64,7 +65,7 @@ function build30Days(checkins) {
   return Array.from({ length: 30 }, (_, i) => {
     const date = new Date(base)
     date.setDate(base.getDate() - (29 - i))
-    const match = checkins.find(c => sameLocalDay(new Date(c.created_at), date))
+    const match = checkins.find(c => c.local_date === localDateString(date)) // stored day, not created_at
     return {
       feeling: match?.feeling ?? null,
       done: !!match,
@@ -256,10 +257,16 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     }
 
     // The server derives user_id + clinic_id from the verified token and enforces
-    // one check-in per UTC day (upsert), so the payload is just the check-in data
-    // and the same-day re-entry logic no longer lives in the client.
+    // one check-in per LOCAL day (upsert), so the payload is the check-in data
+    // plus the day itself -- and the same-day re-entry logic no longer lives in
+    // the client.
+    // ⚠️ local_date is captured HERE, when the check-in is made, and rides in the
+    // payload on purpose: a retry (retrySave, below) re-sends this same object,
+    // so a save that fails at 11:58pm and succeeds at 12:01am is still filed
+    // under the day the patient actually checked in.
     const payload = {
       feeling: selectedFeeling,
+      local_date: localDateString(),
       feeling_word: selectedFeeling ? feelingData[selectedFeeling].word : '',
       movements,
       other_movement: otherMovement.trim() || null,

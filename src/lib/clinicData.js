@@ -1,5 +1,6 @@
 import * as api from './api'
 import { isFeeling } from './feelings'
+import { localDateString, daysSinceLocalDate } from './localDay'
 
 // Fetch a clinic's patients and their check-ins.
 // RLS scopes the rows automatically: a manager gets the whole clinic; a therapist
@@ -38,19 +39,23 @@ export function restorePatient(patientId) {
   return api.restorePatient(patientId)
 }
 
-function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x }
-function dayKey(d) { const x = startOfDay(d); return `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}` }
-function daysBetween(a, b) { return Math.round((startOfDay(a) - startOfDay(b)) / 86400000) }
+// ⚠️ DAYS COME FROM checkins.local_date, NOT FROM created_at. The row stores the
+// calendar day the PATIENT was living in when they saved it. Deriving it from
+// the timestamp instead was wrong twice over: it filed a post-8pm check-in
+// under the next UTC day (so the next morning's overwrote it, 2026-09-12), and
+// on this screen it bucketed by whatever day the STAFF member's browser was in,
+// so a therapist in another time zone saw their patient's days shifted.
+// Do not reintroduce a timestamp-derived day here.
 
 // Consecutive days with a check-in, ending today or yesterday.
 function computeStreak(checkins) {
   if (!checkins.length) return 0
-  const keys = new Set(checkins.map(c => dayKey(c.created_at)))
+  const days = new Set(checkins.map(c => c.local_date).filter(Boolean))
   let streak = 0
   const cursor = new Date()
   // allow the streak to still count if they haven't checked in yet *today*
-  if (!keys.has(dayKey(cursor))) cursor.setDate(cursor.getDate() - 1)
-  while (keys.has(dayKey(cursor))) { streak++; cursor.setDate(cursor.getDate() - 1) }
+  if (!days.has(localDateString(cursor))) cursor.setDate(cursor.getDate() - 1)
+  while (days.has(localDateString(cursor))) { streak++; cursor.setDate(cursor.getDate() - 1) }
   return streak
 }
 
@@ -62,7 +67,8 @@ export function buildRoster(patients, checkins) {
   return patients.map(p => {
     const cs = byUser[p.id] || []
     const last = cs[0]
-    const daysSince = last ? daysBetween(new Date(), last.created_at) : null
+    // Days since the patient's own last check-in DAY, not since the timestamp.
+    const daysSince = last ? daysSinceLocalDate(last.local_date) : null
     // ⚠️ EVERY read of `feeling` goes through isFeeling, and that is load-bearing.
     // A stored value off the 1-5 scale (a 0 got in on 2026-09-05) is NOT a rating:
     // it must read as "no check-in", never as a low score. Testing `!= null` or
@@ -92,7 +98,9 @@ export function buildRoster(patients, checkins) {
       name: p.full_name || 'New patient',
       therapistId: p.therapist_id || null,
       count: cs.length,
-      lastCheckin: last?.created_at || null,
+      // The patient's own last check-in DAY ('YYYY-MM-DD'), so the Last Check-In
+      // column reads "Yesterday" against THEIR calendar, not the viewer's.
+      lastCheckin: last?.local_date || null,
       daysSince,
       streak: computeStreak(cs),
       last3,
@@ -126,9 +134,11 @@ export function clinicStats(roster) {
   return { total, active, engagement, atRisk, avgFeeling }
 }
 
+// Takes a stored local_date ('YYYY-MM-DD'), not a timestamp.
 export function relativeDay(dateStr) {
   if (!dateStr) return 'Never'
-  const d = daysBetween(new Date(), dateStr)
+  const d = daysSinceLocalDate(dateStr)
+  if (d == null) return 'Never'
   if (d <= 0) return 'Today'
   if (d === 1) return 'Yesterday'
   return `${d} days ago`

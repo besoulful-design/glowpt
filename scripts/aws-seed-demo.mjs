@@ -107,6 +107,20 @@ function atDaysAgo(days) {
   return d.toISOString();
 }
 
+// The calendar day the check-in belongs to, matching atDaysAgo's local 9am.
+// ⚠️ REQUIRED: checkins.local_date is NOT NULL with no default (2026-09-12), so
+// a seed that omits it fails loudly rather than quietly filing demo rows under a
+// UTC day again. Do not switch this to toISOString().slice(0,10) -- that is the
+// UTC date, which is the whole bug.
+function localDayAgo(days) {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  d.setHours(0, 0, 0, 0);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
 async function deleteCognitoUser(email) {
   try {
     await cognito.send(new AdminDeleteUserCommand({ UserPoolId: USER_POOL_ID, Username: email }));
@@ -296,12 +310,12 @@ async function seedDemo() {
       for (let i = 0; i < checkins.length; i++) {
         const c = checkins[i];
         await db.query(
-          `insert into public.checkins (user_id, clinic_id, feeling, feeling_word, movements, note, ai_response, created_at)
-           values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          `insert into public.checkins (user_id, clinic_id, feeling, feeling_word, movements, note, ai_response, created_at, local_date)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           [
             sub, clinic.id, c.feeling, FEELING_WORDS[c.feeling],
             MOVES[i % MOVES.length], NOTES[i % NOTES.length],
-            'You showed up today — and that matters.', atDaysAgo(c.ago),
+            'You showed up today — and that matters.', atDaysAgo(c.ago), localDayAgo(c.ago),
           ],
         );
       }

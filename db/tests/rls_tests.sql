@@ -51,20 +51,21 @@ begin; select set_config('app.user_id','88888888-8888-8888-8888-888888888888',tr
 
 -- =================== CHECK-INS (legit, via RLS insert) ===================
 begin; select set_config('app.user_id','22222222-2222-2222-2222-222222222222',true);
-  insert into checkins (user_id, clinic_id, feeling, feeling_word)
-    values (current_user_id(), auth_clinic_id(), 4, 'Good'); commit;
+  insert into checkins (user_id, clinic_id, feeling, feeling_word, local_date)
+    values (current_user_id(), auth_clinic_id(), 4, 'Good', current_date); commit;
 begin; select set_config('app.user_id','33333333-3333-3333-3333-333333333333',true);
-  insert into checkins (user_id, clinic_id, feeling, feeling_word)
-    values (current_user_id(), auth_clinic_id(), 2, 'Tough'); commit;
+  insert into checkins (user_id, clinic_id, feeling, feeling_word, local_date)
+    values (current_user_id(), auth_clinic_id(), 2, 'Tough', current_date); commit;
 begin; select set_config('app.user_id','66666666-6666-6666-6666-666666666666',true);
-  insert into checkins (user_id, clinic_id, feeling, feeling_word)
-    values (current_user_id(), auth_clinic_id(), 5, 'Great'); commit;
+  insert into checkins (user_id, clinic_id, feeling, feeling_word, local_date)
+    values (current_user_id(), auth_clinic_id(), 5, 'Great', current_date); commit;
 
 \set QUIET off
 -- ================================ TESTS ================================
 do $$
 declare
   pat_a1 uuid := '22222222-2222-2222-2222-222222222222';
+  pat_a2 uuid := '33333333-3333-3333-3333-333333333333';
   pat_c1 uuid := '99999999-9999-9999-9999-999999999999';
   admin_id uuid := '77777777-7777-7777-7777-777777777777';
   clinic_b uuid;
@@ -103,8 +104,8 @@ begin
   perform set_config('app.user_id', '', true);
   denied := false;
   begin
-    insert into public.checkins (user_id, clinic_id, feeling)
-      values ('66666666-6666-6666-6666-666666666666', clinic_b, 5);
+    insert into public.checkins (user_id, clinic_id, feeling, local_date)
+      values ('66666666-6666-6666-6666-666666666666', clinic_b, 5, current_date);
   exception when insufficient_privilege then denied := true; end;
   raise notice '% T4 anonymous checkin insert', case when denied then 'PASS:' else 'FAIL:' end;
 
@@ -112,8 +113,8 @@ begin
   perform set_config('app.user_id', pat_a1::text, true);
   denied := false;
   begin
-    insert into public.checkins (user_id, clinic_id, feeling)
-      values ('66666666-6666-6666-6666-666666666666', clinic_b, 5);
+    insert into public.checkins (user_id, clinic_id, feeling, local_date)
+      values ('66666666-6666-6666-6666-666666666666', clinic_b, 5, current_date);
   exception when insufficient_privilege then denied := true; end;
   raise notice '% T5 forge checkin for another patient', case when denied then 'PASS:' else 'FAIL:' end;
 
@@ -155,15 +156,49 @@ begin
   select count(*) into n from public.checkins;    -- only clinic B has 1 (Pat B1)
   raise notice '% T12 manager B checkin visibility (want 1, clinic B only) -> %', case when n=1 then 'PASS:' else 'FAIL:' end, n;
 
-  -- T13 TIGHTENING P2: a second check-in the same UTC day for the same patient
-  -- (Pat A1 already has one from seeding) must be blocked by the unique index.
+  -- T13 TIGHTENING P2: a second check-in on the same LOCAL day for the same
+  -- patient (Pat A1 already has one from seeding) must be blocked by the unique
+  -- index. The app's own same-day path UPDATEs that row instead, which is the
+  -- deliberate 2026-07-15 behaviour; this only blocks a true duplicate.
   perform set_config('app.user_id', pat_a1::text, true);
   denied := false;
   begin
-    insert into public.checkins (user_id, clinic_id, feeling)
-      values (current_user_id(), auth_clinic_id(), 3);
+    insert into public.checkins (user_id, clinic_id, feeling, local_date)
+      values (current_user_id(), auth_clinic_id(), 3, current_date);
   exception when unique_violation then denied := true; end;
   raise notice '% T13 duplicate same-day checkin blocked', case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T13b REGRESSION (2026-09-12): AN EVENING CHECK-IN AND THE NEXT MORNING'S ARE
+  -- TWO DIFFERENT DAYS. These two timestamps are 7 hours apart and straddle
+  -- 8pm Eastern, so under the old UTC-day key they landed in the SAME slot: the
+  -- morning row overwrote the evening one, destroying its feeling, note and
+  -- reflection, and the patient's streak read a day short. Keyed on local_date
+  -- they are two rows, which is what actually happened in the patient's life.
+  -- ⚠️ FIXED PAST DATES, deliberately. Written first with 2026-09-11/09-12, it
+  -- collided with the seeded current_date row and read 1 -- a test failing for a
+  -- reason that had nothing to do with what it was testing. June is also
+  -- unambiguously EDT, so the 8pm straddle does not depend on a DST boundary.
+  perform set_config('app.user_id', pat_a2::text, true);
+  denied := false;
+  begin
+    insert into public.checkins (user_id, clinic_id, feeling, created_at, local_date)
+      values (current_user_id(), auth_clinic_id(), 4,
+              timestamptz '2026-06-10 20:14 America/New_York', date '2026-06-10');
+    insert into public.checkins (user_id, clinic_id, feeling, created_at, local_date)
+      values (current_user_id(), auth_clinic_id(), 2,
+              timestamptz '2026-06-11 07:20 America/New_York', date '2026-06-11');
+  exception when others then denied := true; end;
+  select count(*) into n from public.checkins
+   where user_id = pat_a2 and local_date in (date '2026-06-10', date '2026-06-11');
+  raise notice '% T13b evening + next morning survive as 2 rows (want 2) -> %',
+    case when not denied and n = 2 then 'PASS:' else 'FAIL:' end, n;
+
+  -- T13c and both of those rows fall on the SAME UTC day, which is precisely why
+  -- the old key collapsed them. If this ever reads 1, the day key has regressed.
+  select count(*) into n from public.checkins
+   where user_id = pat_a2 and public.utc_date(created_at) = date '2026-06-11';
+  raise notice '% T13c the two rows share one UTC day (want 2) -> %',
+    case when n = 2 then 'PASS:' else 'FAIL:' end, n;
 
   -- T14 TIGHTENING P1: checkins.user_id is now NOT NULL at the schema level.
   select attnotnull into denied
@@ -177,11 +212,12 @@ begin
   -- clinic. Dated YESTERDAY on purpose: A1 already checked in today, so a
   -- same-day row would be rejected by the one-per-day index and this would pass
   -- for the wrong reason. check_violation specifically, for the same reason.
+  -- ⚠️ The day is dodged via local_date now, not created_at (2026-09-12).
   perform set_config('app.user_id', pat_a1::text, true);
   denied := false;
   begin
-    insert into public.checkins (user_id, clinic_id, feeling, created_at)
-      values (current_user_id(), auth_clinic_id(), 0, now() - interval '1 day');
+    insert into public.checkins (user_id, clinic_id, feeling, local_date)
+      values (current_user_id(), auth_clinic_id(), 0, current_date - 1);
   exception when check_violation then denied := true; end;
   raise notice '% T14b off-scale feeling (0) rejected', case when denied then 'PASS:' else 'FAIL:' end;
 
@@ -189,8 +225,8 @@ begin
   -- because nothing can be inserted for yesterday at all.
   denied := false;
   begin
-    insert into public.checkins (user_id, clinic_id, feeling, created_at)
-      values (current_user_id(), auth_clinic_id(), 3, now() - interval '1 day');
+    insert into public.checkins (user_id, clinic_id, feeling, local_date)
+      values (current_user_id(), auth_clinic_id(), 3, current_date - 1);
   exception when others then denied := true; end;
   raise notice '% T14c a valid feeling on that same day still inserts', case when not denied then 'PASS:' else 'FAIL:' end;
 
@@ -241,8 +277,8 @@ begin
   perform set_config('app.user_id', pat_c1::text, true);
   denied := false;
   begin
-    insert into public.checkins (user_id, clinic_id, feeling)
-      values (current_user_id(), clinic_c, 3);
+    insert into public.checkins (user_id, clinic_id, feeling, local_date)
+      values (current_user_id(), clinic_c, 3, current_date);
   exception when insufficient_privilege or check_violation then denied := true;
             when others then denied := true; end;
   raise notice '% T19 check-in refused while clinic is switched off', case when denied then 'PASS:' else 'FAIL:' end;

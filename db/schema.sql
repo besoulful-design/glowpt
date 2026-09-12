@@ -177,6 +177,21 @@ create table public.checkins (
   created_at     timestamptz default timezone('utc', now()),
   other_movement text,
   clinic_id      uuid references public.clinics(id) on delete cascade,
+  -- ⚠️ THE DAY A CHECK-IN BELONGS TO IS local_date, NOT created_at. Do not go
+  -- back to deriving the day from the timestamp -- that bug cost a patient a
+  -- real entry on 2026-09-12.
+  --   created_at is the instant it was saved, in UTC.
+  --   local_date is the calendar day the PATIENT was living in when they saved
+  --   it, reported by their own device. Midnight to midnight, their time zone.
+  -- They disagree for any check-in made after 8pm Eastern, because that is
+  -- already tomorrow in UTC. Keying the day off created_at meant a 10pm
+  -- check-in was filed under the next UTC day, and the next morning's check-in
+  -- then overwrote it -- one row, not two, with the evening's feeling, note and
+  -- reflection replaced and the streak reading a day short.
+  -- Storing the patient's own date also means a therapist in another time zone
+  -- reads the same days the patient does; before, the roster bucketed by
+  -- whatever the STAFF member's browser thought the day was.
+  local_date     date not null,
   -- ⚠️ THE SCALE IS 1-5 AND THE APP INDEXES INTO IT DIRECTLY. src/lib/feelings.js
   -- maps 1-5 to a face and a word, so a stored value off the scale is a lookup
   -- that returns undefined. On 2026-09-05 a check-in was saved with feeling 0
@@ -863,9 +878,11 @@ create or replace function public.weekly_summary_rows()
 as $$
   with recent as (
     select ch.user_id,
-           -- distinct UTC calendar days; same rule as public.utc_date(), inlined
-           -- to keep this function free of any create-order / grant dependency.
-           count(distinct (ch.created_at at time zone 'UTC')::date)::int as days
+           -- Distinct days the PATIENT was living in, not distinct UTC days.
+           -- Counting UTC days double-counted anyone whose evening check-in
+           -- spilled into the next UTC date: on 2026-09-12 Charlie's two Friday
+           -- check-ins read as 3 days instead of 2.
+           count(distinct ch.local_date)::int as days
     from public.checkins ch
     where ch.created_at >= now() - interval '7 days'
     group by ch.user_id
@@ -1294,20 +1311,28 @@ alter function public.purge_target(uuid)                      owner to glowpt_au
 --      defense-in-depth backstop for any non-app code path.
 alter table public.checkins alter column user_id set not null;
 
--- (P2) One check-in per user per (UTC) calendar day, enforced in the database so
+-- (P2) One check-in per user per LOCAL calendar day, enforced in the database so
 --      the same-day re-entry logic no longer relies on the app winning a
 --      read-then-write race. The app's same-day path UPDATEs the existing row
 --      rather than inserting, so it is unaffected; this only blocks true dups.
 --
---      "UTC day" needs an IMMUTABLE expression for the index. `created_at AT TIME
---      ZONE 'UTC'` is only STABLE (timezone rules can change in general), so
---      Postgres rejects it directly. For the FIXED 'UTC' zone the result is
---      genuinely constant, so we wrap it in an IMMUTABLE helper (the standard
---      idiom) and index on that.
+--      ⚠️ THIS INDEX IS NO LONGER KEYED ON A UTC DAY (changed 2026-09-12). It
+--      keys on checkins.local_date -- the patient's own calendar day. See the
+--      column comment on public.checkins for why, and do not reintroduce a
+--      timestamp-derived day key here.
+--
+--      public.utc_date() SURVIVES the change and still has two jobs, so do not
+--      drop it as dead: it is the API's fallback when a client sends no local
+--      date (an old cached bundle), and it is what the 2026-09-12 backfill used
+--      to repair rows whose content had already been overwritten.
 create or replace function public.utc_date(ts timestamptz) returns date
   language sql immutable
 as $$ select (ts at time zone 'UTC')::date $$;
 grant execute on function public.utc_date(timestamptz) to glowpt_app;
 
+-- ONE CHECK-IN PER PATIENT PER LOCAL DAY. Keyed on local_date, so "day" means
+-- the patient's own calendar day rather than a UTC one. A same-day re-entry
+-- still UPDATES the existing row (deliberate since 2026-07-15); what it can no
+-- longer do is reach back and overwrite a DIFFERENT day's check-in.
 create unique index checkins_one_per_day
-  on public.checkins (user_id, public.utc_date(created_at));
+  on public.checkins (user_id, local_date);
