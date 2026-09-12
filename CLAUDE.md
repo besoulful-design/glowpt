@@ -17,9 +17,15 @@
 - Anything already true of the code — the code and its comments say it better.
 - A second copy of a rule that is already stated somewhere above.
 
-**🧹 TRIM IT WHEN IT PASSES ~150 KB.** Move backlog entries older than about two weeks into `docs/history.md`, and lift any durable rule out of them into STANDING RULES first. **Losing that second half is how a trim goes wrong** — the rules are the part that earns its place. The method is written up in `docs/claude-md-trim-2026-09-12.md`.
+**🧹 TRIM IT WHEN IT PASSES ~150 KB.** The method that worked on 2026-09-12 (478 KB → 183 KB), in order:
+1. **Bank the full text into `docs/history.md` FIRST**, so nothing can be lost.
+2. Archive whole sections that are unambiguously finished (a completed migration, a resolved incident). That is the cheap half and needs no judgment.
+3. **Check that live operational facts did not leave with the history around them.** The DB secret name did, and it cannot be looked up at runtime.
+4. Condense recent entries to headline + what broke + the rule + what was observed.
+5. **Lift every durable rule into STANDING RULES before archiving its entry. Losing this step is how a trim goes wrong** — the rules are the part that earns its place.
+6. **Probe the result for the specific rules that must survive, by name.** A diff will not tell you a rule is gone; only asking for it will.
 
-**📚 WHERE THE OLD DETAIL LIVES:** `docs/history.md` — the full pre-2026-08-29 backlog, the completed AWS migration log, the superseded Bedrock investigation, the SES and Netlify setup records. Nothing was deleted. Grep it.
+**📚 THERE ARE ONLY TWO FILES. This one, which loads every session and holds what must be known; and `docs/history.md`, which loads never and holds why.** The old detail — the full pre-2026-08-29 backlog, the completed AWS migration log, the superseded Bedrock investigation, the SES and Netlify setup records. Nothing was deleted. Grep it.
 
 ## What it is
 A daily wellness check-in app for physical therapy patients. Patient does a 30-second check-in (feeling 1–5, movement, a note) and gets a warm, AI-written reflection. Their clinic gets dashboards + a weekly summary. **Clinics subscribe; patients use it free** as a value-add.
