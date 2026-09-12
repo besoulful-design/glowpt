@@ -70,11 +70,11 @@ body {
      It belongs on the two screens that want it, and nowhere near the shell. */
 }
 
-html {
-  /* Stops iOS inflating body text when the phone is turned to landscape. It sat
-     on the Dashboard alone and has nothing to do with that screen. */
-  -webkit-text-size-adjust: 100%;
-}
+/* ⛔ `-webkit-text-size-adjust` IS NOT HERE ON PURPOSE. It was globalised from
+   the Dashboard on 2026-09-11 and put back on 2026-09-12. It changes how iOS
+   sizes text, it was never asked for, and it cannot be tested without David's
+   phone — the same shape as the two things that did break it. It stays on the
+   one screen that has always had it. */
 
 /* Was retyped in all five screen-level <style> tags, identically. */
 * {
