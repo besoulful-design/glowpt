@@ -338,7 +338,11 @@ Respond directly to ${firstName} in second person. Reference what they actually 
     logoGlow: { fontFamily: "'Fraunces', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '57px', color: '#f5efe4', letterSpacing: '-0.03em', lineHeight: 1 },
     logoPT: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '57px', color: BRAND, letterSpacing: '-0.02em', lineHeight: 1 },
     tagline: { fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: '21px', color: 'rgba(245,168,26,0.85)', textAlign: 'center', letterSpacing: '0.01em', lineHeight: 1.2 },
-    welcomeMiddle: { textAlign: 'center', padding: '0 8px', marginTop: '40px' },
+    // Gap above the greeting. Was the window's leftover height (113px on a
+    // phone, 191px on a desktop) until the 100vh spread was removed on
+    // 2026-09-08, then a fixed 40, now 26 at David's "tighten up the space
+    // some above the greeting" (2026-09-12, judged on the live screen).
+    welcomeMiddle: { textAlign: 'center', padding: '0 8px', marginTop: '26px' },
     greeting: { fontFamily: "'Fraunces', serif", fontWeight: 300, fontSize: '36px', lineHeight: 1.3, color: '#f5efe4', marginBottom: '36px', letterSpacing: '-0.01em' },
     greetingEm: { color: '#FBC02D' },
     welcomeSub: { fontSize: '15px', lineHeight: 1.6, color: 'rgba(245,239,228,0.5)', maxWidth: '30ch', margin: '0 auto' },
