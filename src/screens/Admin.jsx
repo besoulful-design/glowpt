@@ -122,6 +122,10 @@ export default function Admin() {
 
   return (
     <div style={s.page}>
+      {/* This screen's OWN horizontal guard. See the note in Dashboard.jsx: it
+          cannot be global, because on <html> it breaks the modal scroll lock.
+          Admin has no modal, so it is safe here. */}
+      <style>{`html, body { overflow-x: hidden; }`}</style>
 
       <div style={s.bar}>
         <BrandLockup label="All Clinics" />

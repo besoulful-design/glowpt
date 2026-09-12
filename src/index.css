@@ -57,12 +57,17 @@ body {
   /* Both, deliberately. A background on body alone does NOT propagate to the
      page canvas once html has one of its own, which is how the white got in. */
   background: var(--shell);
-  /* A sideways scrollbar is always a bug in this app, never a design: the one
-     genuinely wide thing, the clinic roster, scrolls inside its OWN box. This
-     was declared on Dashboard and Admin only; it belongs to the shell.
-     ⚠️ It does NOT blind the house overflow test — `scrollWidth > innerWidth`
-     still reports the true content width through a hidden overflow. */
-  overflow-x: hidden;
+
+  /* ⛔ DO NOT ADD `overflow-x: hidden` HERE. It was added on 2026-09-11 and
+     removed on 2026-09-12 because it silently BROKE THE MODAL SCROLL LOCK on
+     every screen that has a modal (Landing, Onboard, Join).
+     WHY: useModal locks the page with `document.body.style.overflow='hidden'`,
+     and that only reaches the viewport because body's overflow PROPAGATES to
+     it — which the spec allows only while <html> is `overflow: visible`. Any
+     non-visible overflow on html (and `overflow-x: hidden` forces overflow-y
+     to compute as `auto`) makes html its own scroll container, propagation
+     stops, and the lock clips nothing while the page keeps scrolling.
+     It belongs on the two screens that want it, and nowhere near the shell. */
 }
 
 html {

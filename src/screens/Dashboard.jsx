@@ -816,6 +816,12 @@ export default function Dashboard() {
 
   return (
     <div style={s.page}>
+      {/* This screen's OWN horizontal guard (the roster is wide). It lived here
+          before 2026-09-11, was briefly globalised into index.css, and had to
+          come back: on <html> it breaks useModal's scroll lock app-wide, because
+          body's overflow only propagates to the viewport while html is visible.
+          This screen has no modal, so it is safe HERE and only here. */}
+      <style>{`html, body { overflow-x: hidden; }`}</style>
       {Bar}
       <div style={s.wrap}>
         {/* Two different facts, so two different messages. A closed clinic is a
