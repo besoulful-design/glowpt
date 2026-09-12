@@ -89,3 +89,25 @@ So the remaining choice, with real numbers:
   file to roughly **140 KB / ~40,000 tokens**. That buys months.
 
 **Not done, because it was not what David approved.** Put it to him.
+
+
+---
+
+# PHASE 2 — condensing the last two weeks (David approved 2026-09-12)
+
+David: *"yes go ahead and condense the two weeks too."*
+
+**Status: IN PROGRESS.** If a thread died here, check `git log` — if the commit
+"CLAUDE.md: condense the last two weeks" exists, phase 2 is done.
+
+**Done first, so nothing can be lost:** the FULL original text of all 82 post-08-29
+entries is now in `docs/history.md` section 10, verbatim.
+
+**Method:** 53 entries are >=1.5 KB (196 KB total) and get condensed to roughly
+400-700 bytes each — the headline, what broke, the durable rule, and what was observed.
+The investigation narrative goes (it is in history.md and in the commit messages).
+The 29 entries under 1.5 KB (28 KB) are already short and are left alone.
+
+**⛔ WHAT MUST SURVIVE CONDENSING:** every ⛔ and ⚠️ rule, every live id/number/threshold,
+every "do not put this back" warning. Those are the lines that have actually saved
+sessions. If in doubt, keep the rule and drop the story around it.
