@@ -34,7 +34,7 @@
 A daily wellness check-in app for physical therapy patients. Patient does a 30-second check-in (feeling 1–5, movement, a note) and gets a warm, AI-written reflection. Their clinic gets dashboards + a weekly summary. **Clinics subscribe; patients use it free** as a value-add.
 
 - **Tagline:** One good day at a time.
-- **Live app:** https://glowpt-app.netlify.app
+- **Live app:** https://glowpt.app (Netlify until the DNS cutover; Amplify preview at https://main.dvewl3gkeo718.amplifyapp.com)
 - **Sits under the FranklinAI umbrella** (David Peterson's company; sibling product: ArmCare). GlowPT keeps its own amber/navy sunrise brand in patient-facing surfaces.
 
 ## How to work with David (IMPORTANT)
@@ -57,7 +57,7 @@ A daily wellness check-in app for physical therapy patients. Patient does a 30-s
 | Frontend | React 19 + Vite |
 | Routing | react-router-dom |
 | Database + Auth | Supabase (passwordless — 6-digit email OTP code) |
-| Hosting / deploy | Netlify (auto-deploys on push to `main`) |
+| Hosting / deploy | **AWS Amplify Hosting** (app `dvewl3gkeo718`, builds `main` on push; MID-CUTOVER 2026-09-13, Netlify still serves glowpt.app until DNS moves) |
 | AI reflections | Anthropic Claude (Haiku) via a **Supabase Edge Function** |
 | Email | Resend (weekly summaries; scheduled via Supabase Cron/pg_cron) |
 | Version control | GitHub — `besoulful-design/glowpt` |
@@ -116,7 +116,7 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 - **⚠️ Netlify serves ONLY the static frontend and declares NO functions directory, on purpose.** PHI goes browser → AWS directly and never transits Netlify, which is what keeps Netlify from being a business associate. **The moment a Netlify Function exists that changes.** The reasoning is also in `netlify.toml`.
 - **The full phase-by-phase log, every acceptance test and the three bugs caught during bring-up are in `docs/history.md`.** Grep it before re-deriving anything about how this stack was built.
 
-> ## 🧭 NEW THREAD? READ THIS FIRST — CURRENT STATE ONLY (Sunday 2026-09-13, 15:30)
+> ## 🧭 NEW THREAD? READ THIS FIRST — CURRENT STATE ONLY (Sunday 2026-09-13, 18:20)
 >
 > **⚠️ THIS BLOCK IS STATE, NOT NEWS. Anything finished belongs in Status & backlog, newest first; anything older is in `docs/history.md`.** It was 37 KB of settled history on 2026-09-13; keep it short or it grows back.
 >
@@ -126,7 +126,16 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 > **Shipped and verified 2026-09-13:** names are **two fields** (`first_name` / `last_name`, `full_name` generated), and a manager corrects a patient's name by **tapping the name on the roster**. Rules under STANDING RULES; detail in Status & backlog.
 > - **⏳ Natalie, Charlie and Timmy have NO last name** — the old form never asked. Not a bug; they are the rows the roster cannot yet disambiguate, and the rename dialog is how David gives them one.
 >
-> **💸 NETLIFY: deploys paused for ~7 hours on 2026-09-13 when the monthly credits ran out.** David bought 1,500 more. **The cause was 200 production deploys in 16 days, not traffic.** `netlify.toml` now skips the build when nothing under `src`/`public`/the build config changed, so docs and DB patches no longer cost a deploy. **Still batch commits and push once.** Allowance resets **2026-09-27**.
+> ### 🚚 THE FRONTEND IS MOVING FROM NETLIFY TO AWS AMPLIFY HOSTING (started 2026-09-13 evening, MID-CUTOVER)
+> **Why:** Netlify bills 15 credits per production deploy and 3,000 of 3,008 September credits went to 200 deploys of this repo; Amplify bills build minutes at a cent each. Decided by David from a claude.ai handoff; Amplify over S3+CloudFront-in-CDK was his call (keeps push-to-deploy; the CDK route was considered, not rejected forever). FranklinAI site and McKenzie STAY on Netlify.
+> - **✅ DONE:** Amplify app `glowpt` (id `dvewl3gkeo718`, glowpt-prod, us-east-1) builds `main` on every push from `amplify.yml`, Node pinned by `.nvmrc` (24), headers in `customHttp.yml`. **Temporary address `https://main.dvewl3gkeo718.amplifyapp.com`** and David drove it end to end: Riverside dashboard, Grace's check-in, AI reflection. CORS origin added to the HTTP API (`3b31f9a`, deployed by David).
+> - **⚠️ Amplify's DEFAULT fallback rule was broken** (every route 301'd to a trailing slash then 404'd). The SPA rewrite and the www→apex 301 are **app settings, not repo files**: `aws amplify get-app --app-id dvewl3gkeo718 --query app.customRules`. Rewrite = regex on paths without a file extension → `/index.html` 200.
+> - **⏳ NOT DONE: DNS.** glowpt.app is still served by Netlify. **DNS for glowpt.app is hosted on NETLIFY DNS (nsone.net), NOT GoDaddy** — GoDaddy is registrar only. Plan: Route 53 zone in glowpt-prod with an exact copy of today's records (inventory below), Amplify domain association, cert issued, THEN David changes the four nameservers at GoDaddy, then apex/www flip to Amplify. **The SES records live in that Netlify zone and MUST be recreated first or sign-in codes stop:** 3 DKIM CNAMEs (`<token>._domainkey` → `<token>.dkim.amazonses.com`; tokens from `aws sesv2 get-email-identity --email-identity glowpt.app`), `bounce.glowpt.app` MX `10 feedback-smtp.us-east-1.amazonses.com` + TXT `v=spf1 include:amazonses.com ~all`, `_dmarc` TXT `v=DMARC1; p=none;`. Apex A today = Netlify's `98.84.224.111` / `18.208.88.157`.
+> - **🔙 ROLLBACK:** Netlify site stays up and untouched for at least a week after cutover. `netlify.toml` and `public/_redirects` are KEPT until Netlify is decommissioned (deleting the build-skip rule while Netlify still builds from main would restart the credit burn).
+> - **🪤 Safari cannot complete the Amplify GitHub App install** (the console spins forever after Authorize). Fix that worked: install the app from GitHub's side at `github.com/apps/aws-amplify-us-east-1/installations/new`, then the wizard lists the repo.
+> - **📝 franklinai-v2's CLAUDE.md (V55) says "Netlify auto-deploys on push, in both repos" — false once this lands. Doc-only V56 there; do not edit that repo from here.**
+>
+> **💸 NETLIFY: deploys paused for ~7 hours on 2026-09-13 when the monthly credits ran out.** David bought 1,500 more. **The cause was 200 production deploys in 16 days, not traffic.** `netlify.toml` skips the build when nothing under `src`/`public`/the build config changed. Allowance resets **2026-09-27**. **After a week on Amplify: delete the GlowPT site from Netlify and downgrade the team** (Free or Personal, by what the other two sites use).
 >
 > **🔓 CLAUDE CAN RUN DB PATCHES DIRECTLY** via `/Users/mac/Downloads/glowpt/scripts/db.sh` once the tunnel is open. **Claude cannot write or commit `.claude/settings.local.json`** — that is David's, correctly.
 >
@@ -144,6 +153,7 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 > - **2026-09-15 to 09-17** — the AWS Activate decision (above).
 > - **After 2026-09-18** — delete the `/staff/:token` route alias in `src/App.jsx`. It exists only because the first staff invite links pointed there and they live 14 days.
 > - **2026-09-27** — Netlify credits reset.
+> - **One week after the glowpt.app cutover to Amplify** — delete the GlowPT Netlify site, downgrade the Netlify team, then remove `netlify.toml` and `public/_redirects`.
 >
 > ### 🧪 DAVID IS STILL TESTING, AND HE IS WHY BUGS GET CAUGHT IN HOURS
 > *"i'll let you know if i find anymore surprises."* **Take every report seriously and REPRODUCE IT BEFORE THEORISING.** On 09-12 he reported two things no tool in this harness could see, and both were real and both were mine. **Expect reports out of order**, sometimes about a screen changed twenty minutes ago, sometimes yesterday. **Run `git log --date=format-local:'%a %H:%M'` and check the deploy time against the report before theorising** — that has already caught two false alarms. He works from an iPhone and desktop Safari, and screenshots both.
@@ -332,7 +342,13 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 - **A last name is REQUIRED for a patient and OPTIONAL for staff**, enforced in `invite_patient` and `rename_patient` in the DATABASE, not only in the forms. Staff are not on the roster that two identical first names break.
 - **A manager renames a patient through `rename_patient` only** (patients only, same clinic only, audited). `profiles_update_self` still scopes the column grant to the caller's own row; do not widen it.
 
-**💸 NETLIFY (set 2026-09-13)**
+**🚚 AMPLIFY HOSTING (set 2026-09-13)**
+- **Build config is in the repo** (`amplify.yml`, `.nvmrc`, `customHttp.yml`); **rewrites and redirects are NOT** — they are app settings read with `aws amplify get-app`. Record any change to them in this doc.
+- **The Amplify origin `https://main.dvewl3gkeo718.amplifyapp.com` is in the API CORS list permanently**, the way the netlify.app one was: it is the fallback address if the custom domain is ever detached.
+- **⛔ Do not enable the Amplify firewall (WAF)**: flat monthly fee the threat model does not justify. No Amplify backend, auth or data either; hosting only.
+- **Amplify's default 404-200 fallback rule does not work for this app**; the regex SPA rewrite does. If deep links start 301ing to a trailing slash, that rule has been reset.
+
+**💸 NETLIFY (set 2026-09-13, kept until the Netlify site is deleted)**
 - **EVERY PUSH TO `main` IS A PRODUCTION DEPLOY AND COSTS 15 CREDITS.** The Pro plan is 3,000/month, so the allowance is **200 deploys a month** and nothing else meaningfully consumes it (16 days of traffic across all three sites came to ~9 credits). **BATCH COMMITS AND PUSH ONCE**; pushing after each piece of work is what exhausted the September allowance.
 - **Auto recharge is DISABLED on purpose.** Leave it: it is what stops a busy week becoming a surprise bill.
 - **A push made while deploys are paused is NOT queued.** Restoring credits does not replay it; the build has to be triggered by hand from the Netlify Deploys page.
@@ -367,6 +383,8 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 ## Status & backlog
 
 **⚠️ CONDENSED 2026-09-12. Each entry below is the headline, what broke, the durable rule, and what was observed — the investigation narrative is NOT here.** The full original text of every entry is in `docs/history.md` section 10, verbatim, and the same reasoning is in the commit messages (`git log`). **When adding a new entry, match this length.**
+
+- **🚚 FRONTEND TO AWS AMPLIFY HOSTING, PART 1 (2026-09-13 evening, `7505d56` / `3b31f9a`).** Netlify bills per production deploy and this repo deploys most; Amplify bills build minutes. Amplify app created in glowpt-prod, connected to `main`, first build 2 min on Node 24.21.0, temp URL verified by curl, in the Browser pane, and by David signed in as manager and as Grace. **What broke:** Amplify's default fallback rule 301'd every deep link to a trailing slash and then 404'd; replaced with the documented regex SPA rewrite. **CORS was needed**, as predicted: preflight from the new origin came back with no allow-origin header; one line in `infra/lib/api.ts`, pinned by a test, `cdk diff` showed exactly one property. **Netlify inventory:** build command + publish dir → `amplify.yml`; the `ignore` build-skip → retired (Amplify builds cost cents); no functions dir → nothing to port, HIPAA reasoning unchanged (Amplify is HIPAA-eligible under the org BAA); `_redirects` SPA fallback → Amplify rewrite rule; Netlify's default HSTS → `customHttp.yml`; www→apex 301 → Amplify redirect rule. **Not yet done: DNS** (see NEW THREAD). **Lesson:** the handoff assumed DNS was at GoDaddy; one `dig SOA` showed Netlify DNS, which changes the whole cutover plan. Check the authoritative nameservers before planning any DNS move.
 
 - **🧑 TWO NAME FIELDS, first_name AND last_name, EVERYWHERE (2026-09-13, `77a0e41` / `bcf12d5`).** David, after walking a new RidgePT patient through the invite: *"we can't identify patients with the same name... We have lots of patients at work with the same first name and seeing the same therapist."* And separately, "PT Pete" was being emailed as **"Hi PT,"**. One cause: ONE `full_name`, and **four** places independently guessed the split with `split(' ')[0]`, disagreeing with each other. Now two real fields, `full_name` GENERATED from them, and no guessing anywhere. Rules under STANDING RULES.
   - **Decisions (David's):** last name required for patients, optional for staff · on the join screen a patient may edit their FIRST name only, the surname is the clinic's identifier · the existing 17 were split on the last space and reviewed together (**16 right, only PT Pete wrong**, fixed by `2026-09-13_fix_pt_pete.sql`).
