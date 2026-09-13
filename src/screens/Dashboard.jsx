@@ -4,6 +4,7 @@ import * as api from '../lib/api'
 import { useAuth } from '../auth'
 import { AuthShell, LogoMark, BrandLockup, BRAND, ui, SECTION_LABEL_SIZE, CARD_LABEL_SIZE } from './AuthShell'
 import { fetchClinicData, fetchTherapists, fetchPendingInvites, inviteTherapist, assignTherapist, dischargePatient, restorePatient, buildRoster, clinicStats, relativeDay } from '../lib/clinicData'
+import { useModal } from '../lib/useModal'
 import { FEELINGS } from '../lib/feelings'
 import FeelingScale from './FeelingScale'
 import { BAA_IS_EXECUTED } from '../lib/legal'
@@ -53,6 +54,26 @@ const s = {
   // The two name boxes get a smaller basis than the email so First and Last
   // pair up on one row and the (much longer) address takes its own. All three
   // still wrap to single file on a phone, which is what flexWrap is for.
+  // ---- Rename a patient (2026-09-13) ----
+  // The name is a button so it can be tapped, but it must look exactly like the
+  // plain text it replaced: no border, no background, no padding shift, and it
+  // inherits the row's font rather than the browser's button font. The only
+  // visible difference is the pointer and the focus ring, which the global rule
+  // in index.css supplies.
+  nameBtn: { background: 'none', border: 'none', padding: 0, margin: 0, font: 'inherit', color: 'inherit', cursor: 'pointer', textAlign: 'inherit', display: 'block', width: '100%' },
+  // ⚠️ STATES ITS OWN lineHeight. Anything under 18px that does not inherits
+  // the body's ABSOLUTE 26.1px and reads far too loose (CLAUDE.md).
+  rosterHint: { fontSize: 12.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.4)', textAlign: 'center', marginTop: 10 },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(6,12,20,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 50 },
+  // position relative or the absolutely placed X escapes to the viewport.
+  renamePanel: { position: 'relative', background: '#1a2840', border: '1px solid rgba(245,168,26,0.25)', borderRadius: 8, padding: '22px 24px', width: '100%', maxWidth: 380, textAlign: 'left' },
+  renameHead: { fontSize: SECTION_LABEL_SIZE, color: '#F5A81A', fontWeight: 600, marginBottom: 4 },
+  renameSub: { fontSize: 13.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.55)', marginBottom: 14 },
+  renameForm: { display: 'flex', flexDirection: 'column', gap: 4 },
+  // States its own lineHeight; see the note on rosterHint.
+  renameLabel: { fontSize: 12.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.5)', marginTop: 6 },
+  renameInput: { width: '100%', background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '9px 12px', color: '#f5efe4', fontSize: 14, fontFamily: 'inherit' },
+  renameFine: { fontSize: 12.5, lineHeight: 1.5, color: 'rgba(245,239,228,0.4)', marginTop: 14 },
   inviteNameInput: { flex: '1 1 110px', background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '9px 12px', color: '#f5efe4', fontSize: 14, fontFamily: 'inherit' },
   inviteBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '9px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   pending: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', marginTop: 12, lineHeight: 1.6 },
@@ -321,12 +342,25 @@ function Trend({ last3 }) {
 // list ('dr', 'mr', ...) so "Dr. Sam" would not break across the two lines. It
 // still got "PT Pete" wrong, and the same guess was made independently in three
 // other places. The two lines are now the two columns the manager typed.
-function PatientName({ first, last }) {
-  return (
+function PatientName({ first, last, onEdit }) {
+  const stack = (
     <span style={s.nameStack}>
       <span>{first}</span>
       {last && <span>{last}</span>}
     </span>
+  )
+  // ⚠️ A THERAPIST GETS PLAIN TEXT, NOT A DISABLED BUTTON. Renaming is a
+  // manager power (rename_patient refuses anyone else, in the database), and a
+  // control that looks tappable and then refuses is worse than no control.
+  if (!onEdit) return stack
+  // The name IS the affordance, so the roster costs no extra width for this.
+  // David's call, 2026-09-13: an Edit column would widen every row by ~68px on
+  // a phone that already scrolls sideways, for something done once a year.
+  return (
+    <button type="button" style={s.nameBtn} onClick={onEdit}
+      title={`Correct ${[first, last].filter(Boolean).join(' ')}'s name`}>
+      {stack}
+    </button>
   )
 }
 
@@ -479,6 +513,12 @@ export default function Dashboard() {
   const [undo, setUndo] = useState(null)          // { id, name } after archiving
   const [removing, setRemoving] = useState(null)  // { id, name, checkins }
   const [removeText, setRemoveText] = useState('')
+  // Renaming a patient. `renaming` is the row being edited, or null.
+  const [renaming, setRenaming] = useState(null)
+  const [renameFirst, setRenameFirst] = useState('')
+  const [renameLast, setRenameLast] = useState('')
+  const [renameErr, setRenameErr] = useState('')
+  const [renameBusy, setRenameBusy] = useState(false)
   // ⚠️ A NOTICE CARRIES ITS KIND, because this slot now reports failures too:
   // an invite whose email did not send, and the form's own validation. Those
   // used to render in the same success green as "Invite emailed to X", which
@@ -645,6 +685,39 @@ export default function Dashboard() {
     copyTimer.current = setTimeout(() => setCopyState(''), 4000)
   }
 
+  // ⚠️ useModal MUST be called ABOVE any early return (CLAUDE.md), and the ref
+  // goes on the PANEL, not the overlay. It handles the scroll lock, Escape,
+  // the focus trap and returning focus.
+  const renamePanelRef = useModal(!!renaming, () => setRenaming(null))
+
+  function openRename(r) {
+    setRenameErr('')
+    setRenaming({ id: r.id, was: r.name })
+    setRenameFirst(r.firstName || r.name || '')
+    setRenameLast(r.lastName || '')
+  }
+
+  async function handleRename(e) {
+    e.preventDefault()
+    const first = renameFirst.trim(), last = renameLast.trim()
+    // Both required, matching the invite form and rename_patient itself. An
+    // edit that could empty a surname would undo, one row at a time, the thing
+    // two name fields exist to guarantee.
+    if (!first) return setRenameErr('Enter a first name.')
+    if (!last) return setRenameErr('Enter a last name, so the roster can tell patients apart.')
+    setRenameBusy(true); setRenameErr('')
+    try {
+      await api.renamePatient(renaming.id, first, last)
+      await loadRoster()
+      setRenaming(null)
+      showFlash(`Renamed to ${first} ${last}.`)
+    } catch (err) {
+      setRenameErr(`Couldn’t save: ${err.message}`)
+    } finally {
+      setRenameBusy(false)
+    }
+  }
+
   async function handleRestore(patientId) {
     setNotice('')
     setUndo(null)
@@ -802,7 +875,7 @@ export default function Dashboard() {
   function rosterCell(c, r) {
     switch (c.key) {
       case 'patient':
-        return <div style={{ ...s.name, alignItems: FLEX_ALIGN[c.align] }}><PatientName first={r.firstName || r.name} last={r.lastName} /><NameFlags flags={r.flags} /></div>
+        return <div style={{ ...s.name, alignItems: FLEX_ALIGN[c.align] }}><PatientName first={r.firstName || r.name} last={r.lastName} onEdit={isManager ? () => openRename(r) : null} /><NameFlags flags={r.flags} /></div>
       case 'avg':
         return r.avg == null ? '—' : (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -1047,7 +1120,63 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
+            {/* ⚠️ THE HINT IS THE OTHER HALF OF PUTTING THE CONTROL ON THE NAME.
+                Tapping the name costs the roster no width, which is why it won
+                over an Edit column -- but an affordance nobody can see is
+                indistinguishable from a feature that was never built, which
+                this project has already learned once (the hidden Remove
+                button, 2026-09-06). One quiet line, managers only. */}
+            {isManager && roster.length > 0 && (
+              <div style={s.rosterHint}>Tap a patient's name to correct it.</div>
+            )}
           </>
+        )}
+
+        {renaming && (
+          <div style={s.overlay} onClick={() => setRenaming(null)}>
+            {/* The ref goes on the PANEL. stopPropagation so a click inside does
+                not reach the overlay's dismiss. */}
+            <div ref={renamePanelRef} style={s.renamePanel} role="dialog" aria-modal="true"
+              aria-label="Correct this patient's name" onClick={e => e.stopPropagation()}>
+              <button type="button" style={ui.modalCloseX} onClick={() => setRenaming(null)}
+                aria-label="Close">×</button>
+              <div style={s.renameHead}>Correct this name</div>
+              {/* Says whose record is being changed. The manager tapped a name in
+                  a list of similar ones, which is the whole reason this exists. */}
+              <div style={s.renameSub}>Currently {renaming.was}.</div>
+              {/* ⚠️ VISIBLE LABELS, NOT PLACEHOLDERS, AND THAT IS THE DIFFERENCE
+                  BETWEEN THIS FORM AND THE INVITE FORM. The invite boxes start
+                  empty, so their placeholder does the labelling. These start
+                  FILLED, and a filled input shows no placeholder at all -- so a
+                  manager correcting "Natalie Watson" would face two boxes with a
+                  word in each and nothing saying which is the surname. Stacked
+                  full-width rather than paired, because each now carries a label
+                  above it. */}
+              <form onSubmit={handleRename} style={s.renameForm}>
+                <label style={s.renameLabel} htmlFor="rename-first">First name</label>
+                <input id="rename-first" style={s.renameInput} value={renameFirst}
+                  autoComplete="given-name"
+                  onChange={e => { setRenameFirst(e.target.value); setRenameErr('') }} />
+                <label style={s.renameLabel} htmlFor="rename-last">Last name</label>
+                <input id="rename-last" style={s.renameInput} value={renameLast}
+                  autoComplete="family-name"
+                  onChange={e => { setRenameLast(e.target.value); setRenameErr('') }} />
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                  <button style={s.inviteBtn} type="submit" disabled={renameBusy}>
+                    {renameBusy ? 'Saving…' : 'Save'}
+                  </button>
+                  <button style={s.restoreBtn} type="button" onClick={() => setRenaming(null)}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+              {renameErr && <div style={s.noticeBad}>{renameErr}</div>}
+              {/* The patient is not told, and a manager should know that. */}
+              <div style={s.renameFine}>
+                This changes how they appear on your roster and in their emails.
+              </div>
+            </div>
+          </div>
         )}
 
         {isManager && discharged.length > 0 && (

@@ -771,6 +771,59 @@ begin
   update public.profiles set discharged_at = now() where id = p_patient;
 end $$;
 
+-- rename_patient: a manager corrects a patient's name.
+--
+-- ⚠️ WHY THIS IS AN RPC AND NOT AN UPDATE. glowpt_app holds
+-- update (first_name, last_name) on profiles, but profiles_update_self scopes
+-- that to the caller's OWN row, so a manager physically cannot write another
+-- person's name through the table. That is the right default and stays; this
+-- function is the one narrow, audited exception, and like every other manager
+-- power it re-derives the caller's clinic and role inside Postgres.
+--
+-- ⛔ PATIENTS ONLY, exactly like assign_therapist / discharge / purge. A manager
+-- cannot rename a therapist or another manager: the role test below is what
+-- stops it, and it is deliberate rather than an oversight. Staff names come
+-- from the invite and from the person themselves.
+--
+-- A last name is REQUIRED here, matching invite_patient. The roster is how a
+-- clinic tells two patients with the same first name apart, and an edit screen
+-- that could empty the surname would be a way to undo that one row at a time.
+-- (The three patients who predate two-field invites have no surname; this is
+-- the tool that gives them one.)
+create or replace function public.rename_patient(
+    p_patient uuid, p_first_name text, p_last_name text)
+  returns void
+  language plpgsql security definer
+  set search_path = public set row_security = off
+as $$
+declare v_clinic uuid;
+begin
+  select clinic_id from public.profiles
+    where id = public.current_user_id() and role = 'manager' into v_clinic;
+  if v_clinic is null then raise exception 'Only a clinic manager can rename patients'; end if;
+  -- Same clinic AND role 'patient'. A manager of clinic A renaming a patient of
+  -- clinic B, or renaming a colleague, both fail here.
+  if not exists (select 1 from public.profiles
+                 where id = p_patient and clinic_id = v_clinic and role = 'patient') then
+    raise exception 'Patient not in your clinic'; end if;
+  if nullif(btrim(p_first_name), '') is null then
+    raise exception 'A first name is required' using errcode = 'P0001';
+  end if;
+  if nullif(btrim(p_last_name), '') is null then
+    raise exception 'A last name is required' using errcode = 'P0001';
+  end if;
+  update public.profiles
+     set first_name = btrim(p_first_name), last_name = btrim(p_last_name)
+   where id = p_patient;
+  -- Audited. Changing the name a clinic identifies someone by is a records
+  -- change, so it leaves a trail like every other staff action on a patient.
+  -- ⚠️ The names themselves are NOT written here: access_log is a log of WHO
+  -- did WHAT to WHOM, and putting a patient's name in it would spread the
+  -- identifier rather than record the act.
+  insert into public.access_log (actor_id, action, clinic_id, target_user_id)
+  values (public.current_user_id(), 'rename_patient', v_clinic, p_patient);
+end $$;
+
 create or replace function public.restore_patient(p_patient uuid)
   returns void
   language plpgsql security definer
@@ -1285,6 +1338,7 @@ grant execute on function
   public.ensure_self(citext),
   public.set_clinic_open_signup(boolean),
   public.assign_therapist(uuid, uuid),
+  public.rename_patient(uuid, text, text),
   public.discharge_patient(uuid),
   public.restore_patient(uuid),
   public.revoke_invite(text),
@@ -1356,6 +1410,7 @@ alter function public.set_clinic_open_signup(boolean)         owner to glowpt_au
 alter function public.get_staff_invite(text)                         owner to glowpt_auth;
 alter function public.new_invite_token()                      owner to glowpt_auth;
 alter function public.assign_therapist(uuid, uuid)            owner to glowpt_auth;
+alter function public.rename_patient(uuid, text, text)  owner to glowpt_auth;
 alter function public.discharge_patient(uuid)                 owner to glowpt_auth;
 alter function public.restore_patient(uuid)                   owner to glowpt_auth;
 alter function public.register_user(uuid, citext, text, text)       owner to glowpt_auth;

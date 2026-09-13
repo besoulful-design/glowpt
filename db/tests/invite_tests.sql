@@ -491,3 +491,79 @@ begin
   raise notice '% T60b full_name cannot be written, only derived',
     case when refused then 'PASS:' else 'FAIL:' end;
 end $$;
+
+-- ===========================================================================
+-- T61-T65: rename_patient (2026-09-13).
+--
+-- A manager corrects a patient's name. Needed because three patients predate
+-- two-field invites and have no surname at all, so the roster still cannot
+-- tell them apart, and nothing in the app could fix that.
+--
+-- The refusals matter more than the success here: this is the only way one
+-- person can write another person's name, so T63 (another clinic) and T64
+-- (a colleague) are the tests that keep it narrow.
+-- ===========================================================================
+do $$
+declare
+  mgr_a   constant uuid := '11111111-1111-1111-1111-111111111111';
+  mgr_b   constant uuid := '55555555-5555-5555-5555-555555555555';
+  pat_a1  constant uuid := '22222222-2222-2222-2222-222222222222';
+  ther_a  constant uuid := '44444444-4444-4444-4444-444444444444';
+  refused boolean;
+  composed text;
+begin
+  perform set_config('app.user_id', mgr_a::text, true);
+
+  -- T61: the ordinary case, and full_name follows the parts.
+  perform rename_patient(pat_a1, 'Sarah', 'Vandenberg');
+  select full_name into composed from public.profiles where id = pat_a1;
+  raise notice '% T61 a manager renames a patient in their clinic -> %',
+    case when composed = 'Sarah Vandenberg' then 'PASS:' else 'FAIL:' end,
+    coalesce(composed, 'null');
+
+  -- T62: a last name is required, exactly as on the invite door. An edit that
+  -- could blank a surname would undo the roster guarantee one row at a time.
+  refused := false;
+  begin
+    perform rename_patient(pat_a1, 'Sarah', '  ');
+  exception when others then refused := (sqlerrm like '%last name is required%'); end;
+  raise notice '% T62 a rename cannot empty the last name',
+    case when refused then 'PASS:' else 'FAIL:' end;
+
+  -- T63 SECURITY: a manager of another clinic is refused. Clinic B's manager
+  -- must not be able to touch clinic A's patient.
+  perform set_config('app.user_id', mgr_b::text, true);
+  refused := false;
+  begin
+    perform rename_patient(pat_a1, 'Hacked', 'Name');
+  exception when others then refused := (sqlerrm like '%not in your clinic%'); end;
+  raise notice '% T63 a manager of another clinic cannot rename this patient',
+    case when refused then 'PASS:' else 'FAIL:' end;
+
+  -- T64 SECURITY: patients only. A manager cannot rename a colleague, which is
+  -- the same boundary assign_therapist / discharge / purge already draw.
+  perform set_config('app.user_id', mgr_a::text, true);
+  refused := false;
+  begin
+    perform rename_patient(ther_a, 'Renamed', 'Therapist');
+  exception when others then refused := (sqlerrm like '%not in your clinic%'); end;
+  raise notice '% T64 a manager cannot rename a therapist',
+    case when refused then 'PASS:' else 'FAIL:' end;
+
+  -- T65 SECURITY: a patient cannot rename anyone, including themselves through
+  -- this door (their own name goes through the column-scoped update grant).
+  perform set_config('app.user_id', pat_a1::text, true);
+  refused := false;
+  begin
+    perform rename_patient(pat_a1, 'Self', 'Promoted');
+  exception when others then refused := (sqlerrm like '%Only a clinic manager%'); end;
+  raise notice '% T65 a patient cannot call rename_patient',
+    case when refused then 'PASS:' else 'FAIL:' end;
+
+  -- T65b: the rename is audited, and the log does NOT carry the name itself.
+  perform set_config('app.user_id', mgr_a::text, true);
+  select count(*)::text into composed from public.access_log
+   where action = 'rename_patient' and target_user_id = pat_a1;
+  raise notice '% T65b the rename is audited -> % row(s)',
+    case when composed = '1' then 'PASS:' else 'FAIL:' end, composed;
+end $$;

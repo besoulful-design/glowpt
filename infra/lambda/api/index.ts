@@ -792,6 +792,24 @@ async function rpcDischargePatient(client: Client, event: APIGatewayProxyEventV2
   return json(200, { ok: true });
 }
 
+// A manager corrects a patient's name. The only path by which one person may
+// write another's name: the column-scoped update grant is limited to the
+// caller's own row by profiles_update_self, so this goes through the definer
+// function, which re-checks manager + same clinic + role 'patient' and writes
+// an access_log row. Both names are required there, not just here.
+async function rpcRenamePatient(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const sub = requireSub(event);
+  const b = parseBody(event);
+  const patientId = typeof b.patient_id === 'string' ? b.patient_id : '';
+  if (!patientId) throw new HttpError(400, 'patient_id_required');
+  const firstName = typeof b.first_name === 'string' ? b.first_name : null;
+  const lastName = typeof b.last_name === 'string' ? b.last_name : null;
+  await withUser(client, sub, async (c) => {
+    await c.query('select public.rename_patient($1, $2, $3)', [patientId, firstName, lastName]);
+  });
+  return json(200, { ok: true });
+}
+
 async function rpcRevokeInvite(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const sub = requireSub(event);
   const b = parseBody(event);
@@ -951,6 +969,7 @@ const ROUTES: Record<string, Route> = {
   // with no route there is no live path to turn it on.
   'POST /rpc/assign-therapist': rpcAssignTherapist,
   'POST /rpc/discharge-patient': rpcDischargePatient,
+  'POST /rpc/rename-patient': rpcRenamePatient,
   'POST /rpc/restore-patient': rpcRestorePatient,
   'POST /rpc/revoke-invite': rpcRevokeInvite,
   'POST /rpc/purge-patient': rpcPurgePatient,

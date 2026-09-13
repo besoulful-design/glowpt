@@ -118,6 +118,14 @@ export const assignTherapist = (patientId, therapistId) =>
   });
 export const dischargePatient = (patientId) =>
   request('/rpc/discharge-patient', { method: 'POST', body: { patient_id: patientId } });
+
+// Manager-only, patients-only, and BOTH names are required. Enforced in the
+// database (rename_patient), not merely here.
+export const renamePatient = (patientId, firstName, lastName) =>
+  request('/rpc/rename-patient', {
+    method: 'POST',
+    body: { patient_id: patientId, first_name: firstName, last_name: lastName },
+  });
 export const restorePatient = (patientId) =>
   request('/rpc/restore-patient', { method: 'POST', body: { patient_id: patientId } });
 // Cancel a pending invite. Until this existed an invite sent to the wrong
