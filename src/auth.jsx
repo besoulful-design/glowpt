@@ -10,13 +10,13 @@ import * as api from './lib/api'
 
 const AuthContext = createContext(null)
 
-const PENDING_JOIN_KEY = 'glowpt.pendingJoin'       // patient: { slug, fullName, consentVersion }
-const PENDING_ONBOARD_KEY = 'glowpt.pendingOnboard' // clinic: { clinicName, slug, fullName }
+const PENDING_JOIN_KEY = 'glowpt.pendingJoin'       // patient: { slug, firstName, lastName, consentVersion }
+const PENDING_ONBOARD_KEY = 'glowpt.pendingOnboard' // clinic: { clinicName, slug, firstName, lastName }
 const PENDING_STAFF_KEY = 'glowpt.pendingStaff'     // staff: the invite token
 const PENDING_PATIENT_INVITE_KEY = 'glowpt.pendingPatientInvite' // { token, consentVersion }
 
-export function savePendingJoin(slug, fullName, consentVersion) {
-  localStorage.setItem(PENDING_JOIN_KEY, JSON.stringify({ slug, fullName, consentVersion }))
+export function savePendingJoin(slug, firstName, lastName, consentVersion) {
+  localStorage.setItem(PENDING_JOIN_KEY, JSON.stringify({ slug, firstName, lastName, consentVersion }))
 }
 
 export function savePendingStaff(token) {
@@ -27,8 +27,8 @@ export function savePendingPatientInvite(token, consentVersion) {
   localStorage.setItem(PENDING_PATIENT_INVITE_KEY, JSON.stringify({ token, consentVersion }))
 }
 
-export function savePendingOnboard(clinicName, slug, fullName) {
-  localStorage.setItem(PENDING_ONBOARD_KEY, JSON.stringify({ clinicName, slug, fullName }))
+export function savePendingOnboard(clinicName, slug, firstName, lastName) {
+  localStorage.setItem(PENDING_ONBOARD_KEY, JSON.stringify({ clinicName, slug, firstName, lastName }))
 }
 
 export function AuthProvider({ children }) {
@@ -67,7 +67,10 @@ export function AuthProvider({ children }) {
         if (onboardRaw) {
           const o = JSON.parse(onboardRaw)
           await api.provisionClinic(o.clinicName, o.slug)
-          if (o.fullName) await api.updateMe(o.fullName)
+          // ⚠️ o.fullName is read as a fallback because a sign-up started before
+          // the two-field deploy still has the old shape sitting in localStorage.
+          const oFirst = o.firstName || o.fullName
+          if (oFirst) await api.updateMe(oFirst, o.lastName || null)
         } else if (patInviteRaw) {
           // An invited patient. Carries its own consent version, because this
           // path writes a consents row and the staff path never does.
@@ -76,7 +79,10 @@ export function AuthProvider({ children }) {
         } else if (joinRaw) {
           const j = JSON.parse(joinRaw)
           // join_clinic upserts the profile (role pinned to patient) + records consent.
-          await api.joinClinic(j.slug, j.fullName || null, j.consentVersion || null)
+          // Same one-deploy fallback as the onboard branch above.
+          await api.joinClinic(
+            j.slug, j.firstName || j.fullName || null, j.lastName || null, j.consentVersion || null,
+          )
         } else {
           // Invited staff. With a token this is a retry of the link they
           // followed; without one it is the blind email-matched net, which

@@ -50,6 +50,10 @@ const s = {
   signInRow: { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 },
   signInHint: { fontSize: 12.5, color: 'rgba(245,239,228,0.4)', textAlign: 'left' },
   inviteInput: { flex: '1 1 150px', background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '9px 12px', color: '#f5efe4', fontSize: 14, fontFamily: 'inherit' },
+  // The two name boxes get a smaller basis than the email so First and Last
+  // pair up on one row and the (much longer) address takes its own. All three
+  // still wrap to single file on a phone, which is what flexWrap is for.
+  inviteNameInput: { flex: '1 1 110px', background: '#0d1825', border: '1px solid rgba(245,239,228,0.15)', borderRadius: 4, padding: '9px 12px', color: '#f5efe4', fontSize: 14, fontFamily: 'inherit' },
   inviteBtn: { background: '#F5A81A', color: '#0d1825', border: 'none', borderRadius: 4, padding: '9px 18px', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' },
   pending: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', marginTop: 12, lineHeight: 1.6 },
   pendingRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' },
@@ -268,11 +272,16 @@ function textWidth(text) {
   measureCtx.font = NAME_FONT
   return measureCtx.measureText(text).width
 }
-function patientColumnWidth(names) {
+// Takes {firstName, lastName} rows, because since 2026-09-13 the two lines of
+// a stacked name are two real columns rather than a guess at where to split.
+// ⚠️ Still measures each WORD, not each line: a two-word first name like
+// "PT Pete" wraps within its own line rather than forcing the column wide.
+function patientColumnWidth(people) {
   let widest = 0
-  for (const n of names) {
-    const [first, rest] = splitName(n)
-    for (const unit of [first, ...rest.split(/\s+/)]) if (unit) widest = Math.max(widest, textWidth(unit))
+  for (const p of people) {
+    for (const unit of `${p.firstName || ''} ${p.lastName || ''}`.split(/\s+/)) {
+      if (unit) widest = Math.max(widest, textWidth(unit))
+    }
   }
   return Math.min(PATIENT_COL_MAX, Math.max(PATIENT_COL_MIN, Math.ceil(widest) + 3))
 }
@@ -307,19 +316,16 @@ function Trend({ last3 }) {
 // single WORD, not the widest full name, and makes every row look the same.
 // A one-word name ("Charlie") is one line; a title stays with the first name
 // ("Dr. Sam" / "Torres") so it never sits alone on a line.
-const TITLES = new Set(['dr', 'dr.', 'mr', 'mr.', 'mrs', 'mrs.', 'ms', 'ms.', 'miss', 'prof', 'prof.'])
-function splitName(full) {
-  const parts = (full || '').trim().split(/\s+/).filter(Boolean)
-  if (parts.length <= 1) return [parts[0] || '', '']
-  const head = TITLES.has(parts[0].toLowerCase()) && parts.length > 2 ? parts.slice(0, 2) : parts.slice(0, 1)
-  return [head.join(' '), parts.slice(head.length).join(' ')]
-}
-function PatientName({ name }) {
-  const [first, rest] = splitName(name)
+// ⚠️ NO MORE GUESSING WHERE A NAME SPLITS. This used to be splitName(), which
+// took everything before the first space as the first name and kept a title
+// list ('dr', 'mr', ...) so "Dr. Sam" would not break across the two lines. It
+// still got "PT Pete" wrong, and the same guess was made independently in three
+// other places. The two lines are now the two columns the manager typed.
+function PatientName({ first, last }) {
   return (
     <span style={s.nameStack}>
       <span>{first}</span>
-      {rest && <span>{rest}</span>}
+      {last && <span>{last}</span>}
     </span>
   )
 }
@@ -331,14 +337,10 @@ function NameFlags({ flags }) {
   return flags.map(f => <span key={f} style={s.pill(f)}>{f === 'low' ? 'Low Mood' : 'Inactive'}</span>)
 }
 
-// Friendly greeting name. Keep a leading title with the name ("Dr. Sam"), otherwise
-// just the first name ("David") so staff are greeted personally, not formally.
-function greetingName(full) {
-  if (!full) return ''
-  const parts = full.trim().split(/\s+/)
-  if (parts.length > 1 && TITLES.has(parts[0].toLowerCase())) return `${parts[0]} ${parts[1]}`
-  return parts[0]
-}
+// Friendly greeting name: the first_name column, verbatim. It carries whatever
+// the person is actually called, "Dr. Sam" and "PT Pete" included, so there is
+// no title list to keep and nothing to guess. (full_name is the fallback for a
+// profile that predates the two fields and has not been backfilled.)
 
 // Module scope, not nested inside Dashboard: a component declared inside another
 // is a NEW component type on every render, so React unmounts and remounts it
@@ -387,6 +389,8 @@ export function PendingList({ people, clinicName, onCopied, onResend, onCancel, 
       <strong style={{ color: 'rgba(245,239,228,0.7)' }}>Invited (Waiting for First Sign-In):</strong>
       {people.map(i => (
         <div key={i.email} style={s.pendingRow}>
+          {/* The same two fields the roster stacks, joined for one line here.
+              The bare em dash is one of the protected empty-value placeholders. */}
           <span style={s.pendingWho}>{i.full_name || '—'} · {i.email}</span>
           <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {/* ⚠️ A FAILED COPY MUST STILL LEAVE THE MESSAGE ON SCREEN. The panel
@@ -400,7 +404,7 @@ export function PendingList({ people, clinicName, onCopied, onResend, onCancel, 
                 inside it, so nothing is lost either way. */}
             <button type="button" style={s.copyLinkBtn}
               onClick={async () => {
-                const who = i.full_name || i.email
+                const who = i.first_name || i.full_name || i.email
                 const message = inviteMessage(i, clinicName)
                 try {
                   await navigator.clipboard.writeText(message)
@@ -437,7 +441,8 @@ export default function Dashboard() {
   // Only a platform admin sees the Admin link. The server answers this, and the
   // /admin screen re-checks on its own — this just decides whether to show it.
   const [isAdmin, setIsAdmin] = useState(false)
-  const [tName, setTName] = useState('')
+  const [tFirst, setTFirst] = useState('')
+  const [tLast, setTLast] = useState('')
   const [tEmail, setTEmail] = useState('')
   const [notice, setNotice] = useState('')
   // ⚠️ ONE MESSAGE SLOT PER CONTROL, DELIBERATELY. Until 2026-09-05 the whole
@@ -480,7 +485,8 @@ export default function Dashboard() {
   // says the opposite of what happened. { text, bad } or null.
   const [patientNotice, setPatientNotice] = useState(null)
   const [staffNotice, setStaffNotice] = useState(null)
-  const [pName, setPName] = useState('')
+  const [pFirst, setPFirst] = useState('')
+  const [pLast, setPLast] = useState('')
   const [pEmail, setPEmail] = useState('')
 
   // Show a self-clearing confirmation. Six seconds: long enough to read a short
@@ -495,7 +501,7 @@ export default function Dashboard() {
   useEffect(() => () => clearTimeout(copyTimer.current), [])
 
   const isManager = profile?.role === 'manager'
-  const staffName = greetingName(profile?.full_name)
+  const staffName = (profile?.first_name || profile?.full_name || '').trim()
 
   // Load the roster, splitting active patients from discharged (soft-deleted) ones.
   // The roster endpoint writes the HIPAA view_roster audit row server-side, in the
@@ -678,8 +684,8 @@ export default function Dashboard() {
     setNote(null); setResending(inv.email)
     try {
       const res = patient
-        ? await api.invitePatient(inv.email, inv.full_name)
-        : await api.inviteStaff(inv.email, inv.full_name, inv.role)
+        ? await api.invitePatient(inv.email, inv.first_name, inv.last_name)
+        : await api.inviteStaff(inv.email, inv.first_name, inv.last_name, inv.role)
       // The re-read matters more than usual here: a resend mints a FRESH token,
       // so the copy link on the row below is stale until this lands.
       setInvites(await fetchPendingInvites())
@@ -696,16 +702,22 @@ export default function Dashboard() {
   async function handlePatientInvite(e) {
     e.preventDefault()
     setPatientNotice(null)
-    const name = pName.trim(), email = pEmail.trim()
-    if (!name) return setPatientNotice({ text: 'Enter the patient’s name.', bad: true })
+    const first = pFirst.trim(), last = pLast.trim(), email = pEmail.trim()
+    // ⚠️ BOTH NAMES ARE REQUIRED FOR A PATIENT. A clinic routinely has several
+    // patients sharing a first name and a therapist, and the roster is how staff
+    // tell them apart. invite_patient enforces this in the database too, so this
+    // check is the friendly message, not the guarantee.
+    if (!first) return setPatientNotice({ text: 'Enter the patient’s first name.', bad: true })
+    if (!last) return setPatientNotice({ text: 'Enter the patient’s last name, so the roster can tell patients apart.', bad: true })
     if (!email) return setPatientNotice({ text: 'Enter the patient’s email.', bad: true })
+    const name = `${first} ${last}`
     let res
     try {
-      res = await api.invitePatient(email, name)
+      res = await api.invitePatient(email, first, last)
     } catch (err) {
       return setPatientNotice({ text: `Couldn’t send invite: ${err.message}`, bad: true })
     }
-    setPName(''); setPEmail('')
+    setPFirst(''); setPLast(''); setPEmail('')
     // The link is no longer repeated here: it is on their pending row below, and
     // it stays there. Either way the invite itself is already saved, so a failed
     // send never loses it -- it just changes who does the sending.
@@ -729,16 +741,21 @@ export default function Dashboard() {
   async function handleInvite(e) {
     e.preventDefault()
     setStaffNotice(null)
-    const name = tName.trim(), email = tEmail.trim()
-    if (!name) return setStaffNotice({ text: 'Enter the therapist’s name.', bad: true })
+    const first = tFirst.trim(), last = tLast.trim(), email = tEmail.trim()
+    // ⚠️ A LAST NAME IS OPTIONAL FOR STAFF, DELIBERATELY. They are not on the
+    // patient roster, which is the thing two identical first names break, and a
+    // clinician who goes by "PT Pete" has no surname to give. Whatever is in the
+    // first box is what the app will call them, verbatim.
+    if (!first) return setStaffNotice({ text: 'Enter the therapist’s first name.', bad: true })
     if (!email) return setStaffNotice({ text: 'Enter the therapist’s email.', bad: true })
+    const name = [first, last].filter(Boolean).join(' ')
     let res
     try {
-      res = await inviteTherapist(email, name)
+      res = await inviteTherapist(email, first, last || null)
     } catch (err) {
       return setStaffNotice({ text: `Couldn’t send invite: ${err.message}`, bad: true })
     }
-    setTName(''); setTEmail('')
+    setTFirst(''); setTLast(''); setTEmail('')
     // Same shape as the patient handler. ⛔ DIFF THESE TWO AGAINST EACH OTHER
     // whenever you touch one: the patient path keeps being built second and
     // keeps missing a step this one already had.
@@ -772,7 +789,7 @@ export default function Dashboard() {
   // Web fonts arrive after first paint; the width is measured again when they do.
   const [fontsReady, setFontsReady] = useState(false)
   useEffect(() => { document.fonts?.ready.then(() => setFontsReady(true)) }, [])
-  const patientW = useMemo(() => patientColumnWidth(roster.map(r => r.name)), [roster, fontsReady]) // eslint-disable-line react-hooks/exhaustive-deps
+  const patientW = useMemo(() => patientColumnWidth(roster), [roster, fontsReady]) // eslint-disable-line react-hooks/exhaustive-deps
   const rosterColumns = ROSTER_COLUMNS
     .filter(c => isManager || !c.managerOnly)
     .map(c => (c.key === 'patient' ? { ...c, w: `${patientW}px` } : c))
@@ -785,7 +802,7 @@ export default function Dashboard() {
   function rosterCell(c, r) {
     switch (c.key) {
       case 'patient':
-        return <div style={{ ...s.name, alignItems: FLEX_ALIGN[c.align] }}><PatientName name={r.name} /><NameFlags flags={r.flags} /></div>
+        return <div style={{ ...s.name, alignItems: FLEX_ALIGN[c.align] }}><PatientName first={r.firstName || r.name} last={r.lastName} /><NameFlags flags={r.flags} /></div>
       case 'avg':
         return r.avg == null ? '—' : (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -873,8 +890,14 @@ export default function Dashboard() {
               <form onSubmit={handlePatientInvite} style={s.inviteForm}>
                 {/* Typing the next patient clears the last result, so the card
                     is never showing one person's link above another's form. */}
-                <input style={s.inviteInput} placeholder="Patient name" value={pName}
-                  onChange={e => { setPName(e.target.value); setPatientNotice(null) }} autoComplete="name" />
+                {/* ⚠️ TWO BOXES, AND THE LAST NAME IS REQUIRED HERE. The roster is how
+                    a clinic tells one patient from another, and several patients
+                    can share a first name and a therapist. Splitting one box on a
+                    space is what made "PT Pete" into "PT"; nothing guesses now. */}
+                <input style={s.inviteNameInput} placeholder="First name" value={pFirst}
+                  onChange={e => { setPFirst(e.target.value); setPatientNotice(null) }} autoComplete="given-name" />
+                <input style={s.inviteNameInput} placeholder="Last name" value={pLast}
+                  onChange={e => { setPLast(e.target.value); setPatientNotice(null) }} autoComplete="family-name" />
                 <input style={s.inviteInput} placeholder="Patient email" type="email" value={pEmail}
                   onChange={e => { setPEmail(e.target.value); setPatientNotice(null) }}
                   autoComplete="off" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
@@ -930,8 +953,13 @@ export default function Dashboard() {
                 )
               })}
               <form onSubmit={handleInvite} style={s.inviteForm}>
-                <input style={s.inviteInput} placeholder="Therapist name" value={tName}
-                  onChange={e => { setTName(e.target.value); setStaffNotice(null) }} autoComplete="name" />
+                {/* The last name is OPTIONAL for staff: they are not on the patient
+                    roster, and "PT Pete" has no surname to give. Whatever goes in
+                    the first box is exactly what the app will call them. */}
+                <input style={s.inviteNameInput} placeholder="First name" value={tFirst}
+                  onChange={e => { setTFirst(e.target.value); setStaffNotice(null) }} autoComplete="given-name" />
+                <input style={s.inviteNameInput} placeholder="Last name (optional)" value={tLast}
+                  onChange={e => { setTLast(e.target.value); setStaffNotice(null) }} autoComplete="family-name" />
                 <input style={s.inviteInput} placeholder="Therapist email" type="email" value={tEmail}
                   onChange={e => { setTEmail(e.target.value); setStaffNotice(null) }}
                   autoComplete="off" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />

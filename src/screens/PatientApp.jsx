@@ -128,7 +128,15 @@ function weeklyAverages(days) {
 
 export default function PatientApp() {
   const { user, profile, signOut } = useAuth()
-  const firstName = (profile?.full_name || '').trim().split(' ')[0] || 'there'
+  // ⚠️⚠️ THE ONLY NAME THIS SCREEN EVER SEES IS THE FIRST ONE, AND IT IS A REAL
+  // COLUMN, NOT A SUBSTRING. It goes into the AI prompt below, and the privacy
+  // notice promises a patient's surname never leaves the clinic's own records.
+  // Until 2026-09-13 this was full_name.split(' ')[0], which was correct for a
+  // plain "Natalie Watson" and wrong for "PT Pete" (greeted as "PT") and, more
+  // to the point, was a GUESS standing between a patient's full name and a
+  // third-party model. There is no guess now.
+  // ⛔ DO NOT read profile.full_name or profile.last_name in this file.
+  const firstName = (profile?.first_name || '').trim() || 'there'
 
   const [screen, setScreen] = useState('welcome')
   const [selectedFeeling, setSelectedFeeling] = useState(null)

@@ -28,7 +28,11 @@ export default function Onboard() {
   // Fixed once the code is sent, so a resend cannot land on a different slug
   // than the one the first attempt claimed.
   const [resolvedSlug, setResolvedSlug] = useState('')
-  const [fullName, setFullName] = useState('')
+  // A manager is staff, so the last name is OPTIONAL here, matching the staff
+  // invite door. They are not on the patient roster, which is the thing two
+  // identical first names break.
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [baaReviewed, setBaaReviewed] = useState(false)
   const [showBaa, setShowBaa] = useState(false)
@@ -66,12 +70,13 @@ export default function Onboard() {
     // in state yet at that point. A resend calls this with nothing and picks up
     // the stored value, so both routes use the same slug.
     const useSlug = slugOverride || effectiveSlug
-    savePendingOnboard(clinicName.trim(), useSlug, fullName.trim())
+    savePendingOnboard(clinicName.trim(), useSlug, firstName.trim(), lastName.trim())
     return cognito.beginSignUp(email.trim(), {
       flow: 'onboard',
       onboard_clinic_name: clinicName.trim(),
       onboard_clinic_slug: useSlug,
-      full_name: fullName.trim(),
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
     })
   }
 
@@ -81,7 +86,7 @@ export default function Onboard() {
     if (!clinicName.trim()) return setError('Please enter your clinic name.')
     // Only possible if the name has no letters or numbers at all.
     if (!slugify(clinicName)) return setError('Please use letters or numbers in your clinic name.')
-    if (!fullName.trim()) return setError('Please enter your name.')
+    if (!firstName.trim()) return setError('Please enter your first name.')
     if (!email.trim()) return setError('Please enter your work email.')
     if (!baaReviewed) return setError('Please confirm you’ve reviewed the BAA.')
     setBusy(true)
@@ -122,8 +127,10 @@ export default function Onboard() {
       <form onSubmit={handleSubmit} style={ui.form}>
         <input style={ui.input} placeholder="Clinic name (e.g. Riverside PT)" value={clinicName}
           onChange={e => setClinicName(e.target.value)} />
-        <input style={ui.input} placeholder="Your name" value={fullName}
-          onChange={e => setFullName(e.target.value)} autoComplete="name" />
+        <input style={ui.input} placeholder="Your first name" value={firstName}
+          onChange={e => setFirstName(e.target.value)} autoComplete="given-name" />
+        <input style={ui.input} placeholder="Your last name (optional)" value={lastName}
+          onChange={e => setLastName(e.target.value)} autoComplete="family-name" />
         <input style={ui.input} placeholder="Your work email" type="email" value={email}
           onChange={e => setEmail(e.target.value)}
           autoComplete="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />

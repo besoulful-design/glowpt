@@ -46,8 +46,8 @@ echo "Running RLS tests (as glowpt_app) ..."
 # admin above. Clinic A exists only after rls_tests.sql has run, hence the order.
 echo "Seeding an expired staff invite (as schema owner) ..."
 "$PSQL" -d "$DB" -h "$HOST" -p "$PORT" -q -v ON_ERROR_STOP=1 -c \
-  "insert into public.staff_invites (clinic_id, email, full_name, role, expires_at)
-   select id, 'expired@a.com', 'Expired Invitee', 'therapist', now() - interval '1 day'
+  "insert into public.staff_invites (clinic_id, email, first_name, last_name, role, expires_at)
+   select id, 'expired@a.com', 'Expired', 'Invitee', 'therapist', now() - interval '1 day'
      from public.clinics where slug = 'clinic-a';"
 
 echo "Running staff-invite tests (as glowpt_app) ..."

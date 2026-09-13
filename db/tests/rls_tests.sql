@@ -24,12 +24,12 @@ begin; select set_config('app.user_id','77777777-7777-7777-7777-777777777777',tr
 begin; select set_config('app.user_id','11111111-1111-1111-1111-111111111111',true);
   select set_clinic_open_signup(true); commit;
 begin; select set_config('app.user_id','22222222-2222-2222-2222-222222222222',true);
-  select join_clinic('clinic-a','Pat A1','v1'); commit;
+  select join_clinic('clinic-a','Pat','A1','v1'); commit;
 begin; select set_config('app.user_id','33333333-3333-3333-3333-333333333333',true);
-  select join_clinic('clinic-a','Pat A2','v1'); commit;
+  select join_clinic('clinic-a','Pat','A2','v1'); commit;
 -- manager invites therapist; therapist accepts; manager assigns Pat A1 to therapist
 begin; select set_config('app.user_id','11111111-1111-1111-1111-111111111111',true);
-  select invite_staff('thera@a.com','Ther A','therapist'); commit;
+  select invite_staff('thera@a.com','Ther','A','therapist'); commit;
 begin; select set_config('app.user_id','44444444-4444-4444-4444-444444444444',true);
   select accept_staff_invite(); commit;
 begin; select set_config('app.user_id','11111111-1111-1111-1111-111111111111',true);
@@ -43,7 +43,7 @@ begin; select set_config('app.user_id','77777777-7777-7777-7777-777777777777',tr
 begin; select set_config('app.user_id','55555555-5555-5555-5555-555555555555',true);
   select set_clinic_open_signup(true); commit;
 begin; select set_config('app.user_id','66666666-6666-6666-6666-666666666666',true);
-  select join_clinic('clinic-b','Pat B1','v1'); commit;
+  select join_clinic('clinic-b','Pat','B1','v1'); commit;
 
 -- =========== BUILD CLINIC C (provisioned, deliberately left CLOSED) ===========
 begin; select set_config('app.user_id','88888888-8888-8888-8888-888888888888',true);
@@ -95,8 +95,10 @@ begin
   exception when insufficient_privilege then denied := true; end;
   raise notice '% T2 self-reassign clinic', case when denied then 'PASS:' else 'FAIL:' end;
 
-  -- T3 LEGIT: patient edits own full_name  (expect SUCCESS)
-  update public.profiles set full_name = 'Pat A1 Edited' where id = pat_a1;
+  -- T3 LEGIT: patient edits own name  (expect SUCCESS)
+  -- The grant is on first_name/last_name; full_name is generated from them, so
+  -- this also proves the generated column follows a write to its parts.
+  update public.profiles set first_name = 'Pat', last_name = 'A1 Edited' where id = pat_a1;
   select count(*) into n from public.profiles where id = pat_a1 and full_name='Pat A1 Edited';
   raise notice '% T3 edit own name', case when n=1 then 'PASS:' else 'FAIL:' end;
 
@@ -142,7 +144,7 @@ begin
   -- T10 STAFF REFUSED SELF-JOIN: therapist A tries to self-join as a patient  (expect RAISE)
   denied := false;
   begin
-    perform public.join_clinic('clinic-a','Sneaky','v1');
+    perform public.join_clinic('clinic-a','Sneaky','Person','v1');
   exception when others then denied := (sqlerrm like '%Staff account cannot self-join%'); end;
   raise notice '% T10 staff self-join refused', case when denied then 'PASS:' else 'FAIL:' end;
 
@@ -235,7 +237,7 @@ begin
   perform set_config('app.user_id', pat_a1::text, true);
   denied := false;
   begin
-    perform public.register_user(gen_random_uuid(), 'evil@x.com', 'Evil');
+    perform public.register_user(gen_random_uuid(), 'evil@x.com', 'Evil', 'Person');
   exception when insufficient_privilege then denied := true; end;
   raise notice '% T15 glowpt_app cannot call register_user', case when denied then 'PASS:' else 'FAIL:' end;
 
@@ -244,7 +246,7 @@ begin
   perform set_config('app.user_id', pat_c1::text, true);
   denied := false;
   begin
-    perform public.join_clinic('clinic-c','Pat C1','v1');
+    perform public.join_clinic('clinic-c','Pat','C1','v1');
   exception when others then denied := (sqlerrm like '%not open for sign-ups%'); end;
   raise notice '% T17 join refused while clinic is closed', case when denied then 'PASS:' else 'FAIL:' end;
 
@@ -257,7 +259,7 @@ begin
   perform set_config('app.user_id', pat_c1::text, true);
   denied := false;
   begin
-    perform public.join_clinic('clinic-c','Pat C1','v1');
+    perform public.join_clinic('clinic-c','Pat','C1','v1');
   exception when others then denied := (sqlerrm like '%invite only%'); end;
   raise notice '% T17b an active clinic still refuses walk-ins while invite-only',
     case when denied then 'PASS:' else 'FAIL:' end;
@@ -266,7 +268,7 @@ begin
   perform set_config('app.user_id', '88888888-8888-8888-8888-888888888888', true);
   perform public.set_clinic_open_signup(true);
   perform set_config('app.user_id', pat_c1::text, true);
-  perform public.join_clinic('clinic-c','Pat C1','v1');
+  perform public.join_clinic('clinic-c','Pat','C1','v1');
   select count(*) into n from public.profiles where id = pat_c1 and clinic_id = clinic_c;
   raise notice '% T18 join succeeds once both gates are open', case when n=1 then 'PASS:' else 'FAIL:' end;
 

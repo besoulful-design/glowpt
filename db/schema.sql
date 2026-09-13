@@ -154,7 +154,25 @@ create table public.profiles (
   clinic_id    uuid references public.clinics(id) on delete set null,
   role         text not null default 'patient'
                  check (role in ('patient','therapist','manager')),
-  full_name    text,
+  -- ⚠️ TWO NAME FIELDS, AND full_name IS DERIVED FROM THEM. DO NOT WRITE TO IT.
+  --
+  -- first_name is WHAT WE CALL YOU. It is the only part of a name that ever
+  -- reaches the AI prompt, which is the promise the privacy notice makes, and
+  -- it is whatever was typed: "Pete", "Dr. Sam", or "PT Pete". There is no
+  -- heuristic and no title list. Until 2026-09-13 there was one full_name and
+  -- three separate places guessed the first name with split(' ')[0], which is
+  -- why the therapist who goes by "PT Pete" was emailed as "Hi PT,".
+  --
+  -- last_name is WHAT DISAMBIGUATES YOU. A clinic can have two Sarahs seeing
+  -- the same therapist, and before this the roster could not tell them apart.
+  -- It is REQUIRED for a patient invite (enforced in invite_patient below, not
+  -- only in the form) and optional for staff, who are not on that roster.
+  --
+  -- full_name is a STORED GENERATED column so the two can never drift from it.
+  -- Every reader keeps working untouched; every writer sets the two parts.
+  first_name   text,
+  last_name    text,
+  full_name    text generated always as (nullif(btrim(coalesce(first_name,'') || ' ' || coalesce(last_name,'')), '')) stored,
   therapist_id uuid references public.profiles(id) on delete set null,
   created_at   timestamptz not null default now(),
   discharged_at timestamptz
@@ -246,7 +264,12 @@ create table public.staff_invites (
   id         uuid primary key default gen_random_uuid(),
   clinic_id  uuid not null references public.clinics(id) on delete cascade,
   email      text not null,
-  full_name  text,
+  -- Same two-field shape as profiles, and for the same reasons; see the note
+  -- there. The invite carries the name the manager typed so the join screen can
+  -- show it back, and accept_* copies both parts onto the profile.
+  first_name text,
+  last_name  text,
+  full_name  text generated always as (nullif(btrim(coalesce(first_name,'') || ' ' || coalesce(last_name,'')), '')) stored,
   role       text not null default 'therapist' check (role in ('patient','therapist','manager')),
   invited_by uuid references public.users(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -327,8 +350,13 @@ as $$ select exists (
 -- register_user: the AWS replacement for the handle_new_user trigger, which
 -- cannot port (there is no auth.users to fire on). The Cognito post-confirmation
 -- Lambda (Phase 2) calls this to create the identity row + a bare profile.
+-- ⚠️ NO DEFAULTS ON p_first_name / p_last_name, DELIBERATELY. During the
+-- 2026-09-13 rollout this function briefly coexisted with the old
+-- register_user(uuid, citext, text) as an overload, and a default would have
+-- made a 3-argument call match BOTH, which Postgres refuses as ambiguous --
+-- breaking every sign-up in the window. Every caller passes all four.
 create or replace function public.register_user(
-    p_id uuid, p_email citext, p_full_name text default null)
+    p_id uuid, p_email citext, p_first_name text, p_last_name text)
   returns void
   language plpgsql security definer
   set search_path = public set row_security = off
@@ -336,8 +364,8 @@ as $$
 begin
   insert into public.users (id, email) values (p_id, lower(p_email))
     on conflict (id) do nothing;
-  insert into public.profiles (id, full_name)
-    values (p_id, nullif(trim(p_full_name), ''))
+  insert into public.profiles (id, first_name, last_name)
+    values (p_id, nullif(btrim(p_first_name), ''), nullif(btrim(p_last_name), ''))
     on conflict (id) do nothing;
 end $$;
 
@@ -412,8 +440,8 @@ declare v_clinic_id uuid;
 begin
   if public.current_user_id() is null then raise exception 'Not authenticated'; end if;
   insert into public.clinics (name, slug) values (p_name, p_slug) returning id into v_clinic_id;
-  insert into public.profiles (id, clinic_id, role, full_name)
-    values (public.current_user_id(), v_clinic_id, 'manager', null)
+  insert into public.profiles (id, clinic_id, role)
+    values (public.current_user_id(), v_clinic_id, 'manager')
     on conflict (id) do update set clinic_id = v_clinic_id, role = 'manager';
   return v_clinic_id;
 end $$;
@@ -422,7 +450,7 @@ end $$;
 -- Role is pinned to 'patient' server-side; clinic resolved from the slug; a
 -- staff member is refused, not downgraded; consent written in the same txn.
 create or replace function public.join_clinic(
-    p_slug text, p_full_name text, p_consent_version text)
+    p_slug text, p_first_name text, p_last_name text, p_consent_version text)
   returns uuid
   language plpgsql security definer
   set search_path = public set row_security = off
@@ -455,12 +483,17 @@ begin
     raise exception 'Staff account cannot self-join as a patient';
   end if;
 
-  insert into public.profiles (id, clinic_id, role, full_name)
-    values (public.current_user_id(), v_clinic, 'patient', nullif(trim(p_full_name), ''))
+  -- coalesce keeps a name the person already has rather than blanking it,
+  -- exactly as it did when this was one column. Each part is kept separately,
+  -- so someone who had a first name but no last one gains the last one here.
+  insert into public.profiles (id, clinic_id, role, first_name, last_name)
+    values (public.current_user_id(), v_clinic, 'patient',
+            nullif(btrim(p_first_name), ''), nullif(btrim(p_last_name), ''))
     on conflict (id) do update
-      set clinic_id = v_clinic,
-          role      = 'patient',
-          full_name = coalesce(public.profiles.full_name, excluded.full_name);
+      set clinic_id  = v_clinic,
+          role       = 'patient',
+          first_name = coalesce(public.profiles.first_name, excluded.first_name),
+          last_name  = coalesce(public.profiles.last_name,  excluded.last_name);
 
   if p_consent_version is not null then
     insert into public.consents (user_id, clinic_id, type, version)
@@ -525,11 +558,13 @@ begin
       order by created_at desc limit 1 into v_inv;
     if v_inv.id is null then return null; end if;
   end if;
-  insert into public.profiles (id, clinic_id, role, full_name)
-    values (public.current_user_id(), v_inv.clinic_id, v_inv.role, v_inv.full_name)
+  insert into public.profiles (id, clinic_id, role, first_name, last_name)
+    values (public.current_user_id(), v_inv.clinic_id, v_inv.role,
+            v_inv.first_name, v_inv.last_name)
     on conflict (id) do update
-      set clinic_id = v_inv.clinic_id, role = v_inv.role,
-          full_name = coalesce(public.profiles.full_name, v_inv.full_name);
+      set clinic_id  = v_inv.clinic_id, role = v_inv.role,
+          first_name = coalesce(public.profiles.first_name, v_inv.first_name),
+          last_name  = coalesce(public.profiles.last_name,  v_inv.last_name);
   update public.staff_invites set consumed_at = now() where id = v_inv.id;
   return v_inv.clinic_id;
 end $$;
@@ -537,8 +572,12 @@ end $$;
 -- Returns the invite TOKEN so the caller can build the link to send. Re-inviting
 -- the same address mints a FRESH token and a fresh expiry and clears consumed_at
 -- — that is deliberately how a link sent to the wrong place gets invalidated.
+-- ⚠️ NO DEFAULT ON p_role, for the same reason as register_user above: with
+-- one, a 3-argument call would have matched both this and the old
+-- invite_staff(text, text, text) during the rollout window. Callers pass the
+-- role explicitly.
 create or replace function public.invite_staff(
-    p_email text, p_full_name text, p_role text default 'therapist')
+    p_email text, p_first_name text, p_last_name text, p_role text)
   returns text
   language plpgsql security definer
   set search_path = public set row_security = off
@@ -548,10 +587,16 @@ begin
   select clinic_id from public.profiles where id = public.current_user_id() and role = 'manager' into v_clinic;
   if v_clinic is null then raise exception 'Only a clinic manager can invite staff'; end if;
   if p_role not in ('therapist','manager') then raise exception 'Invalid role'; end if;
-  insert into public.staff_invites (clinic_id, email, full_name, role, invited_by)
-  values (v_clinic, lower(trim(p_email)), nullif(trim(p_full_name), ''), p_role, public.current_user_id())
+  -- ⚠️ A last name is NOT required for staff. They do not appear on the patient
+  -- roster, which is the thing two identical first names break, and a clinician
+  -- who goes by "PT Pete" has no surname to give. See invite_patient, where it
+  -- IS required.
+  insert into public.staff_invites (clinic_id, email, first_name, last_name, role, invited_by)
+  values (v_clinic, lower(trim(p_email)), nullif(btrim(p_first_name), ''),
+          nullif(btrim(p_last_name), ''), p_role, public.current_user_id())
   on conflict (clinic_id, email) do update
-    set full_name = excluded.full_name, role = excluded.role,
+    set first_name = excluded.first_name, last_name = excluded.last_name,
+        role = excluded.role,
         invited_by = excluded.invited_by, created_at = now(), consumed_at = null,
         token = public.new_invite_token(), expires_at = now() + interval '14 days'
   returning token into v_token;
@@ -566,11 +611,12 @@ end $$;
 -- the secret, and holding it still does not let the wrong person claim the role.
 -- An unknown, expired or already-used token returns zero rows.
 create or replace function public.get_staff_invite(p_token text)
-  returns table (clinic_name text, clinic_slug text, email text, full_name text, role text)
+  returns table (clinic_name text, clinic_slug text, email text,
+                 first_name text, last_name text, full_name text, role text)
   language sql stable security definer
   set search_path = public set row_security = off
 as $$
-  select c.name, c.slug, i.email, i.full_name, i.role
+  select c.name, c.slug, i.email, i.first_name, i.last_name, i.full_name, i.role
     from public.staff_invites i
     join public.clinics c on c.id = i.clinic_id
    where i.token = p_token
@@ -582,7 +628,8 @@ $$;
 -- guarantee: the token says which invite, the verified email is the gate. Split
 -- from invite_staff rather than folded into it so a patient form can never be
 -- coaxed into minting a therapist or manager invite by passing a role.
-create or replace function public.invite_patient(p_email text, p_full_name text)
+create or replace function public.invite_patient(
+    p_email text, p_first_name text, p_last_name text)
   returns text
   language plpgsql security definer
   set search_path = public set row_security = off
@@ -591,10 +638,23 @@ declare v_clinic uuid; v_token text;
 begin
   select clinic_id from public.profiles where id = public.current_user_id() and role = 'manager' into v_clinic;
   if v_clinic is null then raise exception 'Only a clinic manager can invite patients'; end if;
-  insert into public.staff_invites (clinic_id, email, full_name, role, invited_by)
-  values (v_clinic, lower(trim(p_email)), nullif(trim(p_full_name), ''), 'patient', public.current_user_id())
+  -- ⚠️ BOTH NAMES ARE REQUIRED FOR A PATIENT, AND THE RULE LIVES HERE RATHER
+  -- THAN ONLY IN THE FORM. The roster is how a clinic tells one patient from
+  -- another, and David's clinics routinely have several patients sharing a
+  -- first name and a therapist. A form check alone would be a suggestion; this
+  -- is the guarantee. (Staff are deliberately exempt: see invite_staff.)
+  if nullif(btrim(p_first_name), '') is null then
+    raise exception 'A first name is required' using errcode = 'P0001';
+  end if;
+  if nullif(btrim(p_last_name), '') is null then
+    raise exception 'A last name is required' using errcode = 'P0001';
+  end if;
+  insert into public.staff_invites (clinic_id, email, first_name, last_name, role, invited_by)
+  values (v_clinic, lower(trim(p_email)), btrim(p_first_name),
+          btrim(p_last_name), 'patient', public.current_user_id())
   on conflict (clinic_id, email) do update
-    set full_name = excluded.full_name, role = 'patient',
+    set first_name = excluded.first_name, last_name = excluded.last_name,
+        role = 'patient',
         invited_by = excluded.invited_by, created_at = now(), consumed_at = null,
         token = public.new_invite_token(), expires_at = now() + interval '14 days'
   returning token into v_token;
@@ -643,11 +703,13 @@ begin
     raise exception 'Staff account cannot join as a patient';
   end if;
 
-  insert into public.profiles (id, clinic_id, role, full_name)
-    values (public.current_user_id(), v_inv.clinic_id, 'patient', v_inv.full_name)
+  insert into public.profiles (id, clinic_id, role, first_name, last_name)
+    values (public.current_user_id(), v_inv.clinic_id, 'patient',
+            v_inv.first_name, v_inv.last_name)
     on conflict (id) do update
-      set clinic_id = v_inv.clinic_id, role = 'patient',
-          full_name = coalesce(public.profiles.full_name, v_inv.full_name);
+      set clinic_id  = v_inv.clinic_id, role = 'patient',
+          first_name = coalesce(public.profiles.first_name, v_inv.first_name),
+          last_name  = coalesce(public.profiles.last_name,  v_inv.last_name);
 
   if p_consent_version is not null then
     insert into public.consents (user_id, clinic_id, type, version)
@@ -866,6 +928,10 @@ create or replace function public.weekly_summary_rows()
     clinic_name            text,
     recipient_id           uuid,
     email                  citext,
+    -- The greeting uses first_name, never a substring of full_name. full_name
+    -- stays because the clinic-facing half of this function has always carried
+    -- it and a future template may want it.
+    first_name             text,
     full_name              text,
     role                   text,
     checkin_days           integer,
@@ -891,6 +957,7 @@ as $$
     select p.clinic_id,
            p.id                as recipient_id,
            u.email,
+           p.first_name,
            p.full_name,
            coalesce(r.days, 0) as checkin_days
     from public.profiles p
@@ -907,13 +974,13 @@ as $$
     from patients
     group by clinic_id
   )
-  select c.id, c.name, pt.recipient_id, pt.email, pt.full_name,
+  select c.id, c.name, pt.recipient_id, pt.email, pt.first_name, pt.full_name,
          'patient'::text, pt.checkin_days, a.total, a.active
   from patients pt
   join public.clinics c on c.id = pt.clinic_id
   join agg a            on a.clinic_id = pt.clinic_id
   union all
-  select c.id, c.name, sp.id, u.email, sp.full_name,
+  select c.id, c.name, sp.id, u.email, sp.first_name, sp.full_name,
          sp.role, 0, coalesce(a.total, 0), coalesce(a.active, 0)
   from public.profiles sp
   join public.users u   on u.id = sp.id
@@ -1039,7 +1106,10 @@ create policy staff_invites_select_clinic on public.staff_invites
 -- gets left behind on purpose (Rule 2). RLS is a second line, not the only one.
 grant select                    on public.clinics       to glowpt_app;
 grant select                    on public.profiles      to glowpt_app;
-grant update (full_name)        on public.profiles      to glowpt_app;  -- Hole 1: column lock
+-- Hole 1: column lock. The app role may change a person's NAME and nothing
+-- else on their profile, so it can never move itself to another clinic or
+-- promote itself. full_name is a generated column and is not writable at all.
+grant update (first_name, last_name) on public.profiles    to glowpt_app;
 grant select, insert, update    on public.checkins      to glowpt_app;
 grant select, insert            on public.consents      to glowpt_app;
 grant select, insert            on public.access_log    to glowpt_app;  -- append-only: no update/delete
@@ -1206,11 +1276,11 @@ grant execute on function
   public.is_my_patient(uuid),
   public.get_clinic_by_slug(text),
   public.provision_clinic(text, text),
-  public.join_clinic(text, text, text),
+  public.join_clinic(text, text, text, text),
   public.accept_staff_invite(text),
   public.get_staff_invite(text),
-  public.invite_staff(text, text, text),
-  public.invite_patient(text, text),
+  public.invite_staff(text, text, text, text),
+  public.invite_patient(text, text, text),
   public.accept_patient_invite(text, text),
   public.ensure_self(citext),
   public.set_clinic_open_signup(boolean),
@@ -1234,9 +1304,9 @@ to glowpt_app;
 -- the Lambda sets app.user_id via the set_config() built-in, and the attach RPCs
 -- read it internally as their definer, not as glowpt_postconfirm.
 grant execute on function
-  public.register_user(uuid, citext, text),
+  public.register_user(uuid, citext, text, text),
   public.provision_clinic(text, text),
-  public.join_clinic(text, text, text),
+  public.join_clinic(text, text, text, text),
   public.accept_staff_invite(text),
   public.accept_patient_invite(text, text)
 to glowpt_postconfirm;
@@ -1277,10 +1347,10 @@ alter function public.auth_clinic_id()                        owner to glowpt_au
 alter function public.is_my_patient(uuid)                     owner to glowpt_auth;
 alter function public.get_clinic_by_slug(text)                owner to glowpt_auth;
 alter function public.provision_clinic(text, text)            owner to glowpt_auth;
-alter function public.join_clinic(text, text, text)           owner to glowpt_auth;
+alter function public.join_clinic(text, text, text, text)           owner to glowpt_auth;
 alter function public.accept_staff_invite(text)               owner to glowpt_auth;
-alter function public.invite_staff(text, text, text)          owner to glowpt_auth;
-alter function public.invite_patient(text, text)              owner to glowpt_auth;
+alter function public.invite_staff(text, text, text, text)          owner to glowpt_auth;
+alter function public.invite_patient(text, text, text)              owner to glowpt_auth;
 alter function public.accept_patient_invite(text, text)       owner to glowpt_auth;
 alter function public.set_clinic_open_signup(boolean)         owner to glowpt_auth;
 alter function public.get_staff_invite(text)                         owner to glowpt_auth;
@@ -1288,7 +1358,7 @@ alter function public.new_invite_token()                      owner to glowpt_au
 alter function public.assign_therapist(uuid, uuid)            owner to glowpt_auth;
 alter function public.discharge_patient(uuid)                 owner to glowpt_auth;
 alter function public.restore_patient(uuid)                   owner to glowpt_auth;
-alter function public.register_user(uuid, citext, text)       owner to glowpt_auth;
+alter function public.register_user(uuid, citext, text, text)       owner to glowpt_auth;
 alter function public.ensure_self(citext)                     owner to glowpt_auth;
 alter function public.weekly_summary_rows()                   owner to glowpt_auth;
 alter function public.clinic_is_active(uuid)                  owner to glowpt_auth;

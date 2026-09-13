@@ -26,7 +26,15 @@ export default function InviteJoin() {
   const navigate = useNavigate()
   const [invite, setInvite] = useState(undefined) // undefined = loading, null = invalid
   const [loadFailed, setLoadFailed] = useState(false)
-  const [fullName, setFullName] = useState('')
+  // ⚠️ THE FIRST NAME IS EDITABLE, THE LAST NAME IS NOT (David's call,
+  // 2026-09-13). A patient may correct what they are called, "Nat" to "Natalie"
+  // say, because that is the name the app greets them by and the only part the
+  // AI prompt ever sees. The SURNAME is the clinic's identifier for them on the
+  // roster, so letting a patient rewrite it would quietly break the thing the
+  // two fields exist to fix. It is shown, not hidden: they can see what the
+  // clinic has and ring up if it is wrong.
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [consented, setConsented] = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
   const panelRef = useModal(showPrivacy, () => setShowPrivacy(false))
@@ -40,7 +48,11 @@ export default function InviteJoin() {
 
   useEffect(() => {
     api.getStaffInvite(token)
-      .then((inv) => { setInvite(inv); setFullName(inv.full_name || '') })
+      .then((inv) => {
+        setInvite(inv)
+        setFirstName(inv.first_name || inv.full_name || '')
+        setLastName(inv.last_name || '')
+      })
       .catch((err) => {
         // 404 is the real "this invite is unknown, expired or used". Anything
         // else is the network or the API having a bad moment, and telling
@@ -61,7 +73,9 @@ export default function InviteJoin() {
     return cognito.beginSignUp(invite.email, {
       flow: isPatient ? 'patient_invite' : 'staff',
       staff_token: token,
-      full_name: fullName.trim(),
+      // The parts, not a joined string: nothing downstream splits a name.
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
       ...(isPatient ? { consent_version: CONSENT_VERSION } : {}),
     })
   }
@@ -71,13 +85,16 @@ export default function InviteJoin() {
   async function claimAsSignedIn(e) {
     e.preventDefault()
     setError('')
-    if (!fullName.trim()) return setError('Please enter your name.')
+    if (!firstName.trim()) return setError('Please enter your first name.')
     if (isPatient && !consented) return setError('Please agree to the privacy notice to continue.')
     setBusy(true)
     try {
       if (isPatient) await api.acceptPatientInvite(token, CONSENT_VERSION)
       else await api.acceptStaffInvite(token)
-      if (fullName.trim()) { try { await api.updateMe(fullName.trim()) } catch { /* name is not worth failing the join over */ } }
+      // Only the first name is sent. updateMe leaves last_name untouched when
+      // it is absent, so a corrected first name cannot blank the surname the
+      // clinic entered on the invite.
+      if (firstName.trim()) { try { await api.updateMe(firstName.trim()) } catch { /* name is not worth failing the join over */ } }
       await refreshProfile()
       navigate('/', { replace: true })
     } catch (err) {
@@ -89,7 +106,7 @@ export default function InviteJoin() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    if (!fullName.trim()) return setError('Please enter your name.')
+    if (!firstName.trim()) return setError('Please enter your first name.')
     if (isPatient && !consented) return setError('Please agree to the privacy notice to continue.')
     setBusy(true)
     try {
@@ -196,8 +213,18 @@ export default function InviteJoin() {
         <div>{isPatient ? 'Confirm your name to start checking in.' : 'Confirm your name to set up your account.'}</div>
       </div>
       <form onSubmit={claiming ? claimAsSignedIn : handleSubmit} style={ui.form}>
-        <input style={ui.input} placeholder="Your name" value={fullName}
-          onChange={e => setFullName(e.target.value)} autoComplete="name" />
+        <input style={ui.input} placeholder="Your first name" value={firstName}
+          onChange={e => setFirstName(e.target.value)} autoComplete="given-name" />
+        {/* Shown but not editable, for the same reason as the email below: the
+            clinic identifies you by it on their roster. Rendered only when the
+            clinic actually supplied one, so a staff invite with no surname does
+            not show an empty box. */}
+        {lastName && (
+          <div style={s.fixedEmail}>
+            <div style={s.fixedEmailLabel}>Last name</div>
+            <div style={s.fixedEmailValue}>{lastName}</div>
+          </div>
+        )}
         {/* Fixed, not editable: the invite is FOR this address, and the database
             refuses the claim if the signed-up email differs. An editable field
             would invite people to type their own and hit a confusing refusal. */}

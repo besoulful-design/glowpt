@@ -220,8 +220,14 @@ const inviteUrlFor = (token: string) => `${APP_URL}/invite/${token}`;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'GlowPT <no-reply@glowpt.app>';
 const SES_CONFIG_SET = process.env.SES_CONFIG_SET || '';
 
-function inviteEmail(clinicName: string, role: string, inviteUrl: string, fullName: string | null) {
-  const greeting = fullName ? `Hi ${fullName.trim().split(' ')[0]},` : 'Hello,';
+// ⚠️ THE GREETING USES first_name VERBATIM. It used to be
+// fullName.split(' ')[0], which made the therapist who goes by "PT Pete" into
+// "Hi PT,". There is no title list and no heuristic: whatever the manager typed
+// in the First box is what we call this person. first_name is also the ONLY
+// part of a name that ever reaches the AI prompt, which is the promise the
+// privacy notice makes.
+function inviteEmail(clinicName: string, role: string, inviteUrl: string, firstName: string | null) {
+  const greeting = firstName?.trim() ? `Hi ${firstName.trim()},` : 'Hello,';
   const isPatient = role === 'patient';
   const roleWord = role === 'manager' ? 'a manager' : role === 'patient' ? 'a patient' : 'a therapist';
   // Two audiences, one shell. A patient is being asked to use the app daily; a
@@ -244,6 +250,15 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, fullNa
   const home = isPatient
     ? `After today, your check-in lives at <a href="${APP_URL}" style="color:#F5A81A;text-decoration:none">glowpt.app</a>. Save it somewhere you will find it.`
     : `Your clinic dashboard lives at <a href="${APP_URL}" style="color:#F5A81A;text-decoration:none">glowpt.app</a>.`;
+  // ⚠️ ONE FONT, AND THE OPACITY LADDER MUST ONLY EVER DESCEND. There is no
+  // second family in this email: the sense that "some text is a different font"
+  // comes entirely from these alpha values, so a step that goes back UP reads as
+  // an inconsistency rather than as hierarchy. It did: the home line sat at 0.7
+  // directly under the 0.6 pitch, making the housekeeping sentence brighter than
+  // the one that sells the product, and David caught it in a real invite on
+  // 2026-09-13. Reading down, alpha goes 1.0, 0.8, 0.6, 0.6, 0.5, 0.35 and never
+  // rises. The weekly email's ladder (0.8, 0.6, 0.35) has always been clean;
+  // this one had drifted. Check the whole ladder when adding a paragraph.
   return `<div style="font-family:-apple-system,Segoe UI,sans-serif;background:#0d1825;color:#f5efe4;padding:32px;border-radius:8px;max-width:480px;margin:auto">
     <img src="${APP_URL}/apple-touch-icon.png" alt="GlowPT" width="56" height="56" style="display:block;width:56px;height:56px;border:0;border-radius:13px;margin-bottom:12px">
     <div style="font-size:26px;font-weight:600;margin-bottom:18px">Glow<span style="color:#F5A81A">PT</span></div>
@@ -258,7 +273,7 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, fullNa
          emailed until they act on the page. The real sequence is tap, confirm
          your name, THEN a code arrives, so it now says that in that order.
          (David spotted the contradiction on 2026-09-05.) -->
-    <p style="font-size:14px;line-height:1.6;color:rgba(245,239,228,0.7);margin-top:20px">${home}</p>
+    <p style="font-size:14px;line-height:1.6;color:rgba(245,239,228,0.6);margin-top:20px">${home}</p>
     <p style="font-size:13px;line-height:1.6;color:rgba(245,239,228,0.5);margin-top:22px">You will confirm your name, then we will email you a code to sign in. There is no password to create. This link works only for this email address and expires in 14 days.</p>
     <p style="font-size:13px;color:rgba(245,239,228,0.35);margin-top:18px">One good day at a time.</p>
   </div>`;
@@ -293,7 +308,8 @@ async function getMe(client: Client, event: APIGatewayProxyEventV2WithJWTAuthori
   const sub = requireSub(event);
   const row = await withUser(client, sub, async (c) => {
     const { rows } = await c.query(
-      `select id, clinic_id, role, full_name, therapist_id, discharged_at, created_at
+      `select id, clinic_id, role, first_name, last_name, full_name,
+              therapist_id, discharged_at, created_at
          from public.profiles
         where id = public.current_user_id()`,
     );
@@ -304,17 +320,28 @@ async function getMe(client: Client, event: APIGatewayProxyEventV2WithJWTAuthori
 }
 
 // -- Profile: update the caller's own name. The column-scoped grant
-//    (update (full_name)) plus profiles_update_self mean role/clinic_id cannot
-//    be touched here even if asked.
+//    (update (first_name, last_name)) plus profiles_update_self mean
+//    role/clinic_id cannot be touched here even if asked. full_name is a
+//    generated column and is not writable by anyone.
+//
+//    ⚠️ LAST NAME IS OPTIONAL HERE, AND DELIBERATELY SO. A patient may correct
+//    what they are called; the surname the clinic identifies them by is set on
+//    the invite and left alone. Omitting last_name leaves the stored one
+//    untouched rather than clearing it, so the join screen (which sends only
+//    the first name back) cannot blank a surname the manager entered.
 async function patchMe(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const sub = requireSub(event);
   const body = parseBody(event);
-  const fullName = typeof body.full_name === 'string' ? body.full_name.trim() : null;
-  if (!fullName) throw new HttpError(400, 'full_name_required');
+  const firstName = typeof body.first_name === 'string' ? body.first_name.trim() : null;
+  const lastName = typeof body.last_name === 'string' ? body.last_name.trim() : null;
+  if (!firstName) throw new HttpError(400, 'first_name_required');
   await withUser(client, sub, async (c) => {
     await c.query(
-      'update public.profiles set full_name = $1 where id = public.current_user_id()',
-      [fullName],
+      `update public.profiles
+          set first_name = $1,
+              last_name  = coalesce($2, last_name)
+        where id = public.current_user_id()`,
+      [firstName, lastName],
     );
   });
   return json(200, { ok: true });
@@ -479,7 +506,8 @@ async function getRoster(client: Client, event: APIGatewayProxyEventV2WithJWTAut
   const sub = requireSub(event);
   const result = await withUser(client, sub, async (c) => {
     const patients = await c.query(
-      `select id, full_name, created_at, therapist_id, discharged_at
+      `select id, first_name, last_name, full_name, created_at,
+              therapist_id, discharged_at
          from public.profiles
         where role = 'patient'`,
     );
@@ -504,7 +532,7 @@ async function getTherapists(client: Client, event: APIGatewayProxyEventV2WithJW
   const sub = requireSub(event);
   const result = await withUser(client, sub, async (c) => {
     const { rows } = await c.query(
-      `select id, full_name
+      `select id, first_name, last_name, full_name
          from public.profiles
         where clinic_id = public.auth_clinic_id() and role = 'therapist'
         order by full_name`,
@@ -531,7 +559,7 @@ async function getInvites(client: Client, event: APIGatewayProxyEventV2WithJWTAu
     // the token is not a credential anyway (accept_*_invite still requires the
     // signed-in user's VERIFIED email to match the invited address).
     const { rows } = await c.query(
-      `select email, full_name, role, token
+      `select email, first_name, last_name, full_name, role, token
          from public.staff_invites
         where consumed_at is null
           and expires_at > now()
@@ -539,6 +567,10 @@ async function getInvites(client: Client, event: APIGatewayProxyEventV2WithJWTAu
     );
     return rows.map((r) => ({
       email: r.email,
+      // Both parts AND the composed name: the pending row renders the stacked
+      // name like the roster, and the Copy Invite message greets by first name.
+      first_name: r.first_name,
+      last_name: r.last_name,
       full_name: r.full_name,
       role: r.role,
       invite_url: inviteUrlFor(r.token as string),
@@ -575,12 +607,13 @@ async function rpcJoinClinic(client: Client, event: APIGatewayProxyEventV2WithJW
   const b = parseBody(event);
   const slug = typeof b.slug === 'string' ? b.slug.trim() : '';
   if (!slug) throw new HttpError(400, 'slug_required');
-  const fullName = typeof b.full_name === 'string' ? b.full_name : null;
+  const firstName = typeof b.first_name === 'string' ? b.first_name : null;
+  const lastName = typeof b.last_name === 'string' ? b.last_name : null;
   const consentVersion = typeof b.consent_version === 'string' ? b.consent_version : null;
   const clinicId = await withUserEnsured(client, event, sub, async (c) => {
     const { rows } = await c.query(
-      'select public.join_clinic($1, $2, $3) as clinic_id',
-      [slug, fullName, consentVersion],
+      'select public.join_clinic($1, $2, $3, $4) as clinic_id',
+      [slug, firstName, lastName, consentVersion],
     );
     return rows[0].clinic_id as string;
   });
@@ -611,13 +644,17 @@ async function rpcInviteStaff(client: Client, event: APIGatewayProxyEventV2WithJ
   const b = parseBody(event);
   const email = typeof b.email === 'string' ? b.email.trim() : '';
   if (!email) throw new HttpError(400, 'email_required');
-  const fullName = typeof b.full_name === 'string' ? b.full_name : null;
+  // A last name is optional for staff and required for patients; both rules are
+  // enforced in the database, not here. See invite_staff / invite_patient.
+  const firstName = typeof b.first_name === 'string' ? b.first_name : null;
+  const lastName = typeof b.last_name === 'string' ? b.last_name : null;
   const role = typeof b.role === 'string' && b.role ? b.role : 'therapist';
 
   const { token, clinicName } = await withUser(client, sub, async (c) => {
-    const { rows } = await c.query('select public.invite_staff($1, $2, $3) as token', [
+    const { rows } = await c.query('select public.invite_staff($1, $2, $3, $4) as token', [
       email,
-      fullName,
+      firstName,
+      lastName,
       role,
     ]);
     const { rows: cl } = await c.query(
@@ -626,7 +663,7 @@ async function rpcInviteStaff(client: Client, event: APIGatewayProxyEventV2WithJ
     return { token: rows[0].token as string, clinicName: (cl[0]?.name as string) || 'Your clinic' };
   });
 
-  return json(200, await sendInvite(clinicName, role, token, email, fullName));
+  return json(200, await sendInvite(clinicName, role, token, email, firstName));
 }
 
 /**
@@ -644,7 +681,7 @@ async function sendInvite(
   role: string,
   token: string,
   email: string,
-  fullName: string | null,
+  firstName: string | null,
 ) {
   const inviteUrl = inviteUrlFor(token);
   let emailSent = false;
@@ -658,7 +695,7 @@ async function sendInvite(
         Content: {
           Simple: {
             Subject: { Data: `${clinicName} invited you to GlowPT` },
-            Body: { Html: { Data: inviteEmail(clinicName, role, inviteUrl, fullName) } },
+            Body: { Html: { Data: inviteEmail(clinicName, role, inviteUrl, firstName) } },
           },
         },
       }),
@@ -676,17 +713,22 @@ async function rpcInvitePatient(client: Client, event: APIGatewayProxyEventV2Wit
   const b = parseBody(event);
   const email = typeof b.email === 'string' ? b.email.trim() : '';
   if (!email) throw new HttpError(400, 'email_required');
-  const fullName = typeof b.full_name === 'string' ? b.full_name : null;
+  const firstName = typeof b.first_name === 'string' ? b.first_name : null;
+  const lastName = typeof b.last_name === 'string' ? b.last_name : null;
 
   const { token, clinicName } = await withUser(client, sub, async (c) => {
-    const { rows } = await c.query('select public.invite_patient($1, $2) as token', [email, fullName]);
+    const { rows } = await c.query('select public.invite_patient($1, $2, $3) as token', [
+      email,
+      firstName,
+      lastName,
+    ]);
     const { rows: cl } = await c.query(
       'select name from public.clinics where id = public.auth_clinic_id()',
     );
     return { token: rows[0].token as string, clinicName: (cl[0]?.name as string) || 'Your clinic' };
   });
 
-  return json(200, await sendInvite(clinicName, 'patient', token, email, fullName));
+  return json(200, await sendInvite(clinicName, 'patient', token, email, firstName));
 }
 
 async function rpcAcceptPatientInvite(
@@ -718,7 +760,8 @@ async function getStaffInvite(client: Client, event: APIGatewayProxyEventV2WithJ
   const token = event.pathParameters?.token;
   if (!token) throw new HttpError(400, 'token_required');
   const { rows } = await client.query(
-    'select clinic_name, clinic_slug, email, full_name, role from public.get_staff_invite($1)',
+    `select clinic_name, clinic_slug, email, first_name, last_name, full_name, role
+       from public.get_staff_invite($1)`,
     [token],
   );
   if (!rows[0]) throw new HttpError(404, 'invite_not_found');

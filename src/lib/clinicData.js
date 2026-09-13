@@ -25,8 +25,8 @@ export async function fetchPendingInvites() {
 }
 
 // Manager actions (backed by SECURITY DEFINER RPCs that enforce manager + same-clinic).
-export function inviteTherapist(email, fullName) {
-  return api.inviteStaff(email, fullName, 'therapist')
+export function inviteTherapist(email, firstName, lastName) {
+  return api.inviteStaff(email, firstName, lastName, 'therapist')
 }
 export function assignTherapist(patientId, therapistId) {
   return api.assignTherapist(patientId, therapistId)
@@ -95,6 +95,10 @@ export function buildRoster(patients, checkins) {
 
     return {
       id: p.id,
+      // Both parts, so the roster stops guessing where a name splits. `name`
+      // stays as the one-string form (search, sort tiebreak, the archive dialog).
+      firstName: p.first_name || '',
+      lastName: p.last_name || '',
       name: p.full_name || 'New patient',
       therapistId: p.therapist_id || null,
       count: cs.length,
@@ -118,10 +122,14 @@ export function buildRoster(patients, checkins) {
 // person finds them faster in a list that has a predictable order. The whole
 // name breaks ties so "Sam Torres" and "Sam Park" stay stable. Case- and
 // accent-insensitive, so "álvarez" sorts with "Alvarez".
+// ⚠️ Sorts on the first_name COLUMN, not on the first word of a full name. For
+// "PT Pete" those differ: the old version filed him under P-T, this one files
+// him under the name he actually goes by, which is where someone would look.
 function byFirstName(a, b) {
-  const fa = (a.name || '').trim().split(/\s+/)[0]
-  const fb = (b.name || '').trim().split(/\s+/)[0]
-  return fa.localeCompare(fb, 'en', { sensitivity: 'base' }) || (a.name || '').localeCompare(b.name || '', 'en', { sensitivity: 'base' })
+  const fa = (a.firstName || a.name || '').trim()
+  const fb = (b.firstName || b.name || '').trim()
+  return fa.localeCompare(fb, 'en', { sensitivity: 'base' })
+    || (a.name || '').localeCompare(b.name || '', 'en', { sensitivity: 'base' })
 }
 
 export function clinicStats(roster) {

@@ -14,7 +14,11 @@ export default function Join() {
   const { slug } = useParams()
   const { session, loading: authLoading } = useAuth()
   const [clinic, setClinic] = useState(undefined) // undefined = loading, null = not found
-  const [fullName, setFullName] = useState('')
+  // Two fields, as everywhere: first_name is what we call you and the only part
+  // the AI prompt sees; last_name is what tells two patients with the same first
+  // name apart on the clinic's roster. Both required on a patient door.
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [consented, setConsented] = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
@@ -34,11 +38,12 @@ export default function Join() {
   async function sendCode() {
     // localStorage backup drives the frontend re-attach safety net; the primary
     // attach is the post-confirmation Lambda reading this same flow metadata.
-    savePendingJoin(slug, fullName.trim(), CONSENT_VERSION)
+    savePendingJoin(slug, firstName.trim(), lastName.trim(), CONSENT_VERSION)
     return cognito.beginSignUp(email.trim(), {
       flow: 'join',
       clinic_slug: slug,
-      full_name: fullName.trim(),
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
       consent_version: CONSENT_VERSION,
     })
   }
@@ -46,7 +51,8 @@ export default function Join() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    if (!fullName.trim()) return setError('Please enter your name.')
+    if (!firstName.trim()) return setError('Please enter your first name.')
+    if (!lastName.trim()) return setError('Please enter your last name.')
     if (!email.trim()) return setError('Please enter your email.')
     if (!consented) return setError('Please agree to the privacy notice to continue.')
     setBusy(true)
@@ -128,8 +134,10 @@ export default function Join() {
         <div>One good day at a time.</div>
       </div>
       <form onSubmit={handleSubmit} style={ui.form}>
-        <input style={ui.input} placeholder="Your name" value={fullName}
-          onChange={e => setFullName(e.target.value)} autoComplete="name" />
+        <input style={ui.input} placeholder="Your first name" value={firstName}
+          onChange={e => setFirstName(e.target.value)} autoComplete="given-name" />
+        <input style={ui.input} placeholder="Your last name" value={lastName}
+          onChange={e => setLastName(e.target.value)} autoComplete="family-name" />
         <input style={ui.input} placeholder="Your email" type="email" value={email}
           onChange={e => setEmail(e.target.value)}
           autoComplete="email" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} />

@@ -28,7 +28,7 @@ declare
 begin
   -- ---- Manager A invites a new therapist and gets a link back. ----
   perform set_config('app.user_id', mgr_a::text, true);
-  select invite_staff('newstaff@a.com','New Staff','therapist') into tok;
+  select invite_staff('newstaff@a.com','New','Staff','therapist') into tok;
 
   raise notice '% T24 invite_staff returns a token (64 hex chars) -> %',
     case when tok ~ '^[0-9a-f]{64}$' then 'PASS:' else 'FAIL:' end, coalesce(length(tok),0);
@@ -116,7 +116,7 @@ begin
   -- T33 Re-inviting the same address mints a FRESH token, and that is what
   -- invalidates a link that went to the wrong place. The old one stays dead.
   perform set_config('app.user_id', mgr_a::text, true);
-  select invite_staff('newstaff@a.com','New Staff','therapist') into tok2;
+  select invite_staff('newstaff@a.com','New','Staff','therapist') into tok2;
   raise notice '% T33 re-inviting mints a different token',
     case when tok2 is distinct from tok then 'PASS:' else 'FAIL:' end;
 
@@ -132,14 +132,14 @@ begin
   perform set_config('app.user_id', '22222222-2222-2222-2222-222222222222', true);
   denied := false;
   begin
-    perform invite_staff('anyone@a.com','Anyone','manager');
+    perform invite_staff('anyone@a.com','Anyone',null,'manager');
   exception when others then denied := (sqlerrm like '%Only a clinic manager%'); end;
   raise notice '% T35 a patient cannot create a staff invite',
     case when denied then 'PASS:' else 'FAIL:' end;
 
   -- =================== PATIENT INVITES ===================
   perform set_config('app.user_id', mgr_a::text, true);
-  select invite_patient('newpat@a.com','New Patient') into ptok;
+  select invite_patient('newpat@a.com','New','Patient') into ptok;
   select id from clinics where slug = 'clinic-a' into clinic_a;
 
   perform set_config('app.user_id', '', true);
@@ -215,7 +215,7 @@ begin
   perform set_config('app.user_id', newpat::text, true);
   denied := false;
   begin
-    perform invite_patient('someone@a.com','Someone');
+    perform invite_patient('someone@a.com','Someone','Person');
   exception when others then denied := (sqlerrm like '%Only a clinic manager%'); end;
   raise notice '% T42 a patient cannot invite patients',
     case when denied then 'PASS:' else 'FAIL:' end;
@@ -237,7 +237,7 @@ begin
   -- NULL rather than true, so the guard fell through and only the profiles
   -- foreign key stopped the claim. The guarantee has to be the check itself.
   perform set_config('app.user_id', mgr_a::text, true);
-  select invite_patient('ghost@a.com','Ghost') into ptok;
+  select invite_patient('ghost@a.com','Ghost','Person') into ptok;
   perform set_config('app.user_id', ghost::text, true);
   denied := false;
   begin
@@ -250,7 +250,7 @@ begin
 
   -- T44b the same guard on the staff door.
   perform set_config('app.user_id', mgr_a::text, true);
-  select invite_staff('ghoststaff@a.com','Ghost Staff','therapist') into tok2;
+  select invite_staff('ghoststaff@a.com','Ghost','Staff','therapist') into tok2;
   perform set_config('app.user_id', ghost::text, true);
   denied := false;
   begin
@@ -411,4 +411,83 @@ begin
   exception when others then denied := (sqlerrm like '%Only a clinic manager%'); end;
   raise notice '% T55b a non-manager cannot read a purge target either',
     case when denied then 'PASS:' else 'FAIL:' end;
+end $$;
+
+-- ===========================================================================
+-- T56-T60: TWO NAME FIELDS (2026-09-13).
+--
+-- The roster is how a clinic tells one patient from another, and David's
+-- clinics routinely have several patients sharing a first name AND a
+-- therapist. So a patient invite must carry both parts, and the rule has to
+-- live in the database rather than only in the form. Staff are deliberately
+-- exempt: they are not on that roster, and the therapist who goes by
+-- "PT Pete" has no surname to give.
+--
+-- T59 is the "PT Pete" regression. Until 2026-09-13 there was ONE full_name
+-- and three separate places took everything before the first space as the
+-- first name, so he was emailed as "Hi PT,". first_name is now verbatim.
+-- ===========================================================================
+do $$
+declare
+  mgr_a   constant uuid := '11111111-1111-1111-1111-111111111111';
+  pat_a1  constant uuid := '22222222-2222-2222-2222-222222222222';
+  refused boolean;
+  fname   text;
+  lname   text;
+  composed text;
+begin
+  perform set_config('app.user_id', mgr_a::text, true);
+
+  -- T56: a patient invite with no last name at all is refused.
+  refused := false;
+  begin
+    perform invite_patient('nolast@a.com', 'Sarah', null);
+  exception when others then refused := (sqlerrm like '%last name is required%'); end;
+  raise notice '% T56 a patient invite needs a last name',
+    case when refused then 'PASS:' else 'FAIL:' end;
+
+  -- T56b: and whitespace is not a last name. btrim, not just a null test.
+  refused := false;
+  begin
+    perform invite_patient('blanklast@a.com', 'Sarah', '   ');
+  exception when others then refused := (sqlerrm like '%last name is required%'); end;
+  raise notice '% T56b whitespace does not count as a last name',
+    case when refused then 'PASS:' else 'FAIL:' end;
+
+  -- T57: the first name is required on that door too.
+  refused := false;
+  begin
+    perform invite_patient('nofirst@a.com', '  ', 'Jones');
+  exception when others then refused := (sqlerrm like '%first name is required%'); end;
+  raise notice '% T57 a patient invite needs a first name',
+    case when refused then 'PASS:' else 'FAIL:' end;
+
+  -- T58: STAFF are exempt, on purpose. This must keep succeeding.
+  perform invite_staff('ptpete@a.com', 'PT Pete', null, 'therapist');
+  select first_name, last_name into fname, lname
+    from staff_invites where email = 'ptpete@a.com';
+  raise notice '% T58 a staff invite is allowed with no last name -> % / %',
+    case when fname = 'PT Pete' and lname is null then 'PASS:' else 'FAIL:' end,
+    fname, coalesce(lname, 'null');
+
+  -- T59 REGRESSION: first_name is stored verbatim, spaces and all. This is the
+  -- whole point of two fields: nothing guesses where a name splits, so the
+  -- greeting is "Hi PT Pete," and never "Hi PT,".
+  raise notice '% T59 "PT Pete" survives as one first name -> %',
+    case when fname = 'PT Pete' then 'PASS:' else 'FAIL:' end, fname;
+
+  -- T60: full_name is DERIVED, so the two can never drift from it.
+  select full_name into composed from staff_invites where email = 'ptpete@a.com';
+  raise notice '% T60 full_name composes from the parts -> %',
+    case when composed = 'PT Pete' then 'PASS:' else 'FAIL:' end, coalesce(composed, 'null');
+
+  -- T60b: and it is not writable, by anyone, including the app role. A write
+  -- here is the drift this design exists to make impossible.
+  perform set_config('app.user_id', pat_a1::text, true);
+  refused := false;
+  begin
+    update public.profiles set full_name = 'Forged Name' where id = pat_a1;
+  exception when others then refused := true; end;
+  raise notice '% T60b full_name cannot be written, only derived',
+    case when refused then 'PASS:' else 'FAIL:' end;
 end $$;

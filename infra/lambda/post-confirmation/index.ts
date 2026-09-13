@@ -89,19 +89,23 @@ export const handler = async (
     await client.query('select set_config($1, $2, true)', ['app.user_id', sub]);
 
     // Always create the identity + bare profile first (idempotent).
-    await client.query('select register_user($1, $2, $3)', [
-      sub,
-      email,
-      meta.full_name ?? null,
-    ]);
+    // ⚠️ TWO NAME PARTS, and each is passed through untouched. Nothing here
+    // splits a name: first_name is what the person typed in the First box and
+    // is the only part that ever reaches the AI prompt. An older sign-up that
+    // is mid-flight when this deploys carries only full_name in its metadata,
+    // so that is accepted as the first name rather than dropped.
+    const first = meta.first_name ?? meta.full_name ?? null;
+    const last = meta.last_name ?? null;
+    await client.query('select register_user($1, $2, $3, $4)', [sub, email, first, last]);
 
     // Then attach to a clinic based on which path the user came through. Every
     // branch is idempotent, so a retry (or the frontend safety-net re-run) is safe.
     switch (flow) {
       case 'join':
-        await client.query('select join_clinic($1, $2, $3)', [
+        await client.query('select join_clinic($1, $2, $3, $4)', [
           meta.clinic_slug,
-          meta.full_name ?? null,
+          first,
+          last,
           meta.consent_version ?? null,
         ]);
         break;

@@ -70,7 +70,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // ---- Email copy, preserved VERBATIM from the old Supabase function so the
 // ---- patient/clinic voice does not change. Only APP_URL/FROM differ (SES).
-const firstName = (n: string | null) => (n || 'there').trim().split(' ')[0];
+// ⚠️ THE GREETING IS THE first_name COLUMN, NOT A SUBSTRING OF full_name. It
+// was (full_name).split(' ')[0] until 2026-09-13, which greeted the therapist
+// who goes by "PT Pete" as "PT". Whatever is in the First box is what we call
+// this person, verbatim, with no title list and no guessing.
+const greetName = (n: string | null) => n?.trim() || 'there';
 
 function shell(inner: string) {
   return `<div style="font-family:-apple-system,Segoe UI,sans-serif;background:#0d1825;color:#f5efe4;padding:32px;border-radius:8px;max-width:480px;margin:auto">
@@ -115,6 +119,7 @@ interface SummaryRow {
   clinic_name: string;
   recipient_id: string;
   email: string;
+  first_name: string | null;
   full_name: string | null;
   role: 'patient' | 'manager' | 'therapist';
   checkin_days: number;
@@ -139,7 +144,7 @@ function buildOutbox(rows: SummaryRow[]): OutboxItem[] {
       outbox.push({
         to: r.email,
         subject: 'Your GlowPT week',
-        html: patientEmail(firstName(r.full_name), r.checkin_days),
+        html: patientEmail(greetName(r.first_name), r.checkin_days),
         recipientId: r.recipient_id,
         role: r.role,
       });

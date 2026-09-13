@@ -135,7 +135,7 @@ export async function beginSignIn(email) {
 
 /**
  * New user: create the (passwordless) account. `clientMetadata` carries the
- * clinic-attach flow (e.g. { flow:'join', clinic_slug, full_name, consent_version })
+ * clinic-attach flow (e.g. { flow:'join', clinic_slug, first_name, last_name, consent_version })
  * and is replayed on confirm, where the post-confirmation Lambda reads it.
  *
  * If the email already has an account, Cognito throws UsernameExistsException.

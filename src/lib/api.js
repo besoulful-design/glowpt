@@ -48,8 +48,19 @@ export const getClinicBySlug = (slug) =>
 
 // -- Me (profile / consents / check-ins) --
 export const getMe = () => request('/me');
-export const updateMe = (fullName) =>
-  request('/me', { method: 'PATCH', body: { full_name: fullName } });
+// ⚠️ NAMES TRAVEL AS TWO FIELDS EVERYWHERE. Nothing in the app splits a name
+// on a space any more; first_name is what the person is called (and the only
+// part the AI prompt ever sees) and last_name is what tells two patients with
+// the same first name apart on the roster.
+//
+// lastName is optional here: omitting it leaves the stored surname alone rather
+// than clearing it, which is what lets the join screen send back a corrected
+// first name without blanking the surname the clinic entered.
+export const updateMe = (firstName, lastName) =>
+  request('/me', {
+    method: 'PATCH',
+    body: { first_name: firstName, ...(lastName != null ? { last_name: lastName } : {}) },
+  });
 export const recordConsent = (version) =>
   request('/me/consents', { method: 'POST', body: { version } });
 export const getMyCheckins = (since) =>
@@ -66,10 +77,10 @@ export const getInvites = () => request('/clinic/invites');
 // -- RPCs (bodies carry entity ids, never the URL) --
 export const provisionClinic = (name, slug) =>
   request('/rpc/provision-clinic', { method: 'POST', body: { name, slug } });
-export const joinClinic = (slug, fullName, consentVersion) =>
+export const joinClinic = (slug, firstName, lastName, consentVersion) =>
   request('/rpc/join-clinic', {
     method: 'POST',
-    body: { slug, full_name: fullName, consent_version: consentVersion },
+    body: { slug, first_name: firstName, last_name: lastName, consent_version: consentVersion },
   });
 // Public, like getClinicBySlug: read before the person has an account, so the
 // staff sign-up page can name the clinic and role. The token in the URL is the
@@ -81,8 +92,13 @@ export const getStaffInvite = (token) =>
 // caller's verified email to match the invite, so the token alone grants nothing.
 export const acceptStaffInvite = (token = null) =>
   request('/rpc/accept-staff-invite', { method: 'POST', body: { token } });
-export const invitePatient = (email, fullName) =>
-  request('/rpc/invite-patient', { method: 'POST', body: { email, full_name: fullName } });
+// A last name is REQUIRED for a patient and optional for staff. Both rules are
+// enforced in the database, so a bad call is refused there, not merely here.
+export const invitePatient = (email, firstName, lastName) =>
+  request('/rpc/invite-patient', {
+    method: 'POST',
+    body: { email, first_name: firstName, last_name: lastName },
+  });
 // Separate from acceptStaffInvite because this door records consent and that
 // one deliberately cannot; the database refuses each the other's invites.
 export const acceptPatientInvite = (token, consentVersion) =>
@@ -90,10 +106,10 @@ export const acceptPatientInvite = (token, consentVersion) =>
     method: 'POST',
     body: { token, consent_version: consentVersion },
   });
-export const inviteStaff = (email, fullName, role = 'therapist') =>
+export const inviteStaff = (email, firstName, lastName, role = 'therapist') =>
   request('/rpc/invite-staff', {
     method: 'POST',
-    body: { email, full_name: fullName, role },
+    body: { email, first_name: firstName, last_name: lastName, role },
   });
 export const assignTherapist = (patientId, therapistId) =>
   request('/rpc/assign-therapist', {
