@@ -4,7 +4,9 @@
 #
 #   1. A Route 53 hosted zone for glowpt.app in glowpt-prod, holding an EXACT
 #      copy of what Netlify DNS serves today (apex + www still pointing at
-#      Netlify, the three SES DKIM CNAMEs, the bounce MX/SPF, DMARC). So the
+#      Netlify, the three SES DKIM CNAMEs, the bounce MX/SPF, DMARC, plus three
+#      dead Resend-era records: send MX/SPF and resend._domainkey. Kept so
+#      the copy is exact; delete them once Netlify DNS is gone). So the
 #      later nameserver switch at GoDaddy changes nothing by itself.
 #   2. The Amplify domain association for glowpt.app + www, which requests
 #      the certificate and hands back one validation CNAME.
@@ -60,7 +62,13 @@ cat > "$BATCH" <<JSON
  {"Action":"UPSERT","ResourceRecordSet":{"Name":"bounce.${DOMAIN}.","Type":"MX","TTL":300,
    "ResourceRecords":[{"Value":"10 feedback-smtp.us-east-1.amazonses.com"}]}},
  {"Action":"UPSERT","ResourceRecordSet":{"Name":"bounce.${DOMAIN}.","Type":"TXT","TTL":300,
-   "ResourceRecords":[{"Value":"\"v=spf1 include:amazonses.com ~all\""}]}}
+   "ResourceRecords":[{"Value":"\"v=spf1 include:amazonses.com ~all\""}]}},
+ {"Action":"UPSERT","ResourceRecordSet":{"Name":"send.${DOMAIN}.","Type":"MX","TTL":300,
+   "ResourceRecords":[{"Value":"10 feedback-smtp.us-east-1.amazonses.com"}]}},
+ {"Action":"UPSERT","ResourceRecordSet":{"Name":"send.${DOMAIN}.","Type":"TXT","TTL":300,
+   "ResourceRecords":[{"Value":"\"v=spf1 include:amazonses.com ~all\""}]}},
+ {"Action":"UPSERT","ResourceRecordSet":{"Name":"resend._domainkey.${DOMAIN}.","Type":"TXT","TTL":300,
+   "ResourceRecords":[{"Value":"\"p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCw5qPbh2pIq04OrdaO7uWx1KXg47Ni05c0ghkBkXRWogR3Q6EVKPrJtOEQF+mXmBvVbXyr8ckpmRW1WMII7n5ZKhqtAr7nERs6yxhXGLhQT3lKqoAYncVaoNzKEaH0uDFSyWv490WVAe9tD0xG22AXZlqrgN7akbDva8C58U6K3QIDAQAB\""}]}}
 ]}
 JSON
 aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" --change-batch "file://$BATCH" "${P[@]}" \
