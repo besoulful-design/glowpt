@@ -1,0 +1,29 @@
+# AWS Amplify Hosting build spec for the GlowPT frontend (moved off Netlify
+# 2026-09-13). Hosting ONLY: no Amplify backend, auth or data. PHI still goes
+# browser -> API Gateway directly; Amplify serves static files, exactly the
+# role Netlify had, now under the org-level AWS BAA.
+#
+# Node is pinned by .nvmrc (read by `nvm install` / `nvm use`) rather than
+# trusting the build image default. Bump it there, not here.
+#
+# The frontend needs NO build environment variables: the API base URL, the
+# Cognito client id and the region are public defaults in src/config.js.
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - nvm install
+        - nvm use
+        - node --version
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*

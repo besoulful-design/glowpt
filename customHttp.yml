@@ -1,0 +1,13 @@
+# Amplify Hosting custom response headers. Ports what Netlify sent by default:
+# HSTS on every response, and no-cache on the HTML shell so a new deploy is
+# picked up on the next load (the Vite asset files are content-hashed, so they
+# can be cached hard by the CDN as Amplify does on its own).
+customHeaders:
+  - pattern: '**'
+    headers:
+      - key: Strict-Transport-Security
+        value: max-age=31536000
+  - pattern: '**/*.html'
+    headers:
+      - key: Cache-Control
+        value: public, max-age=0, must-revalidate
