@@ -53,6 +53,9 @@ test('data API: HTTP API with a Cognito JWT authorizer, one public route, scoped
   const cors = (Object.values(apis)[0] as any).Properties.CorsConfiguration;
   expect(cors.AllowOrigins).not.toContain('*');
   expect(cors.AllowOrigins.length).toBeGreaterThan(0);
+  // The two addresses the built frontend is actually served from.
+  expect(cors.AllowOrigins).toContain('https://glowpt.app');
+  expect(cors.AllowOrigins).toContain('https://main.dvewl3gkeo718.amplifyapp.com');
 
   // A JWT authorizer exists (verifies the Cognito token at the door).
   template.hasResourceProperties('AWS::ApiGatewayV2::Authorizer', {

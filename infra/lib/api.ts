@@ -67,6 +67,11 @@ export class Api extends Construct {
       'https://glowpt.app',
       'https://www.glowpt.app',
       'https://glowpt-app.netlify.app',
+      // Amplify Hosting's own address for the main branch (2026-09-13). The
+      // frontend moved from Netlify to Amplify; this origin is how it is
+      // verified before glowpt.app points at it, and it stays as the
+      // permanent fallback address the same way the netlify.app one did.
+      'https://main.dvewl3gkeo718.amplifyapp.com',
       // Local dev (Vite). Low risk: protected routes still require a valid token,
       // and the one public route only exposes a clinic slug lookup.
       'http://localhost:5173',
