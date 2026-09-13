@@ -1,6 +1,37 @@
 [build]
   command = "npm run build"
   publish = "dist"
+
+  # ⚠️ SKIP THE BUILD WHEN NOTHING THAT REACHES THE BUNDLE CHANGED (2026-09-13).
+  #
+  # WHY: every push to main is a PRODUCTION DEPLOY costing 15 credits against a
+  # 200-deploy monthly allowance, and on 2026-09-13 that allowance ran out
+  # mid-session -- 3,000 of 3,008 credits went to 200 deploys while all three
+  # sites' actual traffic came to about 9. A large share of those deploys were
+  # documentation, database patches and infrastructure: commits that cannot
+  # change a single byte of what Netlify serves.
+  #
+  # ⚠️ THE EXIT CODE IS INVERTED AND THAT IS THE WHOLE TRAP. Netlify CANCELS the
+  # build when this command exits 0. `git diff --quiet` exits 0 when there is NO
+  # difference, so "no listed file changed" means "cancel". Read it as: "are
+  # these paths unchanged? then do not bother."
+  #
+  # ⚠️ IT FAILS TOWARD BUILDING, deliberately. On a first build, a cleared cache
+  # or a force-push, $CACHED_COMMIT_REF is unset or unknown and git errors,
+  # which is a non-zero exit and therefore a build. The expensive mistake here
+  # is skipping a deploy that mattered, never doing one that did not.
+  #
+  # ⛔ EVERY PATH THAT CAN AFFECT THE BUNDLE MUST BE LISTED. A missing one means
+  # a real change silently never ships. src and public are the app; index.html
+  # is the entry and carries the font link; vite.config and the two package
+  # files decide how it is built; eslint.config and the prebuild checker can
+  # FAIL the build, so a change to either must be exercised; and netlify.toml
+  # itself, or a fix to this very rule would skip its own first test.
+  #
+  # Deliberately NOT listed, because Netlify serves none of it: db, infra,
+  # docs, legal, supabase, scripts (other than the prebuild checker), CLAUDE.md
+  # and .claude.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- src public index.html vite.config.js package.json package-lock.json eslint.config.js netlify.toml scripts/check-namespace-imports.mjs"
   # No functions directory ON PURPOSE. PHI goes browser -> AWS API Gateway
   # directly and never transits Netlify, so Netlify is not a HIPAA business
   # associate. The moment a Netlify Function exists that changes, so this stays
