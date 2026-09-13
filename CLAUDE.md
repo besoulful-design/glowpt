@@ -123,7 +123,19 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 
 **Who does what:** **claude.ai = architect** (wrote the planning docs, lives in the web chat, no repo access). **Claude Code (me) = builder** (executes here). **Planning is done; from here it's David + Claude Code.** Only re-engage claude.ai if David wants a second architect opinion on a big call.
 
-> ## 🧭 NEW THREAD? READ THIS FIRST (state as of Saturday 2026-09-12, 08:30; detail for every session is under Status & backlog, newest first)
+> ## 🧭 NEW THREAD? READ THIS FIRST (state as of Sunday 2026-09-13, 15:00; detail for every session is under Status & backlog, newest first)
+>
+> ## ✅ 2026-09-13: NAMES ARE TWO FIELDS NOW, AND A MANAGER CAN CORRECT ONE. ALL LIVE AND VERIFIED. NOTHING OUTSTANDING.
+>
+> **David, after walking a new patient (Natalie) through a real invite: *"we can't identify patients with the same name... We have lots of patients at work with the same first name and seeing the same therapist."*** And separately, PT Pete had been emailed as "Hi PT,". **Both were the same cause and both are fixed.**
+> - **`first_name` (what we call you, verbatim) and `last_name` (what disambiguates you). `full_name` is GENERATED from them and is not writable.** Nothing splits a name on a space any more, anywhere. **Full rules under STANDING RULES — read them before touching any name.**
+> - **A manager corrects a patient's name by TAPPING THE NAME on the roster.** Patients only, both names required, audited.
+> - Deployed in the four-step order patch 1 → API → frontend → patch 2. Schema tests **71 → 84**. The one row the backfill got wrong (PT Pete) was fixed by rule and verified.
+> - **⏳ Natalie, Charlie and Timmy still have NO last name** — the old form never asked. Nothing is broken; they are simply the rows the roster cannot yet disambiguate, and the rename dialog is how David gives them one.
+>
+> **💸 NETLIFY CREDITS RAN OUT MID-SESSION ON 2026-09-13 AND PRODUCTION DEPLOYS PAUSED FOR ~7 HOURS.** Sites never went down. **The cause was 200 production deploys in 16 days consuming 3,000 of 3,008 credits; traffic was ~9.** David bought 1,500 more ($10). **⛔ BATCH COMMITS AND PUSH ONCE — every push to `main` is a deploy and the monthly allowance is 200.** Next reset **2026-09-27**.
+>
+> **🔓 CLAUDE CAN NOW RUN DB PATCHES DIRECTLY via `/Users/mac/Downloads/glowpt/scripts/db.sh` (tunnel must be open).** Claude still cannot write or commit `.claude/settings.local.json` — that is David's.
 >
 > ## ✅ THE CHECK-IN DAY BUG IS FIXED, SHIPPED AND VERIFIED ON PRODUCTION (2026-09-12, 07:20 reported → 08:20 live). NOTHING IS OUTSTANDING FROM IT.
 >
@@ -412,6 +424,18 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 - **`PRICE_LINE` is contractually load-bearing** (Subscription §5.1 "the amount stated at sign-up") and renders on `/onboard` as well as the More Info modal. Change `MONTHLY_PRICE_USD` in `src/lib/marketing.js`, never the strings.
 - **Any style under 18px that does not state its own `lineHeight` inherits the body's ABSOLUTE 26.1px** and will read too loose. Deliberately not swept app-wide; it is why the landing footer and the flag pills each had to state their own.
 
+**🧑 NAMES (set 2026-09-13)**
+- **A person has TWO name fields. `first_name` is WHAT WE CALL YOU, verbatim; `last_name` is WHAT DISAMBIGUATES YOU on the roster.** `full_name` is a STORED GENERATED column computed from both, so it can never drift and **cannot be written by anyone.**
+- **⛔ NOTHING SPLITS A NAME ON A SPACE, ANYWHERE, EVER AGAIN.** There is no title list. "PT Pete" and "Dr. Sam" are first names. Four places used to guess with `split(' ')[0]` and did not agree with each other.
+- **⛔ `first_name` IS THE ONLY PART THAT MAY REACH THE AI PROMPT** — the privacy notice promises it. `PatientApp.jsx` reads no other name field; keep it that way.
+- **A last name is REQUIRED for a patient and OPTIONAL for staff**, enforced in `invite_patient` and `rename_patient` in the DATABASE, not only in the forms. Staff are not on the roster that two identical first names break.
+- **A manager renames a patient through `rename_patient` only** (patients only, same clinic only, audited). `profiles_update_self` still scopes the column grant to the caller's own row; do not widen it.
+
+**💸 NETLIFY (set 2026-09-13)**
+- **EVERY PUSH TO `main` IS A PRODUCTION DEPLOY AND COSTS 15 CREDITS.** The Pro plan is 3,000/month, so the allowance is **200 deploys a month** and nothing else meaningfully consumes it (16 days of traffic across all three sites came to ~9 credits). **BATCH COMMITS AND PUSH ONCE**; pushing after each piece of work is what exhausted the September allowance.
+- **Auto recharge is DISABLED on purpose.** Leave it: it is what stops a busy week becoming a surprise bill.
+- **A push made while deploys are paused is NOT queued.** Restoring credits does not replay it; the build has to be triggered by hand from the Netlify Deploys page.
+
 **⏳ STILL-OPEN BACKLOG ITEMS (carried over from archived entries)**
 - **Owner/super-admin dashboard across all clinics** — David flagged it 2026-07-14 as a near-term want. Keep it to clinic-level aggregates and billing, never patient PHI across clinics. (`/admin` now does part of this.)
 - **A downloadable dated PDF of the accepted agreements** — the clinic is a covered entity and generally needs the executed BAA in its own records. Most of the machinery exists (`legal.js` versions the text, the app records a version per user). Gated on counsel answering the click-through-vs-signature question.
@@ -420,6 +444,22 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 ## Status & backlog
 
 **⚠️ CONDENSED 2026-09-12. Each entry below is the headline, what broke, the durable rule, and what was observed — the investigation narrative is NOT here.** The full original text of every entry is in `docs/history.md` section 10, verbatim, and the same reasoning is in the commit messages (`git log`). **When adding a new entry, match this length.**
+
+- **🧑 TWO NAME FIELDS, first_name AND last_name, EVERYWHERE (2026-09-13, `77a0e41` / `bcf12d5`).** David, after walking a new RidgePT patient through the invite: *"we can't identify patients with the same name... We have lots of patients at work with the same first name and seeing the same therapist."* And separately, "PT Pete" was being emailed as **"Hi PT,"**. One cause: ONE `full_name`, and **four** places independently guessed the split with `split(' ')[0]`, disagreeing with each other. Now two real fields, `full_name` GENERATED from them, and no guessing anywhere. Rules under STANDING RULES.
+  - **Decisions (David's):** last name required for patients, optional for staff · on the join screen a patient may edit their FIRST name only, the surname is the clinic's identifier · the existing 17 were split on the last space and reviewed together (**16 right, only PT Pete wrong**, fixed by `2026-09-13_fix_pt_pete.sql`).
+  - **⚠️ THE REHEARSAL CAUGHT WHAT READING DID NOT: `provision_clinic` was missing from patch 1.** It writes to `full_name`, so once patch 2 made that column generated, **every new clinic sign-up would have failed.** Found only by diffing the patched database against a fresh build. Patch 1's function bodies are now **lifted verbatim from `schema.sql`** rather than retyped.
+  - **⚠️ Overloading with DEFAULT arguments would have broken every sign-up in the rollout window** — `register_user(uuid, citext, text default null, ...)` is callable with 3 args and so is the old one, which Postgres refuses as ambiguous. **No new signature takes a default.**
+  - **⛔ Deploy order was patch 1 → API → frontend → patch 2, the OPPOSITE of the local_date pair**: there the frontend computed the new value, here the DATABASE leads because the new API reads columns that must exist. Tests **71 → 78**.
+
+- **✏️ A MANAGER CAN CORRECT A PATIENT'S NAME (2026-09-13, `96f0c32`).** Three patients (Natalie, Charlie, Timmy) predate two-field invites and have no surname, so the roster still could not tell them apart and nothing could fix it. **Tapping the patient's NAME on the roster opens the dialog** — David's call over an Edit button, which would have cost ~68px on every row forever. **The hint line under the roster is the other half of that decision**, because an invisible affordance reads as a missing feature (the 2026-09-06 hidden-Remove lesson).
+  - **⚠️ A bug caught by measuring: the first cut reused the invite form's placeholder-only inputs.** Those start EMPTY so the placeholder labels them; **this form starts FILLED, and a filled input shows no placeholder at all.** Visible labels now.
+  - **🪤 And a NEW way the harness lied: it had no global `box-sizing: border-box`,** which `src/index.css` sets for the real app, so two fields appeared to stack when they do not. **Put that line in every future harness.** Tests **78 → 84**.
+
+- **💸 NETLIFY RAN OUT OF CREDITS MID-SESSION AND PRODUCTION DEPLOYS PAUSED (2026-09-13).** Sites stayed up; only deploys stopped. **The cause was not traffic: 3,000 of 3,008 credits went to 200 PRODUCTION DEPLOYS in 16 days**, while all three sites' requests, bandwidth and compute together came to ~9. **⚠️ I raised a suspension alarm before reading the usage page and it was wrong** — the 300 operational credits burn at ~0.5/day, hundreds of days of headroom. **Get the number before raising the alarm.** David bought 1,500 credits ($10) and triggered the build by hand. Rule under STANDING RULES.
+
+- **🔓 CLAUDE CAN NOW APPLY DB PATCHES DIRECTLY, THROUGH `scripts/db.sh` ONLY (2026-09-13, `bcf12d5` / `49e0f09`).** The auto-mode classifier refuses ad-hoc shell commands that write to production, so every patch had been paste-and-run. David asked for that removed. **The grant is one reviewed script, not psql**: host, port, user and database are pinned, it reaches production only through the SSM tunnel on localhost:5433, and the password is never printed.
+  - **⛔ CLAUDE CANNOT GRANT THIS TO ITSELF** — writing `.claude/settings.local.json`, and committing it, are both blocked, correctly. David ran those himself.
+  - **⚠️ The doc said this was blocked and I repeated it without testing.** Try the thing, then report. Also: `git commit` of a heredoc message can trip the classifier; write the message to a file and use `-F`.
 
 - **📅 A CHECK-IN BELONGS TO THE PATIENT'S OWN DAY, NOT TO A UTC ONE (2026-09-12, `669afb8`).** The save keyed the day off `created_at` in UTC while every screen bucketed by local day; in Eastern the UTC day rolls at 8pm, so an evening check-in was filed under the next UTC day and the next morning's **overwrote it** — data loss, not a wrong number. Confirmed on Charlie's real rows. Every check-in now stores **`local_date`**, the calendar day the patient's own device was in, and that is the day key everywhere (index, streak, grids, Last Check-In, weekly email).
   - **⛔ NEVER DERIVE A DAY FROM `created_at` AGAIN.** `src/lib/localDay.js` is the one frontend definition; `local_date` the one database definition. Never `toISOString().slice(0,10)` — that is the UTC date and is the bug.
