@@ -2086,3 +2086,127 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 
 
 ```
+
+
+---
+
+# 13. THE NETLIFY TO AWS AMPLIFY MOVE (2026-09-13), AND THE PROCESS FAILURE AROUND IT
+
+Banked 2026-09-14 BEFORE cutting it out of CLAUDE.md, which is step 1 of the method.
+CLAUDE.md was 73 KB after the 2026-09-13 trim and 82 KB after this one session.
+
+## Why this section exists at all
+
+**The session added 11,108 bytes of new lines to CLAUDE.md in one evening.** The rule in
+that file allows a new session to add a durable rule of one or two lines, a change in
+current state edited into the existing line, and one short backlog entry that is
+explicitly "not the investigation". The reasoning and narrative of a fix belongs in the
+commit message.
+
+I wrote the investigation into the file instead, mostly as ten bullets inside the NEW
+THREAD block, which carries its own warning saying it is state and not news. David
+caught it at the close of the session and was right to. **The doc was not missing the
+process. The session ignored it.**
+
+The one genuine ambiguity, now fixed in CLAUDE.md: "bank into history.md first" was
+printed as step 1 of the method under the heading "trim it when it passes ~150 KB", so
+it read as conditional on a big trim. It applies to any removal.
+
+## What happened, in short
+
+David moved the GlowPT frontend off Netlify because Netlify bills 15 credits per
+production deploy: 3,000 of 3,008 September credits went to 200 deploys of this repo,
+while all three sites' actual traffic came to about 9. Amplify bills the same activity as
+build minutes at about a cent each. The backend, the org BAA and the Activate credits
+were already in AWS, so the move also put the whole product in one account.
+
+Amplify Hosting was chosen over S3 + CloudFront in CDK by David, to keep push-to-deploy.
+The CDK route was considered and set aside, not rejected forever.
+
+Sequence: Amplify app created and connected to `main`; first build 2 min on Node 24.21.0;
+temp URL verified by curl, in the browser pane, and by David signed in as the Riverside
+manager and as Grace; CORS origin added to the HTTP API; Route 53 zone built as an exact
+copy of the Netlify zone; certificate validated through Netlify DNS; nameservers changed
+at GoDaddy; apex and www aliased to CloudFront; David's sign-in code arrived and the
+dashboard loaded on glowpt.app.
+
+## Three things that cost time, kept because they can recur
+
+1. **Safari cannot complete the Amplify GitHub App install.** The console spins forever
+   after Authorize and the tell is a red "listBranches data is undefined". Turning off
+   Prevent Cross-Site Tracking did not help; that theory was wrong. What worked: install
+   the app from GitHub's own side at
+   `github.com/apps/aws-amplify-us-east-1/installations/new`, then the wizard lists the
+   repo. Check `github.com/settings/installations` to see whether the install actually
+   landed before theorising about the AWS side.
+2. **A name you dig BEFORE it exists is negatively cached** by your resolver for the
+   zone's SOA minimum. A watcher reported the certificate validation record as missing
+   for 20 minutes after Netlify was already serving it. Query the authoritative
+   nameserver directly. And a TLD server answers a delegation in the AUTHORITY section,
+   so `dig +short` prints nothing: use `+norecurse +noall +authority`.
+3. **Amplify's domain status read AWAITING_APP_CNAME for 16 minutes** after the flip,
+   while the domain was already serving with its Amazon certificate. It reached
+   AVAILABLE at 19:26. The per-subdomain `verified` flag can stay false for the apex
+   ALIAS; `domainStatus` is the signal that counts.
+
+## The Netlify inventory, for the record
+
+Build command and publish directory went to `amplify.yml`. The `ignore` build-skip rule
+was retired, Amplify builds being cheap. No functions directory meant nothing to port and
+the HIPAA reasoning was unchanged. The `_redirects` SPA fallback became an Amplify
+rewrite rule. Netlify's default HSTS became `customHttp.yml`. The www to apex 301 became
+an Amplify redirect rule.
+
+Amplify's own default 404-200 fallback rule does NOT work for this app: every route 301'd
+to a trailing slash and then 404'd. The regex rewrite on paths without a file extension
+is what works.
+
+## DNS, which the handoff got wrong
+
+The claude.ai handoff assumed DNS was at GoDaddy. One `dig SOA` showed the zone was
+hosted on Netlify DNS, with GoDaddy as registrar only, and the SES records for sign-in
+codes, invites and the weekly email lived inside that Netlify zone. That changed the
+whole plan.
+
+What made it safe: the Route 53 zone was built as an exact copy (12 records for 12,
+verified one by one against the live answers, including three dead Resend-era records),
+so changing the nameservers was a no-op, and pointing the site at Amplify became a
+separate, reversible step. The certificate was validated through the OLD DNS so cutover
+day had no waiting.
+
+Route 53 writes were allowed to Claude but `create-hosted-zone` was classifier-blocked,
+which is why the prep ran as `scripts/dns-prep.sh` for David to run.
+
+## VERBATIM TEXT CUT FROM CLAUDE.md ON 2026-09-14
+
+### The NEW THREAD block as written on 2026-09-13
+
+```
+> ### 🚚 THE FRONTEND IS ON AWS AMPLIFY HOSTING. CUT OVER 2026-09-13 19:10, VERIFIED BY DAVID (sign-in code arrived, dashboard loaded on glowpt.app).
+> **Why:** Netlify bills 15 credits per production deploy and 3,000 of 3,008 September credits went to 200 deploys of this repo; Amplify bills build minutes at a cent each (200 builds ≈ $4, free-tier covered the first year). Decided by David from a claude.ai handoff; Amplify over S3+CloudFront-in-CDK was his call (keeps push-to-deploy; the CDK route was considered, not rejected forever). **FranklinAI site and McKenzie STAY on Netlify.**
+> - **How a deploy works now:** push to `main` → Amplify builds from `amplify.yml` (Node pinned by `.nvmrc` = 24, headers from `customHttp.yml`) → live at glowpt.app in ~2 min. No build env vars. **Rewrites/redirects are APP SETTINGS, not repo files** (`aws amplify get-app --app-id dvewl3gkeo718 --query app.customRules`): the SPA rewrite (regex on paths without a file extension → `/index.html` 200) and `https://www.glowpt.app` → `https://glowpt.app` 301. Amplify's default fallback rule does NOT work here (every route 301'd to a trailing slash then 404'd).
+> - **DNS:** Route 53 zone `Z00899942MO7OU6SOCKAS` in glowpt-prod, nameservers `ns-809.awsdns-37.net` · `ns-1883.awsdns-43.co.uk` · `ns-29.awsdns-03.com` · `ns-1090.awsdns-08.org` set at GoDaddy (registrar only). Apex + www are ALIAS records to `d1zcgq2clp38j4.cloudfront.net`. The zone also carries the SES records (3 DKIM CNAMEs, `bounce` MX/SPF, `_dmarc`) and three dead Resend-era records (`send` MX/SPF, `resend._domainkey`) copied for exactness; delete those three at leisure. **`bash scripts/dns-cutover.sh status` is read-only and shows all of this.**
+> - **🔙 ROLLBACK for one week (until ~2026-09-20):** `bash scripts/dns-cutover.sh netlify` points apex + www back at Netlify's load balancers; the Netlify site and its DNS zone are untouched. **After that week:** delete the GlowPT site from Netlify, downgrade the team (Free or Personal by what the other two sites use), and remove `netlify.toml` + `public/_redirects` from the repo in one commit. **Until then those two files stay** (the build-skip rule in `netlify.toml` is what keeps Netlify from burning credits on every push while it still builds `main`; it was verified: four pushes on 09-13, all Canceled).
+> - **Amplify's domain status went `AVAILABLE` at 19:26, sixteen minutes after the flip**, during which the site was already serving with its Amazon certificate. Its per-subdomain `verified` flag can read false for the apex ALIAS; the `domainStatus` is the signal that counts.
+> - **🪤 Safari cannot complete the Amplify GitHub App install** (the console spins forever after Authorize; "listBranches data is undefined" is the tell). Fix that worked: install the app from GitHub's side at `github.com/apps/aws-amplify-us-east-1/installations/new`, then the wizard lists the repo.
+> - **🪤 A name you dig BEFORE it exists is negatively cached by your resolver for the zone's SOA minimum.** Query the authoritative nameserver directly (`dig @ns-809.awsdns-37.net …`) before concluding a record is missing. And a TLD server answers a delegation in the AUTHORITY section, so `dig +short` prints nothing: use `+norecurse +noall +authority`.
+> - **📝 franklinai-v2's CLAUDE.md (V55) says "Netlify auto-deploys on push, in both repos" — now false. Doc-only V56 there; do not edit that repo from here.**
+>
+> **💸 NETLIFY (the other two sites only now):** deploys paused ~7 hours on 2026-09-13 when credits ran out; David bought 1,500 more; allowance resets **2026-09-27**. GlowPT no longer consumes any.
+>
+
+```
+
+### Backlog entry, part 2 as written
+
+```
+- **🚚 FRONTEND TO AWS AMPLIFY HOSTING, PART 2: THE DNS CUTOVER (2026-09-13 19:10, `f1867fa` / `5874545` / `662c82c`).** The handoff assumed DNS was at GoDaddy; it was on Netlify DNS, with the SES records (sign-in codes, invites, weekly email) inside that zone. So the move became: Route 53 zone in glowpt-prod holding an exact copy (12 for 12, verified record by record against live answers, including three dead Resend leftovers), Amplify domain association with its certificate validated THROUGH Netlify DNS before the switch, then David changed the four nameservers at GoDaddy (registry served them within a minute), then `scripts/dns-cutover.sh amplify` aliased apex + www to CloudFront. **Verified on glowpt.app:** Amazon cert, HSTS, deep links 200, www 301 with path, API CORS 200, HTML identical, and David's sign-in code arrived and the dashboard loaded. Netlify left untouched as rollback for a week. **Lessons:** (1) `dig SOA` before planning any DNS move; (2) copy the zone exactly so the nameserver switch is a no-op and the site flip is a separate, reversible step; (3) validate the certificate through the OLD DNS so cutover day has no waiting; (4) Route 53 writes were allowed to Claude but `create-hosted-zone` was classifier-blocked, hence the script David ran.
+
+```
+
+### Backlog entry, part 1 as written
+
+```
+- **🚚 FRONTEND TO AWS AMPLIFY HOSTING, PART 1 (2026-09-13 evening, `7505d56` / `3b31f9a`).** Netlify bills per production deploy and this repo deploys most; Amplify bills build minutes. Amplify app created in glowpt-prod, connected to `main`, first build 2 min on Node 24.21.0, temp URL verified by curl, in the Browser pane, and by David signed in as manager and as Grace. **What broke:** Amplify's default fallback rule 301'd every deep link to a trailing slash and then 404'd; replaced with the documented regex SPA rewrite. **CORS was needed**, as predicted: preflight from the new origin came back with no allow-origin header; one line in `infra/lib/api.ts`, pinned by a test, `cdk diff` showed exactly one property. **Netlify inventory:** build command + publish dir → `amplify.yml`; the `ignore` build-skip → retired (Amplify builds cost cents); no functions dir → nothing to port, HIPAA reasoning unchanged (Amplify is HIPAA-eligible under the org BAA); `_redirects` SPA fallback → Amplify rewrite rule; Netlify's default HSTS → `customHttp.yml`; www→apex 301 → Amplify redirect rule. **Not yet done: DNS** (see NEW THREAD). **Lesson:** the handoff assumed DNS was at GoDaddy; one `dig SOA` showed Netlify DNS, which changes the whole cutover plan. Check the authoritative nameservers before planning any DNS move.
+
+```
