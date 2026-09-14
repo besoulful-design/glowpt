@@ -1,6 +1,7 @@
 import { Signer } from '@aws-sdk/rds-signer';
 import { Client } from 'pg';
 import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
+import { emailShell, emailButton, emailSignOff, EMAIL_INK } from '../shared/email';
 import {
   CognitoIdentityProviderClient,
   AdminDeleteUserCommand,
@@ -247,25 +248,24 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, firstN
   // which is the wrong advice: they need to sign in. The link now offers that
   // (see InviteJoin.jsx), and this names the address a person can actually hold
   // in their head. Say the short one here; the long token link is for tapping.
+  //
+  // ⚠️ THE LINK IS INK WITH AN UNDERLINE, NOT AMBER. Amber link text was
+  // legible on the old navy card and is not legible on white. The underline is
+  // what marks it as a link now, which is also what a plain reader expects.
+  const link = `<a href="${APP_URL}" style="color:${EMAIL_INK};text-decoration:underline">glowpt.app</a>`;
   const home = isPatient
-    ? `After today, your check-in lives at <a href="${APP_URL}" style="color:#F5A81A;text-decoration:none">glowpt.app</a>. Save it somewhere you will find it.`
-    : `Your clinic dashboard lives at <a href="${APP_URL}" style="color:#F5A81A;text-decoration:none">glowpt.app</a>.`;
-  // ⚠️ ONE FONT, AND THE OPACITY LADDER MUST ONLY EVER DESCEND. There is no
-  // second family in this email: the sense that "some text is a different font"
-  // comes entirely from these alpha values, so a step that goes back UP reads as
-  // an inconsistency rather than as hierarchy. It did: the home line sat at 0.7
-  // directly under the 0.6 pitch, making the housekeeping sentence brighter than
-  // the one that sells the product, and David caught it in a real invite on
-  // 2026-09-13. Reading down, alpha goes 1.0, 0.8, 0.6, 0.6, 0.5, 0.35 and never
-  // rises. The weekly email's ladder (0.8, 0.6, 0.35) has always been clean;
-  // this one had drifted. Check the whole ladder when adding a paragraph.
-  return `<div style="font-family:-apple-system,Segoe UI,sans-serif;background:#0d1825;color:#f5efe4;padding:32px;border-radius:8px;max-width:480px;margin:auto">
-    <img src="${APP_URL}/apple-touch-icon.png" alt="GlowPT" width="56" height="56" style="display:block;width:56px;height:56px;border:0;border-radius:13px;margin-bottom:12px">
-    <div style="font-size:26px;font-weight:600;margin-bottom:18px">Glow<span style="color:#F5A81A">PT</span></div>
-    <p style="font-size:17px;line-height:1.5">${greeting}</p>
-    <p style="font-size:16px;line-height:1.6;color:rgba(245,239,228,0.8)">${clinicName} has invited you to join GlowPT as ${roleWord}.</p>
-    <p style="font-size:15px;line-height:1.6;color:rgba(245,239,228,0.6)">${pitch}</p>
-    <a href="${inviteUrl}" style="display:inline-block;margin-top:14px;background:#F5A81A;color:#0d1825;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:4px">${cta}</a>
+    ? `After today, your check-in lives at ${link}. Save it somewhere you will find it.`
+    : `Your clinic dashboard lives at ${link}.`;
+  // ⛔ NO OPACITY LADDER. Every paragraph below is EMAIL_INK; only the size
+  // changes. This email used to fade through six alpha steps and it is the one
+  // that broke worst when Gmail's iOS app re-tinted the card. The full reasoning
+  // is in ../shared/email.ts. Do not reintroduce a faded line here.
+  return emailShell(
+    APP_URL,
+    `<p style="font-size:17px;line-height:1.5;margin:0 0 14px;color:${EMAIL_INK}">${greeting}</p>
+    <p style="font-size:16px;line-height:1.6;margin:0 0 14px;color:${EMAIL_INK}">${clinicName} has invited you to join GlowPT as ${roleWord}.</p>
+    <p style="font-size:15px;line-height:1.6;margin:0;color:${EMAIL_INK}">${pitch}</p>
+    ${emailButton(inviteUrl, cta)}
     <!-- ⚠️ THE ORDER OF THESE SENTENCES IS THE POINT. This used to read "No
          password is needed. We will email you a code.", which contradicted the
          button above it: the button says start checking in, the fine print says
@@ -273,10 +273,10 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, firstN
          emailed until they act on the page. The real sequence is tap, confirm
          your name, THEN a code arrives, so it now says that in that order.
          (David spotted the contradiction on 2026-09-05.) -->
-    <p style="font-size:14px;line-height:1.6;color:rgba(245,239,228,0.6);margin-top:20px">${home}</p>
-    <p style="font-size:13px;line-height:1.6;color:rgba(245,239,228,0.5);margin-top:22px">You will confirm your name, then we will email you a code to sign in. There is no password to create. This link works only for this email address and expires in 14 days.</p>
-    <p style="font-size:13px;color:rgba(245,239,228,0.35);margin-top:18px">One good day at a time.</p>
-  </div>`;
+    <p style="font-size:14px;line-height:1.6;margin:20px 0 0;color:${EMAIL_INK}">${home}</p>
+    <p style="font-size:13px;line-height:1.6;margin:16px 0 0;color:${EMAIL_INK}">You will confirm your name, then we will email you a code to sign in. There is no password to create. This link works only for this email address and expires in 14 days.</p>
+    ${emailSignOff()}`,
+  );
 }
 
 // ---------------------------------------------------------------------------
