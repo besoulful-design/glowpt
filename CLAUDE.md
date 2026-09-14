@@ -22,6 +22,8 @@
 
 **⛔ NOTHING LEAVES THIS FILE UNTIL IT IS IN `docs/history.md`, VERBATIM.** That applies to ANY removal on ANY day, not only to a trim at the threshold below. Bank first, then cut.
 
+**▶ EVERY SESSION REPORTS THIS FILE'S SIZE AND ITS OWN DELTA IN ITS CLOSING MESSAGE**, so the growth is visible without David having to ask: `stat -f%z CLAUDE.md`, against `git cat-file -s <the session's first commit>:CLAUDE.md`. **It is self-reported, so it is not a control** — David checks it independently with `git log --format='%h %ad %s' --date=short -- CLAUDE.md`.
+
 **🧹 TRIM IT WHEN IT PASSES ~150 KB.** The method that worked on 2026-09-12 (478 KB → 183 KB), in order:
 1. **Bank the full text into `docs/history.md` FIRST**, so nothing can be lost.
 2. Archive whole sections that are unambiguously finished (a completed migration, a resolved incident). That is the cheap half and needs no judgment.
