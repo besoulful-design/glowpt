@@ -2210,3 +2210,94 @@ which is why the prep ran as `scripts/dns-prep.sh` for David to run.
 - **🚚 FRONTEND TO AWS AMPLIFY HOSTING, PART 1 (2026-09-13 evening, `7505d56` / `3b31f9a`).** Netlify bills per production deploy and this repo deploys most; Amplify bills build minutes. Amplify app created in glowpt-prod, connected to `main`, first build 2 min on Node 24.21.0, temp URL verified by curl, in the Browser pane, and by David signed in as manager and as Grace. **What broke:** Amplify's default fallback rule 301'd every deep link to a trailing slash and then 404'd; replaced with the documented regex SPA rewrite. **CORS was needed**, as predicted: preflight from the new origin came back with no allow-origin header; one line in `infra/lib/api.ts`, pinned by a test, `cdk diff` showed exactly one property. **Netlify inventory:** build command + publish dir → `amplify.yml`; the `ignore` build-skip → retired (Amplify builds cost cents); no functions dir → nothing to port, HIPAA reasoning unchanged (Amplify is HIPAA-eligible under the org BAA); `_redirects` SPA fallback → Amplify rewrite rule; Netlify's default HSTS → `customHttp.yml`; www→apex 301 → Amplify redirect rule. **Not yet done: DNS** (see NEW THREAD). **Lesson:** the handoff assumed DNS was at GoDaddy; one `dig SOA` showed Netlify DNS, which changes the whole cutover plan. Check the authoritative nameservers before planning any DNS move.
 
 ```
+
+
+---
+
+# 14. THE SUPABASE-ERA SECTIONS OF CLAUDE.md (cut 2026-09-14)
+
+Banked verbatim BEFORE cutting, which is step 1 of the method.
+
+**Why they were cut.** The AWS migration completed 2026-08-22 and `@supabase/supabase-js`
+left the running app, but these sections were never rewritten. For three weeks CLAUDE.md
+opened by telling every new session that the database and auth were Supabase, that the AI
+ran in a Supabase Edge Function, that email was Resend, that the migrations lived in
+`supabase/migrations/`, and that the way to change the database was to hand David SQL to
+paste into the Supabase SQL Editor. All of that was false, and it sat above the section
+that correctly said the migration was done. A session reading top to bottom met the wrong
+stack first.
+
+**What was kept rather than cut.** Supabase is still paid for at about $25/mo as the
+rollback for the whole backend: reverting the `main` merge `2b04f91` and pushing switches
+glowpt.app back to it. So the `supabase/` tree and the two old seed scripts stay in the
+repo and now appear in Key locations under a row that says plainly they are the rollback
+and not live. Only the claim that they are the CURRENT stack was removed.
+
+## VERBATIM TEXT AS IT STOOD BEFORE THE REWRITE
+
+### Tech stack, Key locations, Architecture (V2), Environment variables
+
+```
+## Tech stack
+| Layer | Tool |
+|---|---|
+| Frontend | React 19 + Vite |
+| Routing | react-router-dom |
+| Database + Auth | Supabase (passwordless — 6-digit email OTP code) |
+| Hosting / deploy | **AWS Amplify Hosting** in glowpt-prod, us-east-1 (app `dvewl3gkeo718`; every push to `main` builds and deploys, ~2 min). **DNS: Route 53 zone `Z00899942MO7OU6SOCKAS`** in glowpt-prod; GoDaddy is registrar only. Cut over from Netlify 2026-09-13. |
+| AI reflections | Anthropic Claude (Haiku) via a **Supabase Edge Function** |
+| Email | Resend (weekly summaries; scheduled via Supabase Cron/pg_cron) |
+| Version control | GitHub — `besoulful-design/glowpt` |
+
+## Key locations
+| Thing | Path |
+|---|---|
+| Router | `src/App.jsx` |
+| Entry / providers | `src/main.jsx` |
+| Auth + profile context | `src/auth.jsx` |
+| Patient app | `src/screens/PatientApp.jsx` |
+| Clinic dashboard (manager/therapist) | `src/screens/Dashboard.jsx` |
+| Patient join | `src/screens/Join.jsx` · Login `src/screens/Login.jsx` · Onboard `src/screens/Onboard.jsx` |
+| Dashboard data logic | `src/lib/clinicData.js` |
+| DB migrations | `supabase/migrations/0001_multitenant.sql` · `0002_therapists.sql` (staff invites + caseload RLS) · `0003_discharge.sql` (patient soft-delete + `checkins_update_own`) |
+| Edge functions | `supabase/functions/ai-response/` · `supabase/functions/weekly-summary/` |
+| Demo seed / reset | `scripts/seed-demo.mjs` · `scripts/reset-demo.mjs` |
+| **Legal drafts (attorney review)** | `legal/BAA-draft-for-attorney-review.md` · `legal/Subscription-Agreement-draft-for-attorney-review.md` |
+| In-app legal copy | `src/lib/legal.js` (privacy notice + BAA summary + version constants) |
+| Env (local, gitignored) | `.env` |
+
+## Architecture (V2)
+- **Multi-tenant:** tables `clinics`, `profiles` (role: `patient` | `therapist` | `manager`; patients carry `therapist_id` = assigned PT), `checkins` (keyed on existing `user_id` + `clinic_id`), `consents`, `access_log`, `staff_invites`. Row-Level Security keeps each clinic private.
+- **Staff invites (V2.1):** a manager invites a therapist by email (`invite_staff` RPC → `staff_invites` row); the therapist becomes staff on first sign-in (`accept_staff_invite` RPC, called from `loadProfile`) — role is set server-side so a patient can't self-promote. Manager assigns patients to therapists (`assign_therapist` RPC). Migration `supabase/migrations/0002_therapists.sql`.
+- **Auth:** Supabase passwordless **6-digit email code** (OTP). Flow = `signInWithOtp` → user types the code into the same tab → `verifyOtp` (shared `CodeVerify` screen used by Login/Join/Onboard). Chosen over magic links because links open in whatever email app, breaking session persistence on phones; the code keeps everything in one tab. **Requires the Supabase "Magic Link" + "Confirm sign up" email templates to include `{{ .Token }}`.** Name/clinic/consent ride in signup **user_metadata** AND a localStorage backup saved by the form. **Gotcha (fixed 2026-07-13):** `signInWithOtp` `data`/user_metadata is only written for a BRAND-NEW email — ignored for an already-existing account. So `loadProfile` also falls back to the localStorage backup (incl. the name) — rely on that, not metadata alone, or a returning email's name/clinic goes blank. "Confirm email" is OFF. CodeVerify checks `getSession()` after `verifyOtp` and forwards into the app on success (an error only shows if truly not signed in).
+- **AI:** patient text goes to the `ai-response` Edge Function (keeps PHI inside Supabase — HIPAA-*ready*).
+- **Patient app (`PatientApp.jsx`):** welcome → daily check-in → AI reflection → **Progress screen** ("View my progress", built 2026-07-13). Progress is a stack of cards: consecutive-day **streak** (hero) → This-week + all-time counts → **"Your month"** card (avg-mood summary + 4 weekly-average bars showing the arc) → tappable **"This week"** card to read past entries. One 30-day `checkins` query powers week + trend + streak; all-time total via a count query. (Earlier it reused the post-checkin screen + showed 30 anonymous dots — both replaced.)
+- **Dashboards:** manager = clinic-wide engagement + care-team management (invite therapists, assign patients); therapist = ONLY their assigned caseload (enforced by RLS, not just UI). Both show streaks, 7-day trend, and flags (Inactive 5+ days / Low-mood 2+ low days). Staff views write an `access_log` entry. **7-day trend shows the same emoji faces the patient taps at check-in** (not colored dots, as of 2026-07-14) — patient/manager/therapist share one language; triage is carried by the Status pills, not color. The 1–5 face + word scale (😔 Really tough → 😄 Feeling great) lives in ONE shared file `src/lib/feelings.js`, imported by both `PatientApp.jsx` and `Dashboard.jsx` so they can't drift. (Patient Progress-screen month bars still color by mood via a local `FEELING_COLOR` in `PatientApp.jsx`.)
+- **Weekly emails (PHI-free nudges):** `weekly-summary` Edge Function computes numbers in Supabase and sends via Resend. Patient email = own name + check-in count + link; clinic email = aggregates only, no names. Scheduled: Supabase Cron `weekly_summary`, `0 12 * * 1` (Mon 8am ET).
+
+## Environment variables
+- **Frontend build (Amplify): NONE.** The API base URL, Cognito client id and region are public defaults in `src/config.js`. (The old Netlify build env `VITE_SUPABASE_*` is dead with the Supabase stack.)
+- **Supabase Edge Function secrets:** `ANTHROPIC_API_KEY` (GlowPT workspace key), `RESEND_API_KEY`, `FROM_EMAIL`, `APP_URL`. (`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` are auto-provided to functions.)
+- Supabase project URL: `https://iuefzbsgzsgsvybiurzd.supabase.co`
+```
+
+### HIPAA guardrail paragraph
+
+```
+## HIPAA guardrail (do not violate)
+Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/committed clinic + signed BAAs.** Go-live flips (gated on first paying clinic): Supabase Team plan (~$599/mo) + Supabase BAA + Anthropic BAA + **Resend BAA (flagged 2026-07-15 — was missing from this list)**. Why Resend counts: the weekly *patient* email carries their name + email + check-in count, which identifies a person AND reveals they're a PT patient → individually identifiable health info that Resend transmits → business associate. (The *clinic* email is aggregates-only and genuinely PHI-free.) **Verify Resend can sign a BAA and on which plan BEFORE go-live** — if it can't, the email vendor changes. **ANSWERED 2026-07-17: Resend has no HIPAA/BAA option → the whole stack is moving to AWS (email becomes SES). The go-live infra path is now the AWS migration (RDS + Cognito + Lambda + SES under one AWS BAA, plus the Anthropic BAA), NOT Supabase Team + Resend. See THE AWS MIGRATION IS DONE above.** The demo-data-only rule in this guardrail is unchanged and still governs until a paying clinic + signed BAAs. The static frontend host (Amplify Hosting since 2026-09-13, Netlify before) only serves files; PHI goes browser → AWS API directly, so the host is not treated as a business associate, and Amplify is HIPAA-eligible under the org BAA regardless. Also needs the `access_log` (done) before a real clinic dashboard. David + friends testing on the sandbox = demo data, not real PHI — that's fine.
+```
+
+### The two working-style bullets about Supabase SQL and the seed scripts
+
+```
+- **Supabase/SQL steps:** lead with 1–2 plain-English sentences (what it does + reassurance like "nothing gets deleted"), THEN give the SQL block for David to paste & **Run** in the Supabase **SQL Editor** himself. Do NOT just dump a migration file with a terse "paste and run." (He briefly chose "Claude runs SQL via the Chrome extension," but that isn't connected — Chrome + the Claude-in-Chrome extension would be needed; revisit if set up.)
+- **Scripts needing the service-role/secret key** (`seed-demo.mjs` / `reset-demo.mjs`) are David's to run locally — he has the Supabase **secret key** (`sb_secret_…`, the new service_role replacement). Never ask him to paste that key into chat/screenshots.
+```
+
+### The Supabase mailer rate-limit line
+
+```
+- **Login-code emails use Supabase's built-in rate-limited mailer (~few/hr)** — heavy same-day testing can exhaust it; codes then don't arrive (check spam, wait, or do the custom-SMTP work).
+```
+

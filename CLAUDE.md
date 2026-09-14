@@ -45,8 +45,8 @@ A daily wellness check-in app for physical therapy patients. Patient does a 30-s
 - David is newer to Claude Code and prefers to **go slow and have each step explained in plain, non-technical language before it happens.** Confirm before big/irreversible actions.
 - **🧭 SESSION ROOTING (set 2026-09-01): any session that will touch AWS, the database, deploys, or legal work must be STARTED in THIS project folder.** The AWS permission allowlist (`.claude/settings.local.json`), the per-project memory, and this doc's auto-load are all keyed to `~/Downloads/glowpt`; a session rooted in `franklinai-v2` has none of them and hits permission walls the moment it reaches for the bastion or `cdk deploy`. Cross-repo COPY work from either root is fine and established (read the other repo's `CLAUDE.md` first — its "Working across the two repos" section carries the same conditions). **When working cross-repo, say plainly which repo each change lands in, with hashes** — on 2026-09-01 a franklinai-rooted thread legitimately doing glowpt layout work read from the outside as a stray thread running by itself, and untangling that cost a real session. David starts threads from the correct project consistently; this convention is for the sessions, so the root of a thread always matches the risk of its work. The FranklinAI doc records the same rule at V55.
 - **Edit files directly, then run `git push` yourself** (confirmed preference — don't hand him the command). Show a clear plain-language summary of what changed.
-- **Supabase/SQL steps:** lead with 1–2 plain-English sentences (what it does + reassurance like "nothing gets deleted"), THEN give the SQL block for David to paste & **Run** in the Supabase **SQL Editor** himself. Do NOT just dump a migration file with a terse "paste and run." (He briefly chose "Claude runs SQL via the Chrome extension," but that isn't connected — Chrome + the Claude-in-Chrome extension would be needed; revisit if set up.)
-- **Scripts needing the service-role/secret key** (`seed-demo.mjs` / `reset-demo.mjs`) are David's to run locally — he has the Supabase **secret key** (`sb_secret_…`, the new service_role replacement). Never ask him to paste that key into chat/screenshots.
+- **Database changes:** Claude applies patches directly through `/Users/mac/Downloads/glowpt/scripts/db.sh` once the SSM tunnel is open. **A destructive statement is classifier-blocked, correctly** — for those, hand David a paste-and-run: write the `.sql` in its OWN command and verify it exists on disk first, wrap in `begin; … commit;` with the guards BEFORE the commit, and tell him `PGPASSWORD` is already exported. Either way, lead with one or two plain-English sentences about what it does and what it will not touch.
+- **The demo seed is David's to run** (`scripts/aws-seed-demo.mjs`; needs the DB admin password and `AWS_PROFILE=glowpt-prod`). Never ask him to paste a key into chat or a screenshot.
 - **Keep the code split** into multiple files (router + `screens/` + `lib/` + `auth.jsx`) — do NOT collapse back into one giant `App.jsx`.
 - **Read the current source files before editing them.** David deploys via `git push`; the files on disk are the source of truth.
 - Never commit secrets. All `.env*` files are gitignored.
@@ -60,42 +60,49 @@ A daily wellness check-in app for physical therapy patients. Patient does a 30-s
 |---|---|
 | Frontend | React 19 + Vite |
 | Routing | react-router-dom |
-| Database + Auth | Supabase (passwordless — 6-digit email OTP code) |
+| Database | **RDS Postgres** behind an RDS Proxy; every rule enforced by Row-Level Security. Schema of record `db/schema.sql` |
+| Auth | **AWS Cognito**, passwordless email code. **Sign-IN is 8 digits, sign-UP confirm is 6** |
+| API | **API Gateway HTTP API → `glowpt-api` Lambda**, the only thing that touches the database |
+| AI reflections | Anthropic Claude Haiku via the **`glowpt-ai-response` Lambda** calling `api.anthropic.com` (Bedrock when unblocked) |
+| Email | **Amazon SES**; the weekly summary is an EventBridge **Scheduler** job, Sunday 6pm ET |
 | Hosting / deploy | **AWS Amplify Hosting** in glowpt-prod, us-east-1 (app `dvewl3gkeo718`; every push to `main` builds and deploys, ~2 min). **DNS: Route 53 zone `Z00899942MO7OU6SOCKAS`** in glowpt-prod; GoDaddy is registrar only. Cut over from Netlify 2026-09-13. |
-| AI reflections | Anthropic Claude (Haiku) via a **Supabase Edge Function** |
-| Email | Resend (weekly summaries; scheduled via Supabase Cron/pg_cron) |
 | Version control | GitHub — `besoulful-design/glowpt` |
 
 ## Key locations
 | Thing | Path |
 |---|---|
-| Router | `src/App.jsx` |
-| Entry / providers | `src/main.jsx` |
-| Auth + profile context | `src/auth.jsx` |
+| Router · error boundary | `src/App.jsx` · `src/ErrorBoundary.jsx` |
+| Entry / providers · public config | `src/main.jsx` · `src/config.js` |
+| Auth context · Cognito calls | `src/auth.jsx` · `src/lib/cognito.js` |
+| **API client (every backend call goes through it)** | `src/lib/api.js` |
 | Patient app | `src/screens/PatientApp.jsx` |
-| Clinic dashboard (manager/therapist) | `src/screens/Dashboard.jsx` |
-| Patient join | `src/screens/Join.jsx` · Login `src/screens/Login.jsx` · Onboard `src/screens/Onboard.jsx` |
-| Dashboard data logic | `src/lib/clinicData.js` |
-| DB migrations | `supabase/migrations/0001_multitenant.sql` · `0002_therapists.sql` (staff invites + caseload RLS) · `0003_discharge.sql` (patient soft-delete + `checkins_update_own`) |
-| Edge functions | `supabase/functions/ai-response/` · `supabase/functions/weekly-summary/` |
-| Demo seed / reset | `scripts/seed-demo.mjs` · `scripts/reset-demo.mjs` |
+| Clinic dashboard · its data logic | `src/screens/Dashboard.jsx` · `src/lib/clinicData.js` |
+| Platform admin (activate a clinic) | `src/screens/Admin.jsx` |
+| Auth screens | `Landing` · `Login` · `Join` · `InviteJoin` · `Onboard` · `CodeVerify` · `NoClinic`, all in `src/screens/`; shared shell and sizes in `AuthShell.jsx` |
+| Shared UI and logic | `src/screens/FeelingScale.jsx` · `src/lib/` — `feelings.js` · `localDay.js` · `useModal.js` · `houseVoice.js` · `legal.js` · `marketing.js` |
+| **Database schema of record** | `db/schema.sql` · patches `db/patches/` · tests `db/tests/` |
+| Infrastructure (CDK) | `infra/lib/` · Lambda source `infra/lambda/` · tests `infra/test/` |
+| Demo seed (AWS) | `scripts/aws-seed-demo.mjs` |
+| Claude's DB access · DNS runbook | `scripts/db.sh` · `scripts/dns-cutover.sh` · `scripts/dns-prep.sh` |
 | **Legal drafts (attorney review)** | `legal/BAA-draft-for-attorney-review.md` · `legal/Subscription-Agreement-draft-for-attorney-review.md` |
 | In-app legal copy | `src/lib/legal.js` (privacy notice + BAA summary + version constants) |
 | Env (local, gitignored) | `.env` |
+| **⚠️ SUPABASE ROLLBACK, NOT LIVE** | `supabase/migrations/` · `supabase/functions/` · `scripts/seed-demo.mjs` · `scripts/reset-demo.mjs`. Kept only because reverting merge `2b04f91` switches the backend back. Do not edit as if current. |
 
-## Architecture (V2)
-- **Multi-tenant:** tables `clinics`, `profiles` (role: `patient` | `therapist` | `manager`; patients carry `therapist_id` = assigned PT), `checkins` (keyed on existing `user_id` + `clinic_id`), `consents`, `access_log`, `staff_invites`. Row-Level Security keeps each clinic private.
-- **Staff invites (V2.1):** a manager invites a therapist by email (`invite_staff` RPC → `staff_invites` row); the therapist becomes staff on first sign-in (`accept_staff_invite` RPC, called from `loadProfile`) — role is set server-side so a patient can't self-promote. Manager assigns patients to therapists (`assign_therapist` RPC). Migration `supabase/migrations/0002_therapists.sql`.
-- **Auth:** Supabase passwordless **6-digit email code** (OTP). Flow = `signInWithOtp` → user types the code into the same tab → `verifyOtp` (shared `CodeVerify` screen used by Login/Join/Onboard). Chosen over magic links because links open in whatever email app, breaking session persistence on phones; the code keeps everything in one tab. **Requires the Supabase "Magic Link" + "Confirm sign up" email templates to include `{{ .Token }}`.** Name/clinic/consent ride in signup **user_metadata** AND a localStorage backup saved by the form. **Gotcha (fixed 2026-07-13):** `signInWithOtp` `data`/user_metadata is only written for a BRAND-NEW email — ignored for an already-existing account. So `loadProfile` also falls back to the localStorage backup (incl. the name) — rely on that, not metadata alone, or a returning email's name/clinic goes blank. "Confirm email" is OFF. CodeVerify checks `getSession()` after `verifyOtp` and forwards into the app on success (an error only shows if truly not signed in).
-- **AI:** patient text goes to the `ai-response` Edge Function (keeps PHI inside Supabase — HIPAA-*ready*).
-- **Patient app (`PatientApp.jsx`):** welcome → daily check-in → AI reflection → **Progress screen** ("View my progress", built 2026-07-13). Progress is a stack of cards: consecutive-day **streak** (hero) → This-week + all-time counts → **"Your month"** card (avg-mood summary + 4 weekly-average bars showing the arc) → tappable **"This week"** card to read past entries. One 30-day `checkins` query powers week + trend + streak; all-time total via a count query. (Earlier it reused the post-checkin screen + showed 30 anonymous dots — both replaced.)
-- **Dashboards:** manager = clinic-wide engagement + care-team management (invite therapists, assign patients); therapist = ONLY their assigned caseload (enforced by RLS, not just UI). Both show streaks, 7-day trend, and flags (Inactive 5+ days / Low-mood 2+ low days). Staff views write an `access_log` entry. **7-day trend shows the same emoji faces the patient taps at check-in** (not colored dots, as of 2026-07-14) — patient/manager/therapist share one language; triage is carried by the Status pills, not color. The 1–5 face + word scale (😔 Really tough → 😄 Feeling great) lives in ONE shared file `src/lib/feelings.js`, imported by both `PatientApp.jsx` and `Dashboard.jsx` so they can't drift. (Patient Progress-screen month bars still color by mood via a local `FEELING_COLOR` in `PatientApp.jsx`.)
-- **Weekly emails (PHI-free nudges):** `weekly-summary` Edge Function computes numbers in Supabase and sends via Resend. Patient email = own name + check-in count + link; clinic email = aggregates only, no names. Scheduled: Supabase Cron `weekly_summary`, `0 12 * * 1` (Mon 8am ET).
+## Architecture
+- **Multi-tenant, enforced in Postgres:** `users` · `clinics` · `profiles` (role `patient` | `therapist` | `manager`; patients carry `therapist_id` = assigned PT) · `checkins` · `consents` · `access_log` · `staff_invites` · `platform_admins`. **RLS keeps each clinic private** and the app role `glowpt_app` is fully governed by it.
+- **One path in and out:** browser → API Gateway HTTP API → `glowpt-api` Lambda → RDS Proxy → Postgres. The frontend never touches the database, and `src/lib/api.js` is the only place that calls the API.
+- **Auth is Cognito, passwordless email code**, wrapped by `src/lib/cognito.js`. **Sign-IN codes are 8 digits, sign-UP confirmation codes are 6**, which is how a report names its branch. A signed-in API call carries the **ID token**, not the access token. First sign-up runs `glowpt-post-confirmation`, which creates the row.
+- **Staff invites:** a manager invites by email, which writes a `staff_invites` row and sends an SES email; the person becomes staff on first sign-in with the **role set server-side**, so a patient cannot self-promote. Managers assign patients to therapists.
+- **AI reflections:** patient text goes to the `glowpt-ai-response` Lambda, which calls `api.anthropic.com` with Claude Haiku. It is **deliberately outside the VPC** (it needs the internet and touches no DB). Bedrock replaces that call when AWS unblocks it, and that is a real HIPAA gate.
+- **Patient app (`PatientApp.jsx`):** welcome → daily check-in → AI reflection → **Progress screen**: consecutive-day streak as the hero, this-week and all-time counts, a "Your month" card with four weekly-average bars, and a tappable "This week" card to read past entries.
+- **Dashboards:** manager = clinic-wide engagement plus care-team management; therapist = **ONLY their assigned caseload, enforced by RLS and not just the UI**. Both show streaks, a 7-day trend and flags (Inactive 5+ days / Low-mood). Every staff view writes an `access_log` row. The trend shows the same faces the patient taps, from the one shared `src/lib/feelings.js`.
+- **Weekly emails (PHI-free nudges):** the `glowpt-weekly-summary` Lambda computes in Postgres and sends via SES. Patient email = own first name, check-in count and a link; clinic email = aggregates only, no names. **EventBridge Scheduler, Sunday 6pm Eastern year-round** (a Rule would be UTC only, so it would drift an hour in winter).
 
-## Environment variables
-- **Frontend build (Amplify): NONE.** The API base URL, Cognito client id and region are public defaults in `src/config.js`. (The old Netlify build env `VITE_SUPABASE_*` is dead with the Supabase stack.)
-- **Supabase Edge Function secrets:** `ANTHROPIC_API_KEY` (GlowPT workspace key), `RESEND_API_KEY`, `FROM_EMAIL`, `APP_URL`. (`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` are auto-provided to functions.)
-- Supabase project URL: `https://iuefzbsgzsgsvybiurzd.supabase.co`
+## Environment variables and secrets
+- **Frontend build (Amplify): NONE.** The API base URL, the Cognito app-client id and the region are public values that ship in the bundle anyway, and live as defaults in `src/config.js`.
+- **Lambda secrets live in Secrets Manager**, not in environment variables: `glowpt/anthropic/api-key` plus the DB role secrets, all named under Live infrastructure below.
+- **⚠️ Supabase rollback only, not live:** project URL `https://iuefzbsgzsgsvybiurzd.supabase.co`, Edge Function secrets `ANTHROPIC_API_KEY` · `RESEND_API_KEY` · `FROM_EMAIL` · `APP_URL`. Recorded because they cannot be looked up if that rollback is ever needed.
 
 ## Business model
 - Clinic is the customer; patients free. **Price = $350/mo. DECIDED 2026-08-24 (David) — one price, no range, no blended figure.** It matches the live marketing site and is written into both legal drafts. The old "~$300 blended, planning range $250–350, reconcile" wording is retired; do not reintroduce it. Year-1 target: **29–40 clinics → $100–140K ARR** ($120K goal).
@@ -103,12 +110,18 @@ A daily wellness check-in app for physical therapy patients. Patient does a 30-s
 - **Positioning:** GlowPT is NOT an HEP/exercise-program tool (clinics resist those). Its wedge is the daily emotional/adherence check-in no other clinic tool owns. Target buyers: clinic owners + office/practice managers (often on Instagram, not LinkedIn).
 
 ## HIPAA guardrail (do not violate)
-Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/committed clinic + signed BAAs.** Go-live flips (gated on first paying clinic): Supabase Team plan (~$599/mo) + Supabase BAA + Anthropic BAA + **Resend BAA (flagged 2026-07-15 — was missing from this list)**. Why Resend counts: the weekly *patient* email carries their name + email + check-in count, which identifies a person AND reveals they're a PT patient → individually identifiable health info that Resend transmits → business associate. (The *clinic* email is aggregates-only and genuinely PHI-free.) **Verify Resend can sign a BAA and on which plan BEFORE go-live** — if it can't, the email vendor changes. **ANSWERED 2026-07-17: Resend has no HIPAA/BAA option → the whole stack is moving to AWS (email becomes SES). The go-live infra path is now the AWS migration (RDS + Cognito + Lambda + SES under one AWS BAA, plus the Anthropic BAA), NOT Supabase Team + Resend. See THE AWS MIGRATION IS DONE above.** The demo-data-only rule in this guardrail is unchanged and still governs until a paying clinic + signed BAAs. The static frontend host (Amplify Hosting since 2026-09-13, Netlify before) only serves files; PHI goes browser → AWS API directly, so the host is not treated as a business associate, and Amplify is HIPAA-eligible under the org BAA regardless. Also needs the `access_log` (done) before a real clinic dashboard. David + friends testing on the sandbox = demo data, not real PHI — that's fine.
+Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/committed clinic and signed BAAs.**
+
+**The infrastructure half is done.** RDS, Cognito, Lambda, SES and Amplify Hosting are all HIPAA-eligible and covered by the **org-level AWS BAA** (see AWS account facts). The frontend host only serves static files, PHI goes browser → AWS API directly, so it is not a business associate. `access_log` is in place.
+
+**The one gap left is the AI.** The prompt carries PHI, so whoever runs the model is a business associate, and production still calls `api.anthropic.com`. **That is why Bedrock is a real go-live gate**; an Anthropic 1P BAA is ruled out on cost and that is settled. The superseded Supabase Team and Resend path is in `docs/history.md`.
+
+David and friends testing on the sandbox is demo data, not real PHI, and that is fine.
 
 ## Demo vs sandbox convention
 - **Riverside PT** = the clean **sales demo** clinic. **✅ REBUILT ON AWS 2026-08-22** via `scripts/aws-seed-demo.mjs` (the AWS replacement for the Supabase `seed-demo.mjs`/`reset-demo.mjs`, which are now obsolete). David = manager via **`besoulful@gmail.com`**; therapist Sam Torres = `besoulful+samtorres`; **6 patients** all on `besoulful+` aliases: showcase **Grace Bennett** = `besoulful+grace@gmail.com` (~25 check-ins/30 days, 14-day streak, trending up — log in AS her for the patient **Progress screen**), plus Chris Alvarez (engaged), Maria Chen (mixed), **James Okafor** (inactive 8d → flag), **Linda Park** (low-mood → flag), Robert Ellis (sporadic). Each has a REAL Cognito account, so David can sign in as any of them (OTP lands in his inbox). Never share its `/join/riverside-pt` link. **Re-pristine before a demo:** start the bastion + SSM tunnel (localhost:5433), `export PGPASSWORD=<admin secret>`, then `node scripts/aws-seed-demo.mjs` (self-resetting; needs `AWS_PROFILE=glowpt-prod`). Requires `pg` (in root devDependencies).
 - **Sandbox = "Ridge PT"** (created via `/onboard`, manager `dwpeterson15@gmail.com`) = for David + friends to dogfood. Test logins (Gmail `+aliases` → all land in his inbox): therapist `dwpeterson15+therapist1@gmail.com` ("Dr. Sam"), patients `dwpeterson15+patient1@gmail.com` (Tim Long, assigned to Dr. Sam), "Charlie" (`+charlie@gmail.com`), "Davey" (`+test@gmail.com`, re-joined properly via `/join/ridge-pt` 2026-07-15, assigned to Dr. Sam). Mess is fine — but **make new test patients via the clinic's `/join/<slug>` link, NOT by typing an email into `/login`**, or they land with no clinic (see V2.4). Deleted 2026-07-15 as orphans: `+timmy@gmail.com` ("Timmy"), `+test2@gmail.com`.
-- **Login-code emails use Supabase's built-in rate-limited mailer (~few/hr)** — heavy same-day testing can exhaust it; codes then don't arrive (check spam, wait, or do the custom-SMTP work).
+- **Login-code emails go out through SES**, out of the sandbox since 2026-08-10 (50,000/day, 14/sec), so heavy same-day testing no longer exhausts a mailer quota. If a code does not arrive, check spam and the 8-vs-6 digit tell before theorising.
 
 ## ✅ THE AWS MIGRATION IS DONE (cut over 2026-08-22; the 12 KB log was archived 2026-09-13)
 
@@ -179,7 +192,7 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 > - **⛔ THE "Patient Sign-In Link" CARD IS ONE NEUTRAL LINK FOR EVERY PATIENT, NOT A PER-ROW CONTROL.** A joined patient's invite token is spent, and a permanent per-person link would put "this address is a PT patient" in a URL forever. It shipped on the roster row first and David had it removed the same hour: **a per-row button implies a per-row link.** Do not put it back and do not "fix" it to be unique. **It copies an INSTRUCTION, not a bare URL**, and the exact text is rendered on the card.
 >
 > ### 🌄 DEMO CLINIC STATE
-> **Riverside was re-pristined 2026-09-12 05:00.** Sunday's heartbeat volume is **17** (Riverside 8, RidgePT 9). **⚠️ A re-pristine invalidates David's session** — every demo Cognito account is destroyed and recreated with a fresh sub, so he signs in again as `besoulful@gmail.com`. Not a bug. RidgePT is never reset.
+> **Riverside was re-pristined 2026-09-12 05:00.** **⚠️ It now carries ONE extra real check-in from the 2026-09-13 cutover verification** (David signed in as Grace to prove the flip), so **re-pristine before the next demo.** Sunday's heartbeat volume is **17** (Riverside 8, RidgePT 9). **⚠️ A re-pristine invalidates David's session** — every demo Cognito account is destroyed and recreated with a fresh sub, so he signs in again as `besoulful@gmail.com`. Not a bug. RidgePT is never reset.
 > - **🪤 `aws ec2 start-instances` ON THE BASTION RETURNS `InsufficientInstanceCapacity` INTERMITTENTLY** — five times on 09-06, three on 09-12, first try on 09-13. **us-east-1a is the constrained AZ for this account.** A retry loop is the answer; it is not a fault on our side.
 > - **💲 Running cost is roughly $95/mo against the $150 budget alarm** (a Cognito interface VPC endpoint added ~$7/mo on 2026-09-06, which is what makes Remove delete the person's login).
 >
