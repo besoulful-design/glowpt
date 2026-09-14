@@ -1,0 +1,39 @@
+#!/bin/sh
+# Guards CLAUDE.md, which loads in full at the start of every session and is
+# therefore a tax on every thread. Two checks, both about that file only.
+#
+#   1. BANK FIRST. If CLAUDE.md loses lines, docs/history.md must be staged in
+#      the same commit. Losing text is the only failure here that cannot be
+#      undone later; growth can always be trimmed.
+#   2. GROWTH. More than 2 KB added in one commit without banking anything is
+#      almost always the investigation being written into the guide, which the
+#      file's own rules send to the commit message instead.
+#
+# Turn on:  git config core.hooksPath scripts/hooks
+# Turn off: git config --unset core.hooksPath
+# Skip once: git commit --no-verify   (visible in the transcript, on purpose)
+set -eu
+LIMIT=2048
+
+stats=$(git diff --cached --numstat -- CLAUDE.md)
+[ -n "$stats" ] || exit 0
+
+removed=$(printf '%s' "$stats" | awk '{print $2}')
+banked=$(git diff --cached --name-only -- docs/history.md)
+new=$(git show :CLAUDE.md | wc -c | tr -d ' ')
+old=$(git show HEAD:CLAUDE.md 2>/dev/null | wc -c | tr -d ' ' || echo 0)
+growth=$((new - old))
+
+if [ "$removed" -gt 0 ] && [ -z "$banked" ]; then
+  echo "BLOCKED: CLAUDE.md loses $removed line(s) and docs/history.md is not in this commit."
+  echo "Nothing leaves that file until it is banked verbatim. Bank first, then cut."
+  exit 1
+fi
+
+if [ "$growth" -gt "$LIMIT" ] && [ -z "$banked" ]; then
+  echo "BLOCKED: CLAUDE.md grows by $growth bytes and nothing is banked to docs/history.md."
+  echo "It may add a durable rule, a state change edited in place, and one short backlog"
+  echo "entry. The reasoning of a fix belongs in this commit message, not in the file."
+  exit 1
+fi
+exit 0
