@@ -21,9 +21,11 @@
     "typescript": "~7.0.2"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1132.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.1116.0",
     "@aws-sdk/client-secrets-manager": "^3.1116.0",
     "@aws-sdk/client-sesv2": "^3.1116.0",
+    "@aws-sdk/client-sts": "^3.1132.0",
     "@aws-sdk/rds-signer": "^3.1113.0",
     "aws-cdk-lib": "^2.265.0",
     "constructs": "^10.5.0",

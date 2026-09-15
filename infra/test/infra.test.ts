@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { InfraStack } from '../lib/infra-stack';
@@ -120,8 +122,8 @@ test('ai-response: POST /ai-response is JWT-protected and its Lambda is not in t
   expect(aiRoute).toBeDefined();
   expect(aiRoute.Properties.AuthorizationType).toBe('JWT');
 
-  // The ai-response Lambda must NOT be in the VPC (it needs the internet for
-  // Anthropic and touches no DB). A VpcConfig would mean no egress without a NAT.
+  // The ai-response Lambda must NOT be in the VPC (it needs Bedrock and STS and
+  // touches no DB). A VpcConfig would mean no egress without a NAT.
   const fns = template.findResources('AWS::Lambda::Function');
   const aiFn = Object.values(fns).find(
     (f: any) => f.Properties.FunctionName === 'glowpt-ai-response',
@@ -129,10 +131,60 @@ test('ai-response: POST /ai-response is JWT-protected and its Lambda is not in t
   expect(aiFn).toBeDefined();
   expect(aiFn.Properties.VpcConfig).toBeUndefined();
 
-  // The Anthropic key lives in Secrets Manager, not an env var or the template.
-  template.hasResourceProperties('AWS::SecretsManager::Secret', {
-    Name: 'glowpt/anthropic/api-key',
+  // It calls Bedrock, in the management account, through the US inference
+  // profile. Haiku 4.5 has no on-demand model id, so a bare model id 400s.
+  expect(aiFn.Properties.Environment.Variables.BEDROCK_MODEL_ID).toBe(
+    'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+  );
+  expect(aiFn.Properties.Environment.Variables.BEDROCK_ROLE_ARN).toBe(
+    'arn:aws:iam::456112636877:role/GlowptBedrockInvoke',
+  );
+});
+
+/**
+ * ⚠️ THE EXECUTION ROLE NAME IS PART OF A CONTRACT WITH ANOTHER AWS ACCOUNT.
+ *
+ * infra/bedrock/trust-policy.json lets exactly one ARN assume the Bedrock role,
+ * and that ARN is this name. Rename it, drop the roleName and let CDK generate
+ * one, or replace the role some other way, and the trust silently stops
+ * matching: no deploy error, no alarm, just every patient quietly receiving the
+ * fallback line instead of a reflection. Nothing else in the stack would notice.
+ */
+test('ai-response: the exec role name is pinned, because another account trusts it by ARN', () => {
+  const stack = new InfraStack(app(), 'TestStack', { env: ENV });
+  const template = Template.fromStack(stack);
+
+  template.hasResourceProperties('AWS::IAM::Role', {
+    RoleName: 'glowpt-ai-response-exec',
   });
+
+  // And it may assume the Bedrock role, which is the only cross-account grant.
+  const policies = template.findResources('AWS::IAM::Policy');
+  const assumesBedrock = Object.values(policies).some((p: any) =>
+    JSON.stringify(p.Properties.PolicyDocument).includes(
+      'arn:aws:iam::456112636877:role/GlowptBedrockInvoke',
+    ),
+  );
+  expect(assumesBedrock).toBe(true);
+});
+
+/**
+ * ⛔ PHI MUST NOT LEAVE THE BAA. The prompt carries the patient's first name,
+ * feeling and note, so the model's operator is a business associate. Bedrock is
+ * covered by the org-level AWS BAA; api.anthropic.com is not. This test fails if
+ * anyone reintroduces a direct Anthropic call as a "fallback" for a Bedrock
+ * outage, which is the plausible way it would come back.
+ */
+test('ai-response: nothing in the Lambda source calls api.anthropic.com', () => {
+  const src = readFileSync(
+    path.join(__dirname, '..', 'lambda', 'ai-response', 'index.ts'),
+    'utf8',
+  );
+  const mentions = src.split('\n').filter((l) => l.includes('api.anthropic.com'));
+  // The file names the address in its own prohibition. Any line that mentions it
+  // must be a comment saying not to, never code.
+  for (const line of mentions) expect(line.trimStart().startsWith('*')).toBe(true);
+  expect(src).not.toContain('x-api-key');
 });
 
 // Weekly summary fires Sunday 6pm Eastern, year-round (David, 2026-09-07).
