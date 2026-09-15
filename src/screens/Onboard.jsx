@@ -28,9 +28,12 @@ export default function Onboard() {
   // Fixed once the code is sent, so a resend cannot land on a different slug
   // than the one the first attempt claimed.
   const [resolvedSlug, setResolvedSlug] = useState('')
-  // A manager is staff, so the last name is OPTIONAL here, matching the staff
-  // invite door. They are not on the patient roster, which is the thing two
-  // identical first names break.
+  // The last name is REQUIRED here, by David's call 2026-09-15. The database
+  // still treats a staff surname as optional (a manager is not on the patient
+  // roster that two identical first names break), so this is a form rule, not a
+  // schema one: the clinic's own account should carry a full name because it is
+  // the name on the subscription and the name a prospect meets. The staff invite
+  // door in Dashboard.jsx is unchanged and stays optional.
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -87,6 +90,7 @@ export default function Onboard() {
     // Only possible if the name has no letters or numbers at all.
     if (!slugify(clinicName)) return setError('Please use letters or numbers in your clinic name.')
     if (!firstName.trim()) return setError('Please enter your first name.')
+    if (!lastName.trim()) return setError('Please enter your last name.')
     if (!email.trim()) return setError('Please enter your work email.')
     if (!baaReviewed) return setError('Please confirm you’ve reviewed the BAA.')
     setBusy(true)
@@ -129,7 +133,7 @@ export default function Onboard() {
           onChange={e => setClinicName(e.target.value)} />
         <input style={ui.input} placeholder="Your first name" value={firstName}
           onChange={e => setFirstName(e.target.value)} autoComplete="given-name" />
-        <input style={ui.input} placeholder="Your last name (optional)" value={lastName}
+        <input style={ui.input} placeholder="Your last name" value={lastName}
           onChange={e => setLastName(e.target.value)} autoComplete="family-name" />
         <input style={ui.input} placeholder="Your work email" type="email" value={email}
           onChange={e => setEmail(e.target.value)}

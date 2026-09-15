@@ -2419,3 +2419,12 @@ The new-thread block still described 2026-09-13 as current, and the email backlo
 - **📧 THE EMAILS WENT WHITE AND THE OPACITY LADDER IS GONE (2026-09-14, `a05b1d9`).** David photographed a weekly email on his iPhone showing a pale blue card and a brown button, none of which we send: Gmail's iOS app inverted our dark card. The same inversion left the faded lines close to unreadable, which is what finished the ladder. One shared shell now, white, one ink, bright amber PT. Rules under STANDING RULES. **⏳ Not yet confirmed on a real phone; that is the only test that counts.**
 ```
 
+
+### The last-name standing rule, as it stood before /onboard tightened (2026-09-15)
+
+David asked for the clinic sign-up form's last name to be required. The rule line was
+rewritten to carry that exception; the database is unchanged. Banked verbatim.
+
+```
+- **A last name is REQUIRED for a patient and OPTIONAL for staff**, enforced in `invite_patient` and `rename_patient` in the DATABASE, not only in the forms. Staff are not on the roster that two identical first names break.
+```

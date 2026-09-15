@@ -359,7 +359,7 @@ David and friends testing on the sandbox is demo data, not real PHI, and that is
 - **A person has TWO name fields. `first_name` is WHAT WE CALL YOU, verbatim; `last_name` is WHAT DISAMBIGUATES YOU on the roster.** `full_name` is a STORED GENERATED column computed from both, so it can never drift and **cannot be written by anyone.**
 - **⛔ NOTHING SPLITS A NAME ON A SPACE, ANYWHERE, EVER AGAIN.** There is no title list. "PT Pete" and "Dr. Sam" are first names. Four places used to guess with `split(' ')[0]` and did not agree with each other.
 - **⛔ `first_name` IS THE ONLY PART THAT MAY REACH THE AI PROMPT** — the privacy notice promises it. `PatientApp.jsx` reads no other name field; keep it that way.
-- **A last name is REQUIRED for a patient and OPTIONAL for staff**, enforced in `invite_patient` and `rename_patient` in the DATABASE, not only in the forms. Staff are not on the roster that two identical first names break.
+- **A last name is REQUIRED for a patient and OPTIONAL for staff in the DATABASE**, enforced in `invite_patient` and `rename_patient`, not only in the forms. Staff are not on the roster that two identical first names break. **⚠️ `/onboard` is the one exception and it is a FORM rule only (David, 2026-09-15): the clinic's own manager must give a last name, because that is the name on the subscription. The staff invite form in `Dashboard.jsx` stays optional, and the database is unchanged.**
 - **A manager renames a patient through `rename_patient` only** (patients only, same clinic only, audited). `profiles_update_self` still scopes the column grant to the caller's own row; do not widen it.
 
 **📧 EMAILS (set 2026-09-14)**
