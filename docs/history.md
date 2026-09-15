@@ -2353,3 +2353,12 @@ Founders tier, $1,000 requested, linked to glowpt-prod. Stages 1 (Submit) and 2 
 Outcome by email to `david@franklinaisolutions.com` (Outlook, not Gmail). **⚠️ AWS HAS GIVEN THREE DIFFERENT TURNAROUNDS: the confirmation EMAIL says 3-5 business days, the submit screen said 5-7, the public guide 7-10. David's email is the one that governs.** 09-07 was Labor Day, so the clock started 09-08: day 5 was 09-14, day 7 is 09-16, day 10 is 09-21.
 ```
 
+### The post-Activate-rejection plan, superseded within the hour (2026-09-15)
+
+Written immediately after the rejection, before anyone checked whether the Bedrock wall was still up. It turned out to be specific to glowpt-prod, whose Haiku 4.5 quotas are all literally 0.0, while the management account is fully provisioned. Banked verbatim.
+
+```
+**⛔ THAT PLAN IS DEAD: Activate was rejected 09-14.**
+- **DONE, BADLY: Activate was REJECTED 09-14.** Next actions are David's: the Outlook inbox for a reason, the "Contact us" link on the status page to ask for one, then AWS Sales for the Account Manager lane.
+```
+
