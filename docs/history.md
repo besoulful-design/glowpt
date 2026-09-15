@@ -2397,3 +2397,11 @@ Deleted after checking the database rather than waiting for the date: all 8 staf
 > - **After 2026-09-18** — delete the `/staff/:token` route alias in `src/App.jsx`. It exists only because the first staff invite links pointed there and they live 14 days.
 ```
 
+### The Sunday heartbeat volume before Atlas (2026-09-15)
+
+Atlas joined RidgePT on 2026-09-14 through a test invite and David chose to keep them, so the count moved 17 to 18. Banked verbatim.
+
+```
+> **Riverside was re-pristined 2026-09-12 05:00.** **⚠️ It now carries ONE extra real check-in from the 2026-09-13 cutover verification** (David signed in as Grace to prove the flip), so **re-pristine before the next demo.** Sunday's heartbeat volume is **17** (Riverside 8, RidgePT 9). **⚠️ A re-pristine invalidates David's session** — every demo Cognito account is destroyed and recreated with a fresh sub, so he signs in again as `besoulful@gmail.com`. Not a bug. RidgePT is never reset.
+```
+
