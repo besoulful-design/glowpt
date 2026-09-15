@@ -2318,3 +2318,12 @@ Written while the email wordmark was #FBC02D. David's Gmail dark-mode screenshot
 - **`#FBC02D` is the "PT" in the wordmark and nothing else.** Bright amber on white is too low-contrast for prose, which is also why the clinic email's "may need attention" line is no longer amber.
 ```
 
+### The white-card email rules, superseded the same evening (2026-09-14)
+
+The emails went white for a few hours and came back to navy once David had seen both. The two rules below described the white version. What survived the round trip is the no-ladder rule (one size AND one color) and the color rule derived from Gmail's inversion, both now in CLAUDE.md and in infra/lambda/shared/email.ts. Banked verbatim.
+
+```
+- **The card is WHITE, in a frame, and declares `color-scheme: light`. ⚠️ GMAIL'S iOS APP IGNORES THAT AND INVERTS IT ANYWAY** (proven on David's phone 2026-09-14: near-black card, white text, brown button). Apple Mail honors it. **Assume any color here can be flipped; that is the argument for one ink and one size.** David prefers the inverted dark version, so it is not a bug to chase.
+- **⛔ THE "PT" IS A DEEP AMBER, `#B0730A`, AND MUST NOT BE "RESTORED" TO THE BRIGHT BRAND AMBER.** The rule Gmail's inversion follows, read off David's own screenshot: **a color DARK on white comes back LIGHT on black and stays legible; a color already LIGHT comes back dark and sinks into the card.** Navy "Glow" was never at risk, bright amber "PT" was unreadable. Bright amber cannot hold up in both, and the full-color logo above the wordmark carries the bright palette. The same low-contrast reasoning is why no sentence is amber and the clinic email's "may need attention" line is plain ink.
+```
+
