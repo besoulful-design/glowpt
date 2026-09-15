@@ -50,13 +50,26 @@ export const EMAIL_INK = '#0d1825';
 // The button. Amber field, navy label, exactly as in the app.
 export const EMAIL_AMBER = '#F5A81A';
 
-// The "PT" in the wordmark and nothing else. This is the brighter accent that
-// matches the sunrise artwork (#FBC02D is the top of the logo's sky gradient
-// and repeats through its rays), which is what David asked for on 2026-09-14.
-// ⚠️ It is deliberately NOT used for text: bright amber on white is a low
-// contrast ratio, which is tolerable for two large bold letters sitting under
-// the full-color logo and is not tolerable for a sentence.
-export const EMAIL_AMBER_BRIGHT = '#FBC02D';
+// The "PT" in the wordmark, and nothing else.
+//
+// ⚠️ IT IS A DEEP AMBER, NOT THE BRIGHT ONE, AND THAT IS THE WHOLE POINT.
+// It was #FBC02D (the top of the logo's sky gradient) for a few hours on
+// 2026-09-14, and David's dark-mode screenshot killed that: Gmail's iOS app
+// inverts the card, and the rule its output follows is that A COLOR WHICH IS
+// DARK ON WHITE COMES BACK LIGHT ON BLACK, while a color that is already light
+// comes back dark and collides with the background it is sitting on. All three
+// colors in that screenshot agree: navy #0d1825 became white and stayed
+// perfectly legible, bright amber became a dark brown that sank into the card,
+// and the button survived only because its field and its label were remapped
+// together. So the wordmark's amber has to be dark enough to inherit "Glow"'s
+// good behavior. #B0730A is 3.96:1 on white, which clears the large-text bar
+// for two 26px bold letters, and is deep enough to come back bright rather
+// than muddy.
+//
+// ⛔ DO NOT "restore the brand amber" here. Bright amber cannot hold up in
+// both, which is the trade David accepted when he asked for it to hold up in
+// both. The full-color logo sitting directly above carries the bright palette.
+export const EMAIL_WORDMARK_AMBER = '#B0730A';
 
 // Divider above the sign-off, and the frame around the card. Both replace work
 // the old faded text used to do: they separate without dimming anything.
@@ -87,7 +100,7 @@ export function emailShell(appUrl: string, inner: string) {
 <body style="margin:0;padding:0;background-color:#ffffff">
   <div style="font-family:${FONT};background-color:#ffffff;color:${EMAIL_INK};border:1px solid ${EMAIL_BORDER};border-radius:10px;padding:28px;max-width:480px;margin:24px auto">
     <img src="${appUrl}/apple-touch-icon.png" alt="GlowPT" width="56" height="56" style="display:block;width:56px;height:56px;border:0;border-radius:13px;margin-bottom:12px">
-    <div style="font-size:26px;font-weight:600;margin-bottom:18px;color:${EMAIL_INK}">Glow<span style="color:${EMAIL_AMBER_BRIGHT}">PT</span></div>
+    <div style="font-size:26px;font-weight:600;margin-bottom:18px;color:${EMAIL_INK}">Glow<span style="color:${EMAIL_WORDMARK_AMBER}">PT</span></div>
     ${inner}
   </div>
 </body>
