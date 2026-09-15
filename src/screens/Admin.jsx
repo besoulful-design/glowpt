@@ -28,6 +28,7 @@ const s = {
   card: { background: '#1a2840', border: '1px solid rgba(245,168,26,0.18)', borderRadius: 6, padding: '18px 20px', marginBottom: 14 },
   cardTop: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' },
   name: { fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 400, marginBottom: 2 },
+  // Named for what it USED to carry; it now holds the created date alone.
   slug: { fontSize: 12.5, color: 'rgba(245,239,228,0.45)', marginBottom: 10 },
   pill: { fontSize: 11.5, fontWeight: 600, borderRadius: 999, padding: '4px 11px', whiteSpace: 'nowrap' },
   pillOpen: { background: 'rgba(182,194,74,0.18)', color: '#c9d66a', border: '1px solid rgba(182,194,74,0.35)' },
@@ -152,7 +153,16 @@ export default function Admin() {
               <div style={s.cardTop}>
                 <div>
                   <div style={s.name}>{c.name}</div>
-                  <div style={s.slug}>/join/{c.slug} · created {when(c.created_at)}</div>
+                  {/* ⛔ THE SLUG IS NOT SHOWN HERE ANY MORE (David, 2026-09-15):
+                      "is there a reason otherwise that I would need to
+                      see/use/access the slug? If there's no reason, we can drop
+                      the slug it just adds clutter." There is no reason. It was
+                      only ever the readable half of the public /join/<slug>
+                      address, and that door closed on 2026-09-05. A clinic never
+                      sees its slug: no dashboard, no email, no link they send.
+                      It stays in the database as the clinic row's internal name,
+                      which is all it is now. ⛔ Do not put it back on screen. */}
+                  <div style={s.slug}>created {when(c.created_at)}</div>
                 </div>
                 <div style={{ ...s.pill, ...(open ? s.pillOpen : s.pillClosed) }}>
                   {open ? 'Open' : 'Closed'}
