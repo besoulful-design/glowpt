@@ -1,7 +1,7 @@
 import { Signer } from '@aws-sdk/rds-signer';
 import { Client } from 'pg';
 import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
-import { emailShell, emailButton, emailSignOff, EMAIL_INK } from '../shared/email';
+import { emailShell, emailButton, emailSignOff, emailText, EMAIL_INK } from '../shared/email';
 import {
   CognitoIdentityProviderClient,
   AdminDeleteUserCommand,
@@ -256,15 +256,15 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, firstN
   const home = isPatient
     ? `After today, your check-in lives at ${link}. Save it somewhere you will find it.`
     : `Your clinic dashboard lives at ${link}.`;
-  // ⛔ NO OPACITY LADDER. Every paragraph below is EMAIL_INK; only the size
-  // changes. This email used to fade through six alpha steps and it is the one
-  // that broke worst when Gmail's iOS app re-tinted the card. The full reasoning
-  // is in ../shared/email.ts. Do not reintroduce a faded line here.
+  // ⛔ NO LADDER, IN SHADE OR IN SIZE. Every paragraph below goes through
+  // emailText(), which is the only thing that writes a font-size. This is the
+  // email that had six alpha steps and then five sizes, and David read the
+  // second as the first wearing a hat. The reasoning is in ../shared/email.ts.
   return emailShell(
     APP_URL,
-    `<p style="font-size:17px;line-height:1.5;margin:0 0 14px;color:${EMAIL_INK}">${greeting}</p>
-    <p style="font-size:16px;line-height:1.6;margin:0 0 14px;color:${EMAIL_INK}">${clinicName} has invited you to join GlowPT as ${roleWord}.</p>
-    <p style="font-size:15px;line-height:1.6;margin:0;color:${EMAIL_INK}">${pitch}</p>
+    `${emailText(greeting, 0)}
+    ${emailText(`${clinicName} has invited you to join GlowPT as ${roleWord}.`)}
+    ${emailText(pitch)}
     ${emailButton(inviteUrl, cta)}
     <!-- ⚠️ THE ORDER OF THESE SENTENCES IS THE POINT. This used to read "No
          password is needed. We will email you a code.", which contradicted the
@@ -273,8 +273,8 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, firstN
          emailed until they act on the page. The real sequence is tap, confirm
          your name, THEN a code arrives, so it now says that in that order.
          (David spotted the contradiction on 2026-09-05.) -->
-    <p style="font-size:14px;line-height:1.6;margin:20px 0 0;color:${EMAIL_INK}">${home}</p>
-    <p style="font-size:13px;line-height:1.6;margin:16px 0 0;color:${EMAIL_INK}">You will confirm your name, then we will email you a code to sign in. There is no password to create. This link works only for this email address and expires in 14 days.</p>
+    ${emailText(home, 20)}
+    ${emailText('You will confirm your name, then we will email you a code to sign in. There is no password to create. This link works only for this email address and expires in 14 days.')}
     ${emailSignOff()}`,
   );
 }

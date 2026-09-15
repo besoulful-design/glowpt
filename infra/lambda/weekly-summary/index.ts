@@ -1,7 +1,7 @@
 import { Signer } from '@aws-sdk/rds-signer';
 import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 import { Client } from 'pg';
-import { emailShell, emailButton, emailSignOff, EMAIL_INK } from '../shared/email';
+import { emailShell, emailButton, emailSignOff, emailText } from '../shared/email';
 
 /**
  * GlowPT weekly-summary Lambda (AWS rewrite of the old Supabase edge function).
@@ -86,9 +86,9 @@ function patientEmail(name: string, count: number) {
       : `A fresh week starts tomorrow. A good time to check back in.`;
   return emailShell(
     APP_URL,
-    `<p style="font-size:17px;line-height:1.5;margin:0 0 14px;color:${EMAIL_INK}">Hi ${name},</p>
-    <p style="font-size:16px;line-height:1.6;margin:0 0 14px;color:${EMAIL_INK}">${line}</p>
-    <p style="font-size:15px;line-height:1.6;margin:0;color:${EMAIL_INK}">Open GlowPT to see your reflections and log today.</p>
+    `${emailText(`Hi ${name},`, 0)}
+    ${emailText(line)}
+    ${emailText('Open GlowPT to see your reflections and log today.')}
     ${emailButton(`${APP_URL}/login`, 'Open GlowPT →')}
     ${emailSignOff()}`,
   );
@@ -111,12 +111,12 @@ function clinicEmail(
   // value chosen for a dark background.
   return emailShell(
     APP_URL,
-    `<p style="font-size:17px;line-height:1.5;margin:0 0 14px;color:${EMAIL_INK}">Your weekly GlowPT summary for <strong>${clinicName}</strong> is ready.</p>
-    <div style="background-color:#fdf6e7;border:1px solid #f0dcb0;border-radius:6px;padding:16px;margin:0 0 14px">
-      <p style="margin:0 0 8px;font-size:15px;line-height:1.5;color:${EMAIL_INK}"><strong>${active}</strong> of <strong>${total}</strong> patients checked in (${engagement}% engagement)</p>
-      <p style="margin:0;font-size:15px;line-height:1.5;color:${EMAIL_INK}"><strong>${needAttention}</strong> patient${needAttention === 1 ? '' : 's'} may need attention</p>
+    `${emailText(`Your weekly GlowPT summary for <strong>${clinicName}</strong> is ready.`, 0)}
+    <div style="background-color:#fdf6e7;border:1px solid #f0dcb0;border-radius:6px;padding:16px;margin:16px 0 0">
+      ${emailText(`<strong>${active}</strong> of <strong>${total}</strong> patients checked in (${engagement}% engagement)`, 0)}
+      ${emailText(`<strong>${needAttention}</strong> patient${needAttention === 1 ? '' : 's'} may need attention`, 8)}
     </div>
-    <p style="font-size:14px;line-height:1.6;margin:0;color:${EMAIL_INK}">Log in to see who's engaged and who could use a nudge.</p>
+    ${emailText("Log in to see who's engaged and who could use a nudge.")}
     ${emailButton(`${APP_URL}/dashboard`, 'Open Dashboard →')}
     ${emailSignOff()}`,
   );
