@@ -2336,3 +2336,12 @@ Decision expected **2026-09-15 to 09-17** by email to `david@franklinaisolutions
 - **2026-09-15 to 09-17** — the AWS Activate decision (above).
 ```
 
+### My wrong Activate correction, reverted 2026-09-15 within the hour
+
+I overrode David's recollection of the 3-5 business day figure using AWS's generic public guide, when the authoritative source for HIS application is the confirmation email AWS sent him. He corrected it. Banked verbatim before rewriting.
+
+```
+Decision expected **2026-09-17 to 09-22** by email to `david@franklinaisolutions.com`. **AWS's own guide says 7-10 BUSINESS days, not the 3-5 David recalled, and 09-07 was Labor Day so the clock started 09-08.** Status page: **https://aws.amazon.com/startups/credits/status/** — it signs in with an **AWS Builder ID, NOT the Identity Center login**, so the wrong identity shows an empty account. Past 10 business days (after 09-22): check spam, then contact AWS Activate Support.
+- **2026-09-17 to 09-22** — the AWS Activate decision (above). Nothing is late before then.
+```
+
