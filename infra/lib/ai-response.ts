@@ -72,6 +72,12 @@ export class AiResponse extends Construct {
     // real patient check-in in production. DO NOT RECREATE IT. A key here would
     // only ever be useful for calling api.anthropic.com, and that call is
     // outside the BAA; see the fallback prohibition in the header.
+    //
+    // ⚠️ AND IT WENT IMMEDIATELY, WITH NO RECOVERY WINDOW. Deleting a Secrets
+    // Manager secret by hand schedules it for ~30 days; CloudFormation removed
+    // this one outright, and `list-secrets --include-planned-deletion` came back
+    // empty within seconds. Assume any secret dropped from this stack is gone
+    // the moment the deploy finishes, not recoverable next week.
 
     const logGroup = new logs.LogGroup(this, 'LogGroup', {
       logGroupName: '/aws/lambda/glowpt-ai-response',
