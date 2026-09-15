@@ -26,7 +26,7 @@ export interface WeeklySummaryProps {
  * The weekly-summary Lambda: PHI-minimised nudge emails, Sundays at 6pm ET.
  *
  * Unlike ai-response (which sits OUTSIDE the VPC because it needs the public
- * internet for Anthropic), this Lambda must reach the private database, so it
+ * Bedrock and STS endpoints), this Lambda must reach the private database, so it
  * lives in the VPC's isolated subnets. It therefore needs two private paths:
  *   - the RDS Proxy on 5432 (IAM auth as glowpt_weekly, no stored password);
  *   - the SES API on 443, via an interface VPC endpoint, because the isolated

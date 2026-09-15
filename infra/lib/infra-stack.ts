@@ -63,9 +63,9 @@ export class InfraStack extends cdk.Stack {
       configurationSetName: email.configurationSet.configurationSetName,
     });
 
-    // Phase 4: the ai-response function. A separate, non-VPC Lambda (it needs the
-    // internet for Anthropic and no database), attached to the shared API behind
-    // the same Cognito authorizer at POST /ai-response.
+    // The ai-response function. A separate, non-VPC Lambda (it needs the public
+    // Bedrock and STS endpoints and no database), attached to the shared API
+    // behind the same Cognito authorizer at POST /ai-response.
     new AiResponse(this, 'AiResponse', {
       httpApi: api.httpApi,
       authorizer: api.authorizer,

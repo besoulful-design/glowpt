@@ -3,7 +3,6 @@ import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNode from 'aws-cdk-lib/aws-lambda-nodejs';
-import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
@@ -63,21 +62,16 @@ export interface AiResponseProps {
  */
 export class AiResponse extends Construct {
   public readonly fn: lambdaNode.NodejsFunction;
-  public readonly secret: secretsmanager.Secret;
   public readonly role: iam.Role;
 
   constructor(scope: Construct, id: string, props: AiResponseProps) {
     super(scope, id);
 
-    // ⚠️ KEPT, NO LONGER READ. This held the Anthropic API key until 2026-09-15.
-    // Nothing reads it now. It stays declared because removing it from the stack
-    // DELETES it, and destroying a secret is its own decision with its own
-    // recovery window -- not a side effect of a refactor. Delete it deliberately
-    // once the Bedrock path has run in production for a while.
-    this.secret = new secretsmanager.Secret(this, 'AnthropicKey', {
-      secretName: 'glowpt/anthropic/api-key',
-      description: 'UNUSED since 2026-09-15 (the reflection moved to Bedrock). Safe to delete deliberately.',
-    });
+    // ⛔ THE glowpt/anthropic/api-key SECRET IS GONE. It was deleted on
+    // 2026-09-15, deliberately and in its own commit, once Bedrock had served a
+    // real patient check-in in production. DO NOT RECREATE IT. A key here would
+    // only ever be useful for calling api.anthropic.com, and that call is
+    // outside the BAA; see the fallback prohibition in the header.
 
     const logGroup = new logs.LogGroup(this, 'LogGroup', {
       logGroupName: '/aws/lambda/glowpt-ai-response',
