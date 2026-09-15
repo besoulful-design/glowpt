@@ -2405,3 +2405,17 @@ Atlas joined RidgePT on 2026-09-14 through a test invite and David chose to keep
 > **Riverside was re-pristined 2026-09-12 05:00.** **⚠️ It now carries ONE extra real check-in from the 2026-09-13 cutover verification** (David signed in as Grace to prove the flip), so **re-pristine before the next demo.** Sunday's heartbeat volume is **17** (Riverside 8, RidgePT 9). **⚠️ A re-pristine invalidates David's session** — every demo Cognito account is destroyed and recreated with a fresh sub, so he signs in again as `besoulful@gmail.com`. Not a bug. RidgePT is never reset.
 ```
 
+### CLAUDE.md lines replaced on the 2026-09-15 refresh
+
+The new-thread block still described 2026-09-13 as current, and the email backlog entry still said the emails were white. Banked verbatim.
+
+```
+*Living doc, loaded in full at the start of every session.
+
+> ## 🧭 NEW THREAD? READ THIS FIRST — CURRENT STATE ONLY (Sunday 2026-09-13, 19:30)
+
+> **Shipped and verified 2026-09-13:** names are **two fields** (`first_name` / `last_name`, `full_name` generated), and a manager corrects a patient's name by **tapping the name on the roster**. Rules under STANDING RULES; detail in Status & backlog.
+
+- **📧 THE EMAILS WENT WHITE AND THE OPACITY LADDER IS GONE (2026-09-14, `a05b1d9`).** David photographed a weekly email on his iPhone showing a pale blue card and a brown button, none of which we send: Gmail's iOS app inverted our dark card. The same inversion left the faded lines close to unreadable, which is what finished the ladder. One shared shell now, white, one ink, bright amber PT. Rules under STANDING RULES. **⏳ Not yet confirmed on a real phone; that is the only test that counts.**
+```
+

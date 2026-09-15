@@ -1,6 +1,6 @@
 # GlowPT — Project Guide (for Claude Code)
 
-*Living doc, loaded in full at the start of every session. **⏰ RUN `date` BEFORE SAYING ANYTHING ABOUT TIME. DAVID'S DAY STARTS AT 3AM, so 3 to 6am is his MORNING, not a late night.** Last edited Sunday 2026-09-13.*
+*Living doc, loaded in full at the start of every session. Last edited Tuesday 2026-09-15. **⏰ RUN `date` BEFORE SAYING ANYTHING ABOUT TIME. DAVID'S DAY STARTS AT 3AM, so 3 to 6am is his MORNING, not a late night.***
 
 *⚠️ **THE "PREVIOUSLY UPDATED..." CHAIN THAT USED TO LIVE HERE IS GONE (trimmed 2026-09-13).** It had grown to 29 KB of nested parentheses summarising entries that are ALSO in Status & backlog below, so every session paid for the same news twice. **Current state is the NEW THREAD block; detail is Status & backlog, newest first; everything older is in `docs/history.md`.** Do not start a new chain here.*
 
@@ -133,14 +133,14 @@ David and friends testing on the sandbox is demo data, not real PHI, and that is
 - **⚠️ The frontend host serves ONLY static files, on purpose.** PHI goes browser → AWS directly and never transits the host. On Amplify that means **hosting only: no Amplify backend, auth, data, SSR or functions, ever.** (The same rule kept Netlify out of business-associate territory; the reasoning is still in `netlify.toml` until that file goes.)
 - **The full phase-by-phase log, every acceptance test and the three bugs caught during bring-up are in `docs/history.md`.** Grep it before re-deriving anything about how this stack was built.
 
-> ## 🧭 NEW THREAD? READ THIS FIRST — CURRENT STATE ONLY (Sunday 2026-09-13, 19:30)
+> ## 🧭 NEW THREAD? READ THIS FIRST — CURRENT STATE ONLY (Tuesday 2026-09-15, 08:00)
 >
 > **⚠️ THIS BLOCK IS STATE, NOT NEWS. Anything finished belongs in Status & backlog, newest first; anything older is in `docs/history.md`.** It was 37 KB of settled history on 2026-09-13; keep it short or it grows back.
 >
 > ### ✅ NOTHING IS BROKEN AND NOTHING IS OUTSTANDING IN CODE.
 > **Open with what David wants to do next, not with a list of what he owes.**
 >
-> **Shipped and verified 2026-09-13:** names are **two fields** (`first_name` / `last_name`, `full_name` generated), and a manager corrects a patient's name by **tapping the name on the roster**. Rules under STANDING RULES; detail in Status & backlog.
+> **🎉 SHIPPED 2026-09-15: THE AI REFLECTION RUNS ON BEDROCK, WHICH CLOSED THE LAST HIPAA GATE.** Verified end to end on the live site (Timmy checked in, real reflection). `api.anthropic.com` is out of the app and its API key secret is deleted. **The only thing left before real patients is the attorney review, and that is not a coding task.** Also that morning: the four emails were rebuilt (one size, one color, navy, no ladder) and the `/staff/:token` alias went. Detail in Status & backlog.
 > - **⏳ Natalie, Charlie and Timmy have NO last name** — the old form never asked. Not a bug; they are the rows the roster cannot yet disambiguate, and the rename dialog is how David gives them one.
 >
 > ### 🚚 THE FRONTEND IS ON AWS AMPLIFY HOSTING, cut over 2026-09-13 19:10 and verified end to end by David (sign-in code arrived, dashboard loaded on glowpt.app).
@@ -412,7 +412,9 @@ David and friends testing on the sandbox is demo data, not real PHI, and that is
 
 **⚠️ CONDENSED 2026-09-12. Each entry below is the headline, what broke, the durable rule, and what was observed — the investigation narrative is NOT here.** The full original text of every entry is in `docs/history.md` section 10, verbatim, and the same reasoning is in the commit messages (`git log`). **When adding a new entry, match this length.**
 
-- **📧 THE EMAILS WENT WHITE AND THE OPACITY LADDER IS GONE (2026-09-14, `a05b1d9`).** David photographed a weekly email on his iPhone showing a pale blue card and a brown button, none of which we send: Gmail's iOS app inverted our dark card. The same inversion left the faded lines close to unreadable, which is what finished the ladder. One shared shell now, white, one ink, bright amber PT. Rules under STANDING RULES. **⏳ Not yet confirmed on a real phone; that is the only test that counts.**
+- **✅ BEDROCK IS LIVE; THE LAST HIPAA GATE IS CLOSED (2026-09-15, `c351fc4` → `6d63db6`).** The reflection was the one call carrying PHI outside any BAA. It now runs on Claude Haiku 4.5 on Bedrock, reached by assuming a role in the MANAGEMENT account, because **glowpt-prod's Bedrock quota measured literally 0.0 while the management account had 27M tokens/day and had never been tested.** The last step was not a quota at all but Anthropic's one-time use case form. Rules and the DO NOT REOPEN list are in the NEW THREAD block; the role is in `infra/bedrock/`. **Verified on the live site by David: Timmy checked in and got a real reflection.** The Anthropic key secret is deleted, with no recovery window.
+
+- **📧 THE FOUR EMAILS WERE REBUILT IN ONE EVENING, AND ONLY TWO CHANGES MATTERED (2026-09-14 to 09-15, `a05b1d9` → `dada001`).** David photographed a weekly email showing a pale blue card and a brown button, none of which we send: **Gmail's iOS app inverts the card and ignores the `color-scheme` meta.** Chasing that led through white, a frame and three wordmark colors before landing back on navy. **What survived: ONE size and ONE color for every line of copy, from one shared shell.** *"The big issues we fixed the font size and the ladder nonsense."* Rules under STANDING RULES.
 
 - **🚚 THE FRONTEND MOVED FROM NETLIFY TO AWS AMPLIFY HOSTING (2026-09-13, `7505d56` → `d53c424`).** Netlify bills 15 credits per production deploy and GlowPT's 200 deploys in 16 days were the whole September allowance; Amplify bills build minutes at about a cent. **Three things broke or surprised:** Amplify's default fallback rule 301'd every deep link to a trailing slash then 404'd (regex SPA rewrite fixes it) · the API refused the new origin until its CORS list learned it · **DNS turned out to be on Netlify DNS, not GoDaddy, with the SES records inside that zone**, so the move became a Route 53 copy, a certificate validated through the old DNS, then a nameserver change and a reversible flip. Rules under STANDING RULES; ids under Live infrastructure; full story in `docs/history.md` section 13. **Verified on glowpt.app by David:** sign-in code arrived, dashboard loaded. Netlify kept as rollback for a week.
 
