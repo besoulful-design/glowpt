@@ -2327,3 +2327,12 @@ The emails went white for a few hours and came back to navy once David had seen 
 - **⛔ THE "PT" IS A DEEP AMBER, `#B0730A`, AND MUST NOT BE "RESTORED" TO THE BRIGHT BRAND AMBER.** The rule Gmail's inversion follows, read off David's own screenshot: **a color DARK on white comes back LIGHT on black and stays legible; a color already LIGHT comes back dark and sinks into the card.** Navy "Glow" was never at risk, bright amber "PT" was unreadable. Bright amber cannot hold up in both, and the full-color logo above the wordmark carries the bright palette. The same low-contrast reasoning is why no sentence is amber and the clinic email's "may need attention" line is plain ink.
 ```
 
+### The first AWS Activate decision-date estimate, corrected 2026-09-15
+
+Based on a 3-5 business day figure. AWS's own current guide (aws.amazon.com/startups/learn/applying-for-aws-activate-credits-a-step-by-step-guide) says 7-10 business days, and 2026-09-07 was Labor Day, so the clock started 09-08. Banked verbatim.
+
+```
+Decision expected **2026-09-15 to 09-17** by email to `david@franklinaisolutions.com`; status at the Credit Application Status page on startups.aws.com.
+- **2026-09-15 to 09-17** — the AWS Activate decision (above).
+```
+
