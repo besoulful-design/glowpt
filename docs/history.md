@@ -2428,3 +2428,15 @@ rewritten to carry that exception; the database is unchanged. Banked verbatim.
 ```
 - **A last name is REQUIRED for a patient and OPTIONAL for staff**, enforced in `invite_patient` and `rename_patient` in the DATABASE, not only in the forms. Staff are not on the roster that two identical first names break.
 ```
+
+### CLAUDE.md lines replaced on 2026-09-15, when both names became required
+
+The standing rule still exempted staff, and the new-thread block still said three
+patients had no surname -- David had already fixed those himself, and said so.
+Banked verbatim.
+
+```
+- **A last name is REQUIRED for a patient and OPTIONAL for staff in the DATABASE**, enforced in `invite_patient` and `rename_patient`, not only in the forms. Staff are not on the roster that two identical first names break. **⚠️ `/onboard` is the one exception and it is a FORM rule only (David, 2026-09-15): the clinic's own manager must give a last name, because that is the name on the subscription. The staff invite form in `Dashboard.jsx` stays optional, and the database is unchanged.**
+
+> - **⏳ Natalie, Charlie and Timmy have NO last name** — the old form never asked. Not a bug; they are the rows the roster cannot yet disambiguate, and the rename dialog is how David gives them one.
+```
