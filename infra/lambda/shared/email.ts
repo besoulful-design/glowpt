@@ -75,14 +75,25 @@ export const EMAIL_WORDMARK_AMBER = '#B0730A';
 // separates without dimming anything.
 export const EMAIL_HAIRLINE = '#e6e8ec';
 
-// ⚠️ THE FRAME IS 3px AND AMBER, AND BOTH HALVES WERE ASKED FOR. It was a 1px
-// gray hairline first and David called it "much too thin". A gray frame is also
-// the wrong color for the same reason bright amber was the wrong color for the
-// wordmark: a LIGHT gray inverts to a DARK gray and disappears into the dark
-// card, so the frame would exist in light mode only. The deep amber inverts
-// bright, so the frame holds up in both, and it ties the card to the button and
-// the PT. Keep it the same value as the wordmark.
+// ⚠️ THE FRAME IS 3px NAVY. Both halves were asked for, and each replaced
+// something worse.
+//
+// The WIDTH: it was a 1px gray hairline first, and David called it "much too
+// thin". 3px is a frame; 1px is an apology for one.
+//
+// The COLOR: it was the deep amber for one round, matching the wordmark, and he
+// rejected it because "the same color issue is going on with the amber" -- deep
+// amber is the price of surviving inversion, and on white it reads brown. Navy
+// pays no such price. It is already dark, so it inverts BRIGHT like the "Glow"
+// text does, and on white it is simply crisp. It is the one color in the
+// palette that looks right in both directions without compromise, which is why
+// the ink was never the problem.
+//
+// ⛔ A LIGHT GRAY OR PALE FRAME IS THE ONE THING THAT CANNOT WORK: light
+// inverts to dark and the frame vanishes into the dark card, so it would exist
+// in light mode only. Whatever this becomes, keep it DARK on white.
 export const EMAIL_BORDER_WIDTH = '3px';
+export const EMAIL_FRAME = '#1a2840';
 
 // THE one body size. Every paragraph in every email is this, and emailText()
 // is the only thing that may write it. See the no-ladder note above.
@@ -106,7 +117,7 @@ export function emailShell(appUrl: string, inner: string) {
 <meta name="supported-color-schemes" content="light">
 </head>
 <body style="margin:0;padding:0;background-color:#ffffff">
-  <div style="font-family:${FONT};background-color:#ffffff;color:${EMAIL_INK};border:${EMAIL_BORDER_WIDTH} solid ${EMAIL_WORDMARK_AMBER};border-radius:12px;padding:30px;max-width:480px;margin:24px auto">
+  <div style="font-family:${FONT};background-color:#ffffff;color:${EMAIL_INK};border:${EMAIL_BORDER_WIDTH} solid ${EMAIL_FRAME};border-radius:12px;padding:30px;max-width:480px;margin:24px auto">
     <img src="${appUrl}/apple-touch-icon.png" alt="GlowPT" width="56" height="56" style="display:block;width:56px;height:56px;border:0;border-radius:13px;margin-bottom:12px">
     <div style="font-size:26px;font-weight:600;margin-bottom:18px;color:${EMAIL_INK}">Glow<span style="color:${EMAIL_WORDMARK_AMBER}">PT</span></div>
     ${inner}
