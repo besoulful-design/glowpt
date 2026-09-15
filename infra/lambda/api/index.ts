@@ -266,16 +266,23 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, firstN
     `${emailText(greeting, 0)}
     ${emailText(`${clinicName} has invited you to join GlowPT as ${roleWord}.`)}
     ${emailText(pitch)}
-    ${emailButton(inviteUrl, cta)}
     <!-- ⚠️ THE ORDER OF THESE SENTENCES IS THE POINT. This used to read "No
          password is needed. We will email you a code.", which contradicted the
-         button above it: the button says start checking in, the fine print says
-         wait for a code, and a reader cannot tell which is happening. Nothing is
-         emailed until they act on the page. The real sequence is tap, confirm
-         your name, THEN a code arrives, so it now says that in that order.
+         button: the button says start checking in, the fine print says wait for
+         a code, and a reader cannot tell which is happening. Nothing is emailed
+         until they act on the page. The real sequence is tap, confirm your name,
+         THEN a code arrives, so it says that in that order.
          (David spotted the contradiction on 2026-09-05.) -->
-    ${emailText(home, 20)}
+    ${emailText(home)}
     ${emailText('You will confirm your name, then we will email you a code to sign in. There is no password to create. This link works only for this email address and expires in 14 days.')}
+    <!-- ⛔ THE BUTTON IS LAST, BELOW EVERY LINE OF COPY. It sat in the MIDDLE
+         until 2026-09-15, with the address to come back to and the whole
+         explanation of what happens next stranded underneath it. David: "Why is
+         the CTA stuck midway in the copy? It's not logical. A user should be
+         reading all the way through before clicking on check in." Both weekly
+         emails already ended this way; this one was the outlier. The line
+         directly above it now tells them what tapping does. -->
+    ${emailButton(inviteUrl, cta)}
     ${emailSignOff()}`,
   );
 }
