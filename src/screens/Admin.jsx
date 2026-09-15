@@ -42,6 +42,11 @@ const s = {
   btnOpen: { background: BRAND, color: '#0d1825' },
   btnClose: { background: 'transparent', color: 'rgba(245,239,228,0.75)', border: '1px solid rgba(245,239,228,0.22)' },
   btnBaa: { background: 'transparent', color: BRAND, border: '1px solid rgba(245,168,26,0.4)' },
+  btnDisabled: { opacity: 0.4, cursor: 'not-allowed' },
+  baaDone: { fontSize: 13, color: 'rgba(245,239,228,0.7)', alignSelf: 'center' },
+  clearLink: { color: BRAND, textDecoration: 'underline', cursor: 'pointer' },
+  hint: { fontSize: 12.5, color: 'rgba(245,239,228,0.5)', alignSelf: 'center' },
+  confirmQ: { fontSize: 13, color: 'rgba(245,239,228,0.8)', alignSelf: 'center' },
   error: { ...ui.error, marginBottom: 16 },
   empty: { fontSize: 14, color: 'rgba(245,239,228,0.5)' },
 }
@@ -60,6 +65,8 @@ export default function Admin() {
   // is which needs no knowledge of roles. Nothing in the UI says "admin".
   const [myClinic, setMyClinic] = useState(null)
   const [busyId, setBusyId] = useState('')
+  // The clinic whose action is waiting on a yes. One at a time, by id.
+  const [confirming, setConfirming] = useState('')
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
@@ -102,6 +109,25 @@ export default function Admin() {
     setBusyId(clinic.id)
     try {
       await api.recordClinicBaa(clinic.id, BAA_VERSION)
+      setConfirming('')
+      await load()
+    } catch (err) {
+      setError(err?.message || 'That didn’t go through. Try again.')
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  // ⚠️ REFUSED BY THE DATABASE WHILE THE CLINIC IS ON, deliberately: the switch
+  // now requires this record, so clearing one underneath a running clinic would
+  // leave the state the gate exists to prevent. The message the person sees in
+  // that case is the database's own sentence, which says what to do about it.
+  async function clearBaa(clinic) {
+    setError('')
+    setBusyId(clinic.id)
+    try {
+      await api.clearClinicBaa(clinic.id)
+      setConfirming('')
       await load()
     } catch (err) {
       setError(err?.message || 'That didn’t go through. Try again.')
@@ -184,25 +210,73 @@ export default function Admin() {
                 </div>
               )}
 
-              <div style={s.actions}>
-                {open ? (
-                  <button style={{ ...s.btn, ...s.btnClose }} disabled={busy}
-                    onClick={() => flip(c, false)}>
-                    {busy ? 'Working…' : 'Switch Off'}
-                  </button>
-                ) : (
-                  <button style={{ ...s.btn, ...s.btnOpen }} disabled={busy}
-                    onClick={() => flip(c, true)}>
-                    {busy ? 'Working…' : 'Switch On'}
-                  </button>
-                )}
-                {!c.baa_signed_at && (
+              {/* ⚠️ ONE TAP USED TO WRITE A DATED LEGAL RECORD WITH NO WAY BACK,
+                  and David wrote a false one on a test clinic before anyone
+                  noticed. Both of these now ask first, inline rather than in a
+                  modal: this screen has no modal on purpose (see the overflow-x
+                  note above), and a question in the row the button was in needs
+                  no scroll lock, no focus trap and no Escape key. */}
+              {confirming === c.id ? (
+                <div style={s.actions}>
+                  <div style={s.confirmQ}>
+                    {c.baa_signed_at
+                      ? 'Clear this BAA record? The correction is logged.'
+                      : `Record a signed BAA, dated today, version ${BAA_VERSION}?`}
+                  </div>
                   <button style={{ ...s.btn, ...s.btnBaa }} disabled={busy}
-                    onClick={() => recordBaa(c)}>
-                    Record BAA Signed
+                    onClick={() => (c.baa_signed_at ? clearBaa(c) : recordBaa(c))}>
+                    {busy ? 'Working…' : (c.baa_signed_at ? 'Yes, Clear It' : 'Yes, Record It')}
                   </button>
-                )}
-              </div>
+                  <button style={{ ...s.btn, ...s.btnClose }} disabled={busy}
+                    onClick={() => setConfirming('')}>
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div style={s.actions}>
+                  {open ? (
+                    <button style={{ ...s.btn, ...s.btnClose }} disabled={busy}
+                      onClick={() => flip(c, false)}>
+                      {busy ? 'Working…' : 'Switch Off'}
+                    </button>
+                  ) : (
+                    /* ⛔ THE BAA IS THE KEY TO THIS SWITCH. Switching a clinic on
+                       is the moment real patient information may flow into it,
+                       so the record has to exist first. Disabled rather than
+                       hidden, with the reason beside it: an option withheld in
+                       silence reads as a missing feature (2026-09-06). The
+                       database refuses it too, so this is the explanation, not
+                       the guarantee. */
+                    <button style={{ ...s.btn, ...s.btnOpen, ...(c.baa_signed_at ? null : s.btnDisabled) }}
+                      disabled={busy || !c.baa_signed_at}
+                      onClick={() => flip(c, true)}>
+                      {busy ? 'Working…' : 'Switch On'}
+                    </button>
+                  )}
+                  {c.baa_signed_at ? (
+                    /* The record STAYS ON SCREEN once made (David: "I just don't
+                       want all of it to disappear again"). It reads as a fact
+                       with a correction beside it, not as a button that vanished. */
+                    <div style={s.baaDone}>
+                      BAA signed {when(c.baa_signed_at)}
+                      {' · '}
+                      <span role="button" tabIndex={0} style={s.clearLink}
+                        onClick={() => setConfirming(c.id)}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setConfirming(c.id) } }}>
+                        Clear
+                      </span>
+                    </div>
+                  ) : (
+                    <button style={{ ...s.btn, ...s.btnBaa }} disabled={busy}
+                      onClick={() => setConfirming(c.id)}>
+                      Record BAA Signed
+                    </button>
+                  )}
+                  {!open && !c.baa_signed_at && (
+                    <div style={s.hint}>Record the signed BAA first.</div>
+                  )}
+                </div>
+              )}
             </div>
           )
         })}

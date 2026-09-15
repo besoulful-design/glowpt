@@ -151,3 +151,7 @@ export const setClinicActive = (clinicId, active) =>
   request('/admin/clinics/activation', { method: 'POST', body: { clinic_id: clinicId, active } });
 export const recordClinicBaa = (clinicId, version) =>
   request('/admin/clinics/baa', { method: 'POST', body: { clinic_id: clinicId, version } });
+// Clearing a BAA date entered by mistake. The database refuses it while the
+// clinic is switched on, because the activation gate now requires that record.
+export const clearClinicBaa = (clinicId) =>
+  request('/admin/clinics/baa/clear', { method: 'POST', body: { clinic_id: clinicId } });

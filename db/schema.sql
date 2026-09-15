@@ -1291,7 +1291,22 @@ begin
     raise exception 'Not authorised' using errcode = '42501';
   end if;
 
+  -- ⚠️ THE BAA IS THE KEY TO THIS SWITCH (David, 2026-09-15). Switching a clinic
+  -- on is the exact moment real patient health information becomes allowed to
+  -- flow into it, and a signed BAA is what makes that lawful, so the record has
+  -- to exist BEFORE the gate opens rather than being filled in afterward or
+  -- never. David spotted it himself: his own clinics had been running for days
+  -- with no BAA recorded and nothing had objected.
+  --
+  -- Only switching ON is gated. Switching OFF must always work, or a clinic
+  -- could not be closed in a hurry. A clinic activated before this rule keeps
+  -- running: the check happens when the switch is thrown, not continuously.
   if p_active then
+    if not exists (select 1 from public.clinics
+                    where id = p_clinic and baa_signed_at is not null) then
+      raise exception 'Record the signed BAA before switching this clinic on'
+        using errcode = 'P0001';
+    end if;
     v_now := now();
     update public.clinics
        set activated_at = coalesce(activated_at, v_now),
@@ -1338,6 +1353,42 @@ begin
   return v_now;
 end $$;
 
+-- Clear a BAA record entered by mistake. One tap used to write a dated legal
+-- record with no way back, and a date saying a BAA was signed on a day it was
+-- not is the wrong kind of wrong to leave in a database (David recorded one on
+-- a test clinic 2026-09-15 and there was no undo).
+--
+-- ⛔ REFUSED WHILE THE CLINIC IS ON, and that is the whole design. Since
+-- admin_set_clinic_active now requires a BAA to open the gate, clearing one
+-- underneath a running clinic would leave exactly the state the gate exists to
+-- prevent. Switch the clinic off first: one deliberate act, audited like the
+-- rest of this screen.
+create or replace function public.admin_clear_baa(p_clinic uuid)
+  returns void
+  language plpgsql security definer
+  set search_path = public set row_security = off
+as $$
+begin
+  if not public.is_platform_admin() then
+    raise exception 'Not authorised' using errcode = '42501';
+  end if;
+
+  if exists (select 1 from public.clinics
+              where id = p_clinic and activated_at is not null) then
+    raise exception 'Switch the clinic off before clearing its BAA record'
+      using errcode = 'P0001';
+  end if;
+
+  update public.clinics set baa_signed_at = null, baa_version = null
+   where id = p_clinic;
+  if not found then raise exception 'Clinic not found'; end if;
+
+  -- Audited exactly like recording it. A correction is an act, not an erasure.
+  insert into public.access_log (actor_id, clinic_id, action)
+  values (public.current_user_id(), p_clinic, 'baa_cleared');
+end $$;
+
+
 -- Functions: revoke the PUBLIC default, then grant EXECUTE explicitly.
 -- NOTE: register_user is deliberately ABSENT from glowpt_app's list. Identity
 -- creation from an ARBITRARY id belongs to glowpt_postconfirm alone (granted
@@ -1373,7 +1424,8 @@ grant execute on function
   public.is_platform_admin(),
   public.admin_list_clinics(),
   public.admin_set_clinic_active(uuid, boolean),
-  public.admin_record_baa(uuid, text)
+  public.admin_record_baa(uuid, text),
+  public.admin_clear_baa(uuid)
 to glowpt_app;
 
 -- glowpt_postconfirm: the Cognito post-confirmation Lambda's role. It may run
@@ -1446,6 +1498,7 @@ alter function public.is_platform_admin()                     owner to glowpt_au
 alter function public.admin_list_clinics()                    owner to glowpt_auth;
 alter function public.admin_set_clinic_active(uuid, boolean)  owner to glowpt_auth;
 alter function public.admin_record_baa(uuid, text)            owner to glowpt_auth;
+alter function public.admin_clear_baa(uuid)                   owner to glowpt_auth;
 alter function public.revoke_invite(text)                     owner to glowpt_auth;
 alter function public.purge_patient(uuid)                     owner to glowpt_auth;
 alter function public.purge_target(uuid)                      owner to glowpt_auth;

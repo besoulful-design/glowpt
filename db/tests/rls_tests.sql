@@ -16,7 +16,10 @@ set client_min_messages = notice;
 -- as the schema owner, because glowpt_app deliberately cannot write that table.
 begin; select set_config('app.user_id','11111111-1111-1111-1111-111111111111',true);
   select provision_clinic('Clinic A','clinic-a'); commit;
+-- The BAA record is what unlocks the switch as of 2026-09-15, so the seed does
+-- what a real activation does: record it, then open the gate.
 begin; select set_config('app.user_id','77777777-7777-7777-7777-777777777777',true);
+  select admin_record_baa((select id from admin_list_clinics() where slug='clinic-a'), 'v-test');
   select admin_set_clinic_active((select id from admin_list_clinics() where slug='clinic-a'), true); commit;
 -- A new clinic is invite-only, so the seed's self-serve joins below would be
 -- refused. The manager opts into walk-ins first, which is the real RPC and is
@@ -38,7 +41,10 @@ begin; select set_config('app.user_id','11111111-1111-1111-1111-111111111111',tr
 -- =================== BUILD CLINIC B ===================
 begin; select set_config('app.user_id','55555555-5555-5555-5555-555555555555',true);
   select provision_clinic('Clinic B','clinic-b'); commit;
+-- The BAA record is what unlocks the switch as of 2026-09-15, so the seed does
+-- what a real activation does: record it, then open the gate.
 begin; select set_config('app.user_id','77777777-7777-7777-7777-777777777777',true);
+  select admin_record_baa((select id from admin_list_clinics() where slug='clinic-b'), 'v-test');
   select admin_set_clinic_active((select id from admin_list_clinics() where slug='clinic-b'), true); commit;
 begin; select set_config('app.user_id','55555555-5555-5555-5555-555555555555',true);
   select set_clinic_open_signup(true); commit;
@@ -250,11 +256,56 @@ begin
   exception when others then denied := (sqlerrm like '%not open for sign-ups%'); end;
   raise notice '% T17 join refused while clinic is closed', case when denied then 'PASS:' else 'FAIL:' end;
 
+  -- T17c THE BAA IS THE KEY TO THE SWITCH (2026-09-15). Switching a clinic on is
+  -- the moment real patient information may flow into it, so the signed record
+  -- has to exist first. Before this, a clinic could run for days with no BAA
+  -- recorded and nothing objected, which is how David found it.
+  perform set_config('app.user_id', admin_id::text, true);
+  denied := false;
+  begin
+    perform public.admin_set_clinic_active(clinic_c, true);
+  exception when others then denied := (sqlerrm like '%Record the signed BAA%'); end;
+  raise notice '% T17c a clinic cannot be switched on before its BAA is recorded',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T17d and once recorded, the same call goes through.
+  -- ⚠️ ASSERTED ON THE RETURN VALUE, NOT BY READING public.clinics. This block
+  -- runs as glowpt_app, and RLS hides a clinic the caller is not a member of --
+  -- the platform admin is not staff of Clinic C. Reading the table here returns
+  -- zero rows whatever the truth is, which is how the first cut of these tests
+  -- managed to "fail" a feature that was working.
+  perform public.admin_record_baa(clinic_c, 'v-test');
+  select count(*) into n from (select public.admin_set_clinic_active(clinic_c, true) as ts) t
+   where t.ts is not null;
+  raise notice '% T17d with the BAA recorded, the switch works -> %',
+    case when n = 1 then 'PASS:' else 'FAIL:' end, n;
+
+  -- T17e a BAA record cannot be cleared underneath a RUNNING clinic, or the
+  -- state the gate exists to prevent would be reachable by the back door.
+  denied := false;
+  begin
+    perform public.admin_clear_baa(clinic_c);
+  exception when others then denied := (sqlerrm like '%Switch the clinic off%'); end;
+  raise notice '% T17e a BAA cannot be cleared while the clinic is on',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
+  -- T17f switched off, the correction is allowed -- and the proof that it really
+  -- cleared the record is that the switch refuses again afterwards. Same reason
+  -- as T17d: this role cannot read the clinics row to look.
+  perform public.admin_set_clinic_active(clinic_c, false);
+  perform public.admin_clear_baa(clinic_c);
+  denied := false;
+  begin
+    perform public.admin_set_clinic_active(clinic_c, true);
+  exception when others then denied := (sqlerrm like '%Record the signed BAA%'); end;
+  raise notice '% T17f clearing really removes the record, so the gate closes again',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
   -- T17b THE TWO GATES ARE INDEPENDENT. The admin switches clinic C on, and the
   -- self-serve join is STILL refused, because a new clinic is invite-only until
   -- its manager asks for walk-ins. Activation is "may this clinic operate";
   -- open_signup is "how does it enrol". Different questions, different answers.
-  perform set_config('app.user_id', admin_id::text, true);
+  perform public.admin_record_baa(clinic_c, 'v-test');
   perform public.admin_set_clinic_active(clinic_c, true);
   perform set_config('app.user_id', pat_c1::text, true);
   denied := false;

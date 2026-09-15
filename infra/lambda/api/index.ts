@@ -950,6 +950,19 @@ async function postAdminBaa(client: Client, event: APIGatewayProxyEventV2WithJWT
   return json(200, { baa_signed_at: result.rows[0]?.baa_signed_at ?? null });
 }
 
+async function postAdminBaaClear(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
+  const sub = requireSub(event);
+  const b = parseBody(event);
+  const clinicId = typeof b.clinic_id === 'string' ? b.clinic_id : '';
+  if (!clinicId) throw new HttpError(400, 'clinic_id_required');
+  // The database refuses this while the clinic is switched on, and refuses it
+  // to anyone who is not a platform admin. Both answers come from there.
+  await withUser(client, sub, async (c) =>
+    c.query('select public.admin_clear_baa($1)', [clinicId]),
+  );
+  return json(200, { ok: true });
+}
+
 const ROUTES: Record<string, Route> = {
   'GET /clinics/by-slug/{slug}': getClinicBySlug, // public
   'GET /me': getMe,
@@ -984,6 +997,7 @@ const ROUTES: Record<string, Route> = {
   'GET /admin/clinics': getAdminClinics,
   'POST /admin/clinics/activation': postAdminActivation,
   'POST /admin/clinics/baa': postAdminBaa,
+  'POST /admin/clinics/baa/clear': postAdminBaaClear,
 };
 
 export const handler = async (
