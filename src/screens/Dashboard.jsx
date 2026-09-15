@@ -781,7 +781,7 @@ export default function Dashboard() {
     // tell them apart. invite_patient enforces this in the database too, so this
     // check is the friendly message, not the guarantee.
     if (!first) return setPatientNotice({ text: 'Enter the patient’s first name.', bad: true })
-    if (!last) return setPatientNotice({ text: 'Enter the patient’s last name, so the roster can tell patients apart.', bad: true })
+    if (!last) return setPatientNotice({ text: 'Enter the patient’s last name.', bad: true })
     if (!email) return setPatientNotice({ text: 'Enter the patient’s email.', bad: true })
     const name = `${first} ${last}`
     let res

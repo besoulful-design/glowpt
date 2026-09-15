@@ -220,9 +220,16 @@ export default function InviteJoin() {
             only unlabeled one, sitting above a "Last name" block that does have
             a label. Nothing said what the box was for or that it could be
             changed. Same trap as the rename dialog on 2026-09-13: a filled
-            input shows no placeholder at all. */}
+            input shows no placeholder at all.
+
+            ⚠️ THE LABEL IS THE SAME TWO WORDS AND THE SAME STYLE AS "Last name"
+            BELOW IT, deliberately. The first cut explained itself in a sentence
+            ("what we'll call you. Change it if it's wrong.") and David read the
+            asymmetry immediately: one field labeled, the one beside it lectured.
+            What makes this field obviously editable is that it IS a text box
+            sitting between two flat values, not a sentence saying so. */}
         <div style={s.editableField}>
-          <div style={s.fixedEmailLabel}>First name, what we’ll call you. Change it if it’s wrong.</div>
+          <div style={s.fixedEmailLabel}>First name</div>
           <input style={ui.input} placeholder="Your first name" value={firstName}
             onChange={e => setFirstName(e.target.value)} autoComplete="given-name" />
         </div>
