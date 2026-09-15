@@ -364,8 +364,8 @@ David and friends testing on the sandbox is demo data, not real PHI, and that is
 
 **📧 EMAILS (set 2026-09-14)**
 - **All four emails come from ONE shell, `infra/lambda/shared/email.ts`**, bundled into the `glowpt-api` and `glowpt-weekly-summary` Lambdas by esbuild. The invite's ladder had six steps and the weekly's four before it existed.
-- **⛔ NO OPACITY LADDER. Body copy is ONE color at every size, `EMAIL_INK`.** Hierarchy is size, weight, and a hairline above the sign-off. Fading was tuned against a navy card, and **Gmail's iOS app re-tints an email in dark mode**, which left the faded lines unreadable. David: *"Absolutely get rid of the ladder entirely!!! I hate it!!!"*
-- **The card is WHITE and the document declares `color-scheme: light`.** Apple Mail honors that. **Whether Gmail iOS does is UNPROVEN and only David's phone can settle it.**
+- **⛔ NO LADDER, IN SHADE OR IN SIZE. Every paragraph is ONE color (`EMAIL_INK`) AND ONE SIZE (`EMAIL_TEXT_SIZE`).** Removing the shades but leaving 17/16/15/14/13 just moved the ladder, and David said so: *"make ALL the fonts one size... That last paragraph and last line looks god awful smaller."* **`emailText()` is the ONLY thing that may write a font-size into an email** — it takes no size argument, so a new paragraph is correct by construction. The wordmark and button label are not body copy.
+- **The card is WHITE, in a frame, and declares `color-scheme: light`. ⚠️ GMAIL'S iOS APP IGNORES THAT AND INVERTS IT ANYWAY** (proven on David's phone 2026-09-14: near-black card, white text, brown button). Apple Mail honors it. **Assume any color here can be flipped; that is the argument for one ink and one size.** David prefers the inverted dark version, so it is not a bug to chase.
 - **`#FBC02D` is the "PT" in the wordmark and nothing else.** Bright amber on white is too low-contrast for prose, which is also why the clinic email's "may need attention" line is no longer amber.
 
 **🚚 AMPLIFY HOSTING (set 2026-09-13)**

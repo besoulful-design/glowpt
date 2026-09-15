@@ -2301,3 +2301,12 @@ Patient check-ins are PHI. **Build and demo with DEMO DATA ONLY until a paying/c
 - **Login-code emails use Supabase's built-in rate-limited mailer (~few/hr)** — heavy same-day testing can exhaust it; codes then don't arrive (check spam, wait, or do the custom-SMTP work).
 ```
 
+### The first email no-ladder rule, superseded the same day (2026-09-14)
+
+Written when the opacity ladder was removed but five font sizes were left in place. David read the sizes as the same ladder and asked for one size, so the rule below was corrected in CLAUDE.md within the hour. Banked verbatim.
+
+```
+- **⛔ NO OPACITY LADDER. Body copy is ONE color at every size, `EMAIL_INK`.** Hierarchy is size, weight, and a hairline above the sign-off. Fading was tuned against a navy card, and **Gmail's iOS app re-tints an email in dark mode**, which left the faded lines unreadable. David: *"Absolutely get rid of the ladder entirely!!! I hate it!!!"*
+- **The card is WHITE and the document declares `color-scheme: light`.** Apple Mail honors that. **Whether Gmail iOS does is UNPROVEN and only David's phone can settle it.**
+```
+
