@@ -1,7 +1,15 @@
 import { Signer } from '@aws-sdk/rds-signer';
 import { SESv2Client, SendEmailCommand } from '@aws-sdk/client-sesv2';
 import { Client } from 'pg';
-import { emailShell, emailButton, emailSignOff, emailText } from '../shared/email';
+import {
+  emailShell,
+  emailButton,
+  emailSignOff,
+  emailText,
+  emailAlert,
+  EMAIL_PANEL,
+  EMAIL_HAIRLINE,
+} from '../shared/email';
 
 /**
  * GlowPT weekly-summary Lambda (AWS rewrite of the old Supabase edge function).
@@ -101,20 +109,24 @@ function clinicEmail(
   engagement: number,
   needAttention: number,
 ) {
-  // ⚠️ THE "MAY NEED ATTENTION" LINE IS THE SAME INK AS EVERYTHING ELSE.
-  // It used to switch to bright amber #FBC02D when the count was above zero.
-  // That worked on the old navy card and does not work on white, where the
-  // same amber is a very low contrast ratio: the one line a manager most needs
-  // to see would have been the palest thing in the email. The number is bold
-  // and the box frames it. If this needs a signal color again, pick one that is
-  // readable on white and prove it on a phone first, rather than reusing a
-  // value chosen for a dark background.
+  // The "may need attention" line turns amber when the count is above zero, and
+  // is plain ink when it is zero. This is a SIGNAL, not decoration: it is the
+  // one line a manager scanning on a phone needs to find.
+  //
+  // ⚠️ It was dropped for a few hours on 2026-09-14 while the card was white,
+  // where bright amber is barely 1.66:1 and the most important line would have
+  // been the palest thing in the email. The card is navy again, so the amber is
+  // back and correct again. If the background ever changes, this is one of the
+  // things that has to be rechecked, not one that follows along.
   return emailShell(
     APP_URL,
     `${emailText(`Your weekly GlowPT summary for <strong>${clinicName}</strong> is ready.`, 0)}
-    <div style="background-color:#fdf6e7;border:1px solid #f0dcb0;border-radius:6px;padding:16px;margin:16px 0 0">
+    <div style="background-color:${EMAIL_PANEL};border:1px solid ${EMAIL_HAIRLINE};border-radius:6px;padding:16px;margin:16px 0 0">
       ${emailText(`<strong>${active}</strong> of <strong>${total}</strong> patients checked in (${engagement}% engagement)`, 0)}
-      ${emailText(`<strong>${needAttention}</strong> patient${needAttention === 1 ? '' : 's'} may need attention`, 8)}
+      ${emailAlert(
+        `<strong>${needAttention}</strong> patient${needAttention === 1 ? '' : 's'} may need attention`,
+        needAttention > 0,
+      )}
     </div>
     ${emailText("Log in to see who's engaged and who could use a nudge.")}
     ${emailButton(`${APP_URL}/dashboard`, 'Open Dashboard →')}

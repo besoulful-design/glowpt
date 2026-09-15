@@ -249,9 +249,10 @@ function inviteEmail(clinicName: string, role: string, inviteUrl: string, firstN
   // (see InviteJoin.jsx), and this names the address a person can actually hold
   // in their head. Say the short one here; the long token link is for tapping.
   //
-  // ⚠️ THE LINK IS INK WITH AN UNDERLINE, NOT AMBER. Amber link text was
-  // legible on the old navy card and is not legible on white. The underline is
-  // what marks it as a link now, which is also what a plain reader expects.
+  // ⚠️ THE LINK IS INK WITH AN UNDERLINE, NOT AMBER. It was amber before
+  // 2026-09-14. The underline is what marks a link to a plain reader, it needs
+  // no color to do it, and keeping the copy to one color means the link cannot
+  // become the thing that breaks when the card's background changes again.
   const link = `<a href="${APP_URL}" style="color:${EMAIL_INK};text-decoration:underline">glowpt.app</a>`;
   const home = isPatient
     ? `After today, your check-in lives at ${link}. Save it somewhere you will find it.`
