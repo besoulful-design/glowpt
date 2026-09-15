@@ -45,9 +45,6 @@ export default function App() {
     <Routes>
       <Route path="/join/:slug" element={<Join />} />
       <Route path="/invite/:token" element={<InviteJoin />} />
-      {/* The first staff invite links pointed here. They live 14 days, so this
-          alias stays until 2026-09-18, then it can go. */}
-      <Route path="/staff/:token" element={<InviteJoin />} />
       <Route path="/onboard" element={<Onboard />} />
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<StaffRoute />} />

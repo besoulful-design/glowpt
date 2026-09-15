@@ -2389,3 +2389,11 @@ Replaced by a one-item list. Banked verbatim.
 >
 ```
 
+### The /staff/:token dated item, done 2026-09-15 (three days early)
+
+Deleted after checking the database rather than waiting for the date: all 8 staff_invites rows were consumed, so the alias was stranding nobody. Banked verbatim.
+
+```
+> - **After 2026-09-18** — delete the `/staff/:token` route alias in `src/App.jsx`. It exists only because the first staff invite links pointed there and they live 14 days.
+```
+

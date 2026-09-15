@@ -9,8 +9,9 @@ import { patientPrivacyNotice, PRIVACY_NOTICE_VERSION } from '../lib/legal'
 import CodeVerify from './CodeVerify'
 
 // /invite/:token — the invited person's first entry, for staff AND patients.
-// (Also mounted at /staff/:token, which is where the first staff invite links
-// pointed; those live 14 days, so the alias stays until they have expired.)
+// (It was also mounted at /staff/:token until 2026-09-15, because the very
+// first staff invite links pointed there. Every invite in the database was
+// consumed by then, so the alias was stranding nobody and went early.)
 //
 // This is the third door into an account, and as of 2026-09-05 it is the ONLY
 // one for a patient anywhere: the walk-in join link and QR were removed.

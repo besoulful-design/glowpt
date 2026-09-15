@@ -165,7 +165,6 @@ David and friends testing on the sandbox is demo data, not real PHI, and that is
 >
 > ### 🗓️ DATED ITEMS
 > - **Activate was REJECTED 09-14 and NO EMAIL EVER ARRIVED** (David checked inbox and junk). **▶ But the Bedrock answer may not need Activate at all: the management account has full quota. See the Bedrock item above; retest the invoke there FIRST.** The Activate "Contact us" link and AWS Sales remain open, and the missing email is a fair thing to raise.
-> - **After 2026-09-18** — delete the `/staff/:token` route alias in `src/App.jsx`. It exists only because the first staff invite links pointed there and they live 14 days.
 > - **~2026-09-20** — one week on Amplify with no rollback: delete the GlowPT Netlify site, downgrade the Netlify team, remove `netlify.toml` + `public/_redirects`, and delete the three Resend-era DNS records. Check the first Amplify line on the AWS bill against the Activate credits.
 > - **2026-09-27** — Netlify credits reset (FranklinAI site and McKenzie only).
 >
