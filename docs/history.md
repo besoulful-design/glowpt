@@ -2440,3 +2440,14 @@ Banked verbatim.
 
 > - **⏳ Natalie, Charlie and Timmy have NO last name** — the old form never asked. Not a bug; they are the rows the roster cannot yet disambiguate, and the rename dialog is how David gives them one.
 ```
+
+### CLAUDE.md lines replaced on 2026-09-15, when the BAA became the key to the switch
+
+Both lines said the activation gate and the BAA record were independent. They are
+not, as of that evening. Banked verbatim.
+
+```
+> 1. **A new clinic is CLOSED until David opens `/admin` and presses Switch On.** The only human decision left in the flow, and where the BAA and the first payment get confirmed. `Record BAA Signed` and `Switch On` are separate buttons on purpose.
+
+- **A new clinic is CLOSED until David presses Switch On in `/admin`.** Two separate columns on purpose: `activated_at` (the gate) and `baa_signed_at` (the legal record). The gate is enforced in the DATABASE, in both `join_clinic` and the `checkins` RLS policies — gating only the join would let an already-attached patient keep writing PHI to a switched-off clinic.
+```
