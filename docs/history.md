@@ -2310,3 +2310,11 @@ Written when the opacity ladder was removed but five font sizes were left in pla
 - **The card is WHITE and the document declares `color-scheme: light`.** Apple Mail honors that. **Whether Gmail iOS does is UNPROVEN and only David's phone can settle it.**
 ```
 
+### The bright-amber wordmark rule, superseded within the hour (2026-09-14)
+
+Written while the email wordmark was #FBC02D. David's Gmail dark-mode screenshot showed that bright amber inverts to a dark brown and sinks into the card, so the wordmark moved to a deep amber and the rule was rewritten. Banked verbatim.
+
+```
+- **`#FBC02D` is the "PT" in the wordmark and nothing else.** Bright amber on white is too low-contrast for prose, which is also why the clinic email's "may need attention" line is no longer amber.
+```
+
