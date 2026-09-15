@@ -165,8 +165,11 @@ create table public.profiles (
   --
   -- last_name is WHAT DISAMBIGUATES YOU. A clinic can have two Sarahs seeing
   -- the same therapist, and before this the roster could not tell them apart.
-  -- It is REQUIRED for a patient invite (enforced in invite_patient below, not
-  -- only in the form) and optional for staff, who are not on that roster.
+  -- It is REQUIRED FOR EVERY USER as of 2026-09-15, staff included, enforced in
+  -- invite_patient, invite_staff, join_clinic and rename_patient below rather
+  -- than only in the forms. The column itself stays nullable because rows
+  -- created before that date have no surname and are not being deleted; every
+  -- door that makes a NEW one refuses without both parts.
   --
   -- full_name is a STORED GENERATED column so the two can never drift from it.
   -- Every reader keeps working untouched; every writer sets the two parts.
@@ -483,6 +486,17 @@ begin
     raise exception 'Staff account cannot self-join as a patient';
   end if;
 
+  -- Both parts are required, like every other door that creates a user
+  -- (2026-09-15). This is the self-serve /join/<slug> path, which no live
+  -- clinic has switched on, so the check costs nothing today and keeps the
+  -- guarantee true if one ever does.
+  if nullif(btrim(p_first_name), '') is null then
+    raise exception 'A first name is required' using errcode = 'P0001';
+  end if;
+  if nullif(btrim(p_last_name), '') is null then
+    raise exception 'A last name is required' using errcode = 'P0001';
+  end if;
+
   -- coalesce keeps a name the person already has rather than blanking it,
   -- exactly as it did when this was one column. Each part is kept separately,
   -- so someone who had a first name but no last one gains the last one here.
@@ -587,13 +601,23 @@ begin
   select clinic_id from public.profiles where id = public.current_user_id() and role = 'manager' into v_clinic;
   if v_clinic is null then raise exception 'Only a clinic manager can invite staff'; end if;
   if p_role not in ('therapist','manager') then raise exception 'Invalid role'; end if;
-  -- ⚠️ A last name is NOT required for staff. They do not appear on the patient
-  -- roster, which is the thing two identical first names break, and a clinician
-  -- who goes by "PT Pete" has no surname to give. See invite_patient, where it
-  -- IS required.
+  -- ⚠️ BOTH NAMES ARE REQUIRED HERE TOO, AS OF 2026-09-15 (David's call). Until
+  -- then a staff surname was optional, on the reasoning that staff are not on
+  -- the patient roster two identical first names break. That was too narrow: a
+  -- clinic has as many Sarahs on the care team as in the caseload, and the
+  -- assignment picker, the invite list and the weekly email all name staff. So
+  -- every user in the system now carries both parts, and this door and
+  -- invite_patient hold the same line. A clinician who goes by "PT Pete" still
+  -- gets that verbatim in the first box; the surname is the identifier beside it.
+  if nullif(btrim(p_first_name), '') is null then
+    raise exception 'A first name is required' using errcode = 'P0001';
+  end if;
+  if nullif(btrim(p_last_name), '') is null then
+    raise exception 'A last name is required' using errcode = 'P0001';
+  end if;
   insert into public.staff_invites (clinic_id, email, first_name, last_name, role, invited_by)
-  values (v_clinic, lower(trim(p_email)), nullif(btrim(p_first_name), ''),
-          nullif(btrim(p_last_name), ''), p_role, public.current_user_id())
+  values (v_clinic, lower(trim(p_email)), btrim(p_first_name),
+          btrim(p_last_name), p_role, public.current_user_id())
   on conflict (clinic_id, email) do update
     set first_name = excluded.first_name, last_name = excluded.last_name,
         role = excluded.role,
@@ -642,7 +666,8 @@ begin
   -- THAN ONLY IN THE FORM. The roster is how a clinic tells one patient from
   -- another, and David's clinics routinely have several patients sharing a
   -- first name and a therapist. A form check alone would be a suggestion; this
-  -- is the guarantee. (Staff are deliberately exempt: see invite_staff.)
+  -- is the guarantee. (Staff are held to the same rule since 2026-09-15; the
+  -- identical pair of checks is in invite_staff.)
   if nullif(btrim(p_first_name), '') is null then
     raise exception 'A first name is required' using errcode = 'P0001';
   end if;

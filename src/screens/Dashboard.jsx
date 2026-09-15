@@ -815,16 +815,20 @@ export default function Dashboard() {
     e.preventDefault()
     setStaffNotice(null)
     const first = tFirst.trim(), last = tLast.trim(), email = tEmail.trim()
-    // ⚠️ A LAST NAME IS OPTIONAL FOR STAFF, DELIBERATELY. They are not on the
-    // patient roster, which is the thing two identical first names break, and a
-    // clinician who goes by "PT Pete" has no surname to give. Whatever is in the
-    // first box is what the app will call them, verbatim.
+    // ⚠️ BOTH NAMES ARE REQUIRED HERE TOO, AS OF 2026-09-15 (David's call). A
+    // surname used to be optional on this door, on the reasoning that staff are
+    // not on the patient roster. A clinic has as many Sarahs on the care team as
+    // in the caseload, so every user carries both parts now. invite_staff
+    // enforces it in the database as well, so this check is the friendly
+    // message, not the guarantee. Whatever is in the first box is still what the
+    // app calls them, verbatim: "PT Pete" is a first name.
     if (!first) return setStaffNotice({ text: 'Enter the therapist’s first name.', bad: true })
+    if (!last) return setStaffNotice({ text: 'Enter the therapist’s last name, so the care team can tell staff apart.', bad: true })
     if (!email) return setStaffNotice({ text: 'Enter the therapist’s email.', bad: true })
-    const name = [first, last].filter(Boolean).join(' ')
+    const name = `${first} ${last}`
     let res
     try {
-      res = await inviteTherapist(email, first, last || null)
+      res = await inviteTherapist(email, first, last)
     } catch (err) {
       return setStaffNotice({ text: `Couldn’t send invite: ${err.message}`, bad: true })
     }
@@ -1031,7 +1035,7 @@ export default function Dashboard() {
                     the first box is exactly what the app will call them. */}
                 <input style={s.inviteNameInput} placeholder="First name" value={tFirst}
                   onChange={e => { setTFirst(e.target.value); setStaffNotice(null) }} autoComplete="given-name" />
-                <input style={s.inviteNameInput} placeholder="Last name (optional)" value={tLast}
+                <input style={s.inviteNameInput} placeholder="Last name" value={tLast}
                   onChange={e => { setTLast(e.target.value); setStaffNotice(null) }} autoComplete="family-name" />
                 <input style={s.inviteInput} placeholder="Therapist email" type="email" value={tEmail}
                   onChange={e => { setTEmail(e.target.value); setStaffNotice(null) }}

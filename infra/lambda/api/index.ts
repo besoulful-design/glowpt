@@ -325,16 +325,21 @@ async function getMe(client: Client, event: APIGatewayProxyEventV2WithJWTAuthori
 //    role/clinic_id cannot be touched here even if asked. full_name is a
 //    generated column and is not writable by anyone.
 //
-//    ⚠️ LAST NAME IS OPTIONAL HERE, AND DELIBERATELY SO. A patient may correct
-//    what they are called; the surname the clinic identifies them by is set on
-//    the invite and left alone. Omitting last_name leaves the stored one
-//    untouched rather than clearing it, so the join screen (which sends only
-//    the first name back) cannot blank a surname the manager entered.
+//    ⚠️ LAST NAME IS OPTIONAL HERE, AND DELIBERATELY SO. This is the CORRECTION
+//    door, not a creation door: every door that creates a user requires both
+//    parts (2026-09-15), so by the time anyone reaches this one the surname
+//    already exists. A patient may correct what they are called; the surname the
+//    clinic identifies them by is set on the invite and left alone. Omitting
+//    last_name leaves the stored one untouched rather than clearing it, so the
+//    join screen (which sends only the first name back) cannot blank a surname
+//    the manager entered. ⚠️ An EMPTY last_name is treated as absent for the
+//    same reason: blanking a surname must not be reachable through this door.
 async function patchMe(client: Client, event: APIGatewayProxyEventV2WithJWTAuthorizer) {
   const sub = requireSub(event);
   const body = parseBody(event);
   const firstName = typeof body.first_name === 'string' ? body.first_name.trim() : null;
-  const lastName = typeof body.last_name === 'string' ? body.last_name.trim() : null;
+  const lastName =
+    typeof body.last_name === 'string' && body.last_name.trim() ? body.last_name.trim() : null;
   if (!firstName) throw new HttpError(400, 'first_name_required');
   await withUser(client, sub, async (c) => {
     await c.query(
@@ -645,8 +650,9 @@ async function rpcInviteStaff(client: Client, event: APIGatewayProxyEventV2WithJ
   const b = parseBody(event);
   const email = typeof b.email === 'string' ? b.email.trim() : '';
   if (!email) throw new HttpError(400, 'email_required');
-  // A last name is optional for staff and required for patients; both rules are
-  // enforced in the database, not here. See invite_staff / invite_patient.
+  // Both names are required, for staff and patients alike since 2026-09-15, and
+  // the rule is enforced in the database rather than here. See invite_staff /
+  // invite_patient.
   const firstName = typeof b.first_name === 'string' ? b.first_name : null;
   const lastName = typeof b.last_name === 'string' ? b.last_name : null;
   const role = typeof b.role === 'string' && b.role ? b.role : 'therapist';

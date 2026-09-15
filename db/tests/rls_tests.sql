@@ -272,6 +272,15 @@ begin
   select count(*) into n from public.profiles where id = pat_c1 and clinic_id = clinic_c;
   raise notice '% T18 join succeeds once both gates are open', case when n=1 then 'PASS:' else 'FAIL:' end;
 
+  -- T18b NAMES (2026-09-15): both parts are required on this door too, so the
+  -- one self-serve path cannot be the gap that lets a half-named user in.
+  denied := false;
+  begin
+    perform public.join_clinic('clinic-c','Pat','   ','v1');
+  exception when others then denied := (sqlerrm like '%last name is required%'); end;
+  raise notice '% T18b a self-serve join needs a last name',
+    case when denied then 'PASS:' else 'FAIL:' end;
+
   -- T19 SWITCH OFF: an ALREADY-ATTACHED patient cannot write PHI to a clinic
   -- that has been switched back off. Gating only the join would miss this.
   perform set_config('app.user_id', admin_id::text, true);

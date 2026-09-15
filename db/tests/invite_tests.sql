@@ -462,12 +462,41 @@ begin
   raise notice '% T57 a patient invite needs a first name',
     case when refused then 'PASS:' else 'FAIL:' end;
 
-  -- T58: STAFF are exempt, on purpose. This must keep succeeding.
-  perform invite_staff('ptpete@a.com', 'PT Pete', null, 'therapist');
+  -- T58 ⚠️ THIS TEST INVERTED ON 2026-09-15 AND THE INVERSION IS THE POINT. It
+  -- used to assert that a staff invite with NO last name succeeded, because
+  -- staff are not on the patient roster. David's call is that a clinic has as
+  -- many Sarahs on the care team as in the caseload, so every user now carries
+  -- both parts and this door refuses what it used to allow.
+  refused := false;
+  begin
+    perform invite_staff('nolaststaff@a.com', 'Sarah', null, 'therapist');
+  exception when others then refused := (sqlerrm like '%last name is required%'); end;
+  raise notice '% T58 a staff invite needs a last name too',
+    case when refused then 'PASS:' else 'FAIL:' end;
+
+  -- T58b: whitespace is not a last name here either.
+  refused := false;
+  begin
+    perform invite_staff('blankstaff@a.com', 'Sarah', '   ', 'therapist');
+  exception when others then refused := (sqlerrm like '%last name is required%'); end;
+  raise notice '% T58b whitespace does not count on the staff door',
+    case when refused then 'PASS:' else 'FAIL:' end;
+
+  -- T58c: and the first name, which was only ever checked in the form.
+  refused := false;
+  begin
+    perform invite_staff('nofirststaff@a.com', ' ', 'Jones', 'therapist');
+  exception when others then refused := (sqlerrm like '%first name is required%'); end;
+  raise notice '% T58c a staff invite needs a first name',
+    case when refused then 'PASS:' else 'FAIL:' end;
+
+  -- The real invite the next two tests read. "PT Pete" keeps his verbatim first
+  -- name; what changed is that he now gives a surname beside it.
+  perform invite_staff('ptpete@a.com', 'PT Pete', 'Alvarez', 'therapist');
   select first_name, last_name into fname, lname
     from staff_invites where email = 'ptpete@a.com';
-  raise notice '% T58 a staff invite is allowed with no last name -> % / %',
-    case when fname = 'PT Pete' and lname is null then 'PASS:' else 'FAIL:' end,
+  raise notice '% T58d a staff invite with both names is accepted -> % / %',
+    case when fname = 'PT Pete' and lname = 'Alvarez' then 'PASS:' else 'FAIL:' end,
     fname, coalesce(lname, 'null');
 
   -- T59 REGRESSION: first_name is stored verbatim, spaces and all. This is the
@@ -479,7 +508,7 @@ begin
   -- T60: full_name is DERIVED, so the two can never drift from it.
   select full_name into composed from staff_invites where email = 'ptpete@a.com';
   raise notice '% T60 full_name composes from the parts -> %',
-    case when composed = 'PT Pete' then 'PASS:' else 'FAIL:' end, coalesce(composed, 'null');
+    case when composed = 'PT Pete Alvarez' then 'PASS:' else 'FAIL:' end, coalesce(composed, 'null');
 
   -- T60b: and it is not writable, by anyone, including the app role. A write
   -- here is the drift this design exists to make impossible.

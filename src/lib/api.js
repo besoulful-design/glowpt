@@ -92,8 +92,9 @@ export const getStaffInvite = (token) =>
 // caller's verified email to match the invite, so the token alone grants nothing.
 export const acceptStaffInvite = (token = null) =>
   request('/rpc/accept-staff-invite', { method: 'POST', body: { token } });
-// A last name is REQUIRED for a patient and optional for staff. Both rules are
-// enforced in the database, so a bad call is refused there, not merely here.
+// Both names are REQUIRED, for staff and patients alike since 2026-09-15. The
+// rule is enforced in the database, so a bad call is refused there, not merely
+// here.
 export const invitePatient = (email, firstName, lastName) =>
   request('/rpc/invite-patient', {
     method: 'POST',
