@@ -2345,3 +2345,11 @@ Decision expected **2026-09-17 to 09-22** by email to `david@franklinaisolutions
 - **2026-09-17 to 09-22** — the AWS Activate decision (above). Nothing is late before then.
 ```
 
+### The AWS Activate application, applied 2026-09-07, REJECTED 2026-09-14
+
+Founders tier, $1,000 requested, linked to glowpt-prod. Stages 1 (Submit) and 2 (Pending verification) both passed; rejected at stage 3, the decision itself. No reason shown on the status page, and no email had arrived at david@franklinaisolutions.com by 2026-09-15 04:30. Seen by David on the Reviewed applications tab. The superseded "decision expected" text follows, banked verbatim.
+
+```
+Outcome by email to `david@franklinaisolutions.com` (Outlook, not Gmail). **⚠️ AWS HAS GIVEN THREE DIFFERENT TURNAROUNDS: the confirmation EMAIL says 3-5 business days, the submit screen said 5-7, the public guide 7-10. David's email is the one that governs.** 09-07 was Labor Day, so the clock started 09-08: day 5 was 09-14, day 7 is 09-16, day 10 is 09-21.
+```
+
