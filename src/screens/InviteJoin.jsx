@@ -214,8 +214,18 @@ export default function InviteJoin() {
         <div>{isPatient ? 'Confirm your name to start checking in.' : 'Confirm your name to set up your account.'}</div>
       </div>
       <form onSubmit={claiming ? claimAsSignedIn : handleSubmit} style={ui.form}>
-        <input style={ui.input} placeholder="Your first name" value={firstName}
-          onChange={e => setFirstName(e.target.value)} autoComplete="given-name" />
+        {/* ⚠️ THIS BOX ARRIVES PRE-FILLED FROM THE INVITE, SO ITS PLACEHOLDER
+            NEVER RENDERS. Until 2026-09-15 the placeholder was the only thing
+            naming it, which left the ONE editable field on this screen as the
+            only unlabeled one, sitting above a "Last name" block that does have
+            a label. Nothing said what the box was for or that it could be
+            changed. Same trap as the rename dialog on 2026-09-13: a filled
+            input shows no placeholder at all. */}
+        <div style={s.editableField}>
+          <div style={s.fixedEmailLabel}>First name, what we’ll call you. Change it if it’s wrong.</div>
+          <input style={ui.input} placeholder="Your first name" value={firstName}
+            onChange={e => setFirstName(e.target.value)} autoComplete="given-name" />
+        </div>
         {/* Shown but not editable, for the same reason as the email below: the
             clinic identifies you by it on their roster. Rendered only when the
             clinic actually supplied one, so a staff invite with no surname does
@@ -294,6 +304,10 @@ const s = {
     padding: '12px 16px',
     textAlign: 'left',
   },
+  // The label sits OUTSIDE the box here, unlike the fixed fields whose label is
+  // inside their tinted panel: an input has its own border, and nesting one in a
+  // second bordered box reads as a field inside a field.
+  editableField: { display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'left' },
   fixedEmailLabel: { fontSize: 12, lineHeight: 1.5, color: 'rgba(245,239,228,0.45)' },
   fixedEmailValue: { fontSize: 15, lineHeight: 1.5, color: '#f5efe4', wordBreak: 'break-all' },
   consent: {

@@ -823,7 +823,7 @@ export default function Dashboard() {
     // message, not the guarantee. Whatever is in the first box is still what the
     // app calls them, verbatim: "PT Pete" is a first name.
     if (!first) return setStaffNotice({ text: 'Enter the therapist’s first name.', bad: true })
-    if (!last) return setStaffNotice({ text: 'Enter the therapist’s last name, so the care team can tell staff apart.', bad: true })
+    if (!last) return setStaffNotice({ text: 'Enter the therapist’s last name.', bad: true })
     if (!email) return setStaffNotice({ text: 'Enter the therapist’s email.', bad: true })
     const name = `${first} ${last}`
     let res
