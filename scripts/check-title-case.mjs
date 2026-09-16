@@ -15,16 +15,23 @@
 // punctuation is a label, and every word in it after the first must be
 // capitalised unless it is one of the small words AP leaves alone.
 //
-// ⚠️ IT IS DELIBERATELY NARROW. It reads only src/, only strings short enough
-// to be a label, and only in the three places a label is actually written: a
+// ⚠️ IT IS DELIBERATELY NARROW. It reads only strings short enough to be a
+// label, and in src/ only the three places a label is actually written: a
 // JSX text node, a `heading:` value, and a string inside a JSX expression in
 // text position (which is how the buttons are written). It would rather miss a
 // straggler than block a deploy over a caption. The exceptions below are the
 // strings where a human decided the lowercase is right, each with its reason.
 //
-// ⛔ IT DOES NOT COVER THE EMAILS in infra/lambda/, whose copy is built from
-// template literals this cannot see. Those four are Title Case today and have
-// to be checked by eye.
+// IT ALSO COVERS THE EMAILS in infra/lambda/ (David asked, 2026-09-16). Their
+// copy is template literals this cannot read as markup, so it looks for the two
+// places an email carries a LABEL: the second argument of emailButton(), and
+// any string ending in the house arrow, which is how a call to action is
+// written here.
+//
+// ⛔ EMAIL SUBJECTS ARE DELIBERATELY NOT CHECKED. A subject is a headline, not
+// a label -- it sits in an inbox among other people's sentences, and all three
+// of ours are sentence case on purpose ("Your GlowPT week"). If that is ever
+// meant to change it is a decision, not a straggler.
 // ---------------------------------------------------------------------------
 
 import { readFileSync, readdirSync } from 'node:fs';
@@ -56,6 +63,19 @@ const ALLOWED = new Set([
 
 const WORD = /[A-Za-z][A-Za-z'’-]*/g;
 
+// The email files carry no JSX, so their labels are found by shape instead:
+// the label argument of emailButton(), and anything ending in the house arrow.
+function emailLabels(src) {
+  const found = [];
+  for (const m of src.matchAll(/emailButton\([^,]+,\s*['`]([^'`\n]{3,45})['`]/g)) {
+    found.push({ text: m[1], index: m.index });
+  }
+  for (const m of src.matchAll(/['`]([^'`\n]{3,45}→)['`]/g)) {
+    found.push({ text: m[1], index: m.index });
+  }
+  return found;
+}
+
 function violations(file) {
   const src = readFileSync(file, 'utf8');
   const out = [];
@@ -73,7 +93,8 @@ function violations(file) {
       index: m.index,
     })),
   );
-  for (const re of [...patterns, expressions]) {
+  const emails = file.includes('infra/lambda') ? emailLabels(src) : [];
+  for (const re of [...patterns, expressions, emails]) {
     const matches = Array.isArray(re) ? re : src.matchAll(re);
     for (const raw of matches) {
       const m = Array.isArray(re) ? [null, raw.text] : raw;
@@ -109,7 +130,7 @@ function walk(dir) {
 }
 
 let found = 0;
-for (const file of walk('src')) {
+for (const file of [...walk('src'), ...walk('infra/lambda')]) {
   for (const v of violations(file)) {
     found += 1;
     console.error(
