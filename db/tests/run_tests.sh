@@ -54,4 +54,11 @@ echo "Running staff-invite tests (as glowpt_app) ..."
 "$PSQL" -U glowpt_app -d "$DB" -h "$HOST" -p "$PORT" -v ON_ERROR_STOP=1 \
   -f "$ROOT/db/tests/invite_tests.sql" 2>&1 | grep -E "PASS:|FAIL:" || true
 
+# The checks glowpt_app is deliberately unable to make: public.users and
+# public.clinic_deletions carry no grant to it at all. Run as the schema owner,
+# last, on the wreckage invite_tests.sql leaves behind.
+echo "Running owner-only checks (as schema owner) ..."
+"$PSQL" -d "$DB" -h "$HOST" -p "$PORT" -v ON_ERROR_STOP=1 \
+  -f "$ROOT/db/tests/owner_tests.sql" 2>&1 | grep -E "PASS:|FAIL:" || true
+
 echo "Done. (Any FAIL: line above is a real failure.)"

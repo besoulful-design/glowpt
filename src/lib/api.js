@@ -155,3 +155,14 @@ export const recordClinicBaa = (clinicId, version) =>
 // clinic is switched on, because the activation gate now requires that record.
 export const clearClinicBaa = (clinicId) =>
   request('/admin/clinics/baa/clear', { method: 'POST', body: { clinic_id: clinicId } });
+// The clinic lifecycle (2026-09-16), the same shape as the patient roster's:
+// archive is reversible, export hands the records back, delete is permanent and
+// only possible once archived. Every guard is in the database.
+export const archiveClinic = (clinicId, archived) =>
+  request('/admin/clinics/archive', { method: 'POST', body: { clinic_id: clinicId, archived } });
+// ⚠️ Returns the clinic's FULL records, PHI included. The screen that calls this
+// says so, and the database logs that it happened.
+export const exportClinic = (clinicId) =>
+  request('/admin/clinics/export', { method: 'POST', body: { clinic_id: clinicId } });
+export const deleteClinic = (clinicId) =>
+  request('/admin/clinics/delete', { method: 'POST', body: { clinic_id: clinicId } });

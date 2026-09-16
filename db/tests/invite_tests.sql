@@ -596,3 +596,135 @@ begin
   raise notice '% T65b the rename is audited -> % row(s)',
     case when composed = '1' then 'PASS:' else 'FAIL:' end, composed;
 end $$;
+
+-- ===========================================================================
+-- T66-T74: the clinic lifecycle (2026-09-16). Archive, export, delete.
+--
+-- David asked for the clinic equivalent of the patient roster's Archive and
+-- Remove. The rules are the same ones, one level up: archiving is reversible
+-- and switches the clinic off, deleting is only possible from archived, and it
+-- takes the clinic's people with it.
+--
+-- ⚠️ THIS BLOCK BUILDS AND DESTROYS ITS OWN CLINIC D. Nothing else in the suite
+-- touches it, because the point of these tests is that it stops existing.
+-- ===========================================================================
+do $$
+declare
+  admin_id constant uuid := '77777777-7777-7777-7777-777777777777';
+  mgr_d    constant uuid := 'f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1';
+  pat_d1   constant uuid := 'f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2';
+  mgr_a    constant uuid := '11111111-1111-1111-1111-111111111111';
+  clinic_d uuid; refused boolean; n int; doc jsonb; tok text;
+begin
+  -- Build it the real way: the manager provisions, the admin records a BAA and
+  -- switches it on, the manager invites a patient who claims the invite.
+  perform set_config('app.user_id', mgr_d::text, true);
+  select provision_clinic('Clinic D', 'clinic-d') into clinic_d;
+  perform set_config('app.user_id', admin_id::text, true);
+  perform admin_record_baa(clinic_d, 'v-test');
+  perform admin_set_clinic_active(clinic_d, true);
+  perform set_config('app.user_id', mgr_d::text, true);
+  select invite_patient('patd1@d.com', 'Pat', 'D1') into tok;
+  perform set_config('app.user_id', pat_d1::text, true);
+  perform accept_patient_invite(tok, 'v1');
+  -- ⚠️ THE PLATFORM ADMIN JOINS THIS CLINIC AS STAFF, through the real invite
+  -- flow, because that is David's actual situation: he manages Riverside PT
+  -- with the same address he administers GlowPT with. T71 and T73 are only
+  -- worth anything if an admin is really inside the clinic being deleted.
+  perform set_config('app.user_id', mgr_d::text, true);
+  select invite_staff('admin@glowpt.app', 'Platform', 'Admin', 'therapist') into tok;
+  perform set_config('app.user_id', admin_id::text, true);
+  perform accept_staff_invite(tok);
+  -- The patient's own check-in, written AS the patient: checkins is RLS-scoped
+  -- to its author, so this insert fails from any other session user.
+  perform set_config('app.user_id', pat_d1::text, true);
+  insert into public.checkins (user_id, clinic_id, feeling, local_date, note)
+    values (pat_d1, clinic_d, 4, current_date, 'a note that must not survive');
+
+  -- T66 GUARD: a live clinic cannot be deleted. Archive is the first step, the
+  -- same way a patient must be archived before removal.
+  perform set_config('app.user_id', admin_id::text, true);
+  refused := false;
+  begin
+    perform admin_clinic_purge_target(clinic_d);
+  exception when others then refused := (sqlerrm like '%Archive this clinic first%'); end;
+  raise notice '% T66 a live clinic cannot be deleted',
+    case when refused then 'PASS:' else 'FAIL:' end;
+
+  -- T67 the export hands back the records, and it carries the check-in text.
+  select admin_export_clinic(clinic_d) into doc;
+  raise notice '% T67 the export carries the clinic, its people and its check-ins -> % patient(s), % check-in(s)',
+    case when doc->'clinic'->>'name' = 'Clinic D'
+          and jsonb_array_length(doc->'patients') = 1
+          and jsonb_array_length(doc->'checkins') = 1
+          and doc->'checkins'->0->>'note' = 'a note that must not survive'
+         then 'PASS:' else 'FAIL:' end,
+    jsonb_array_length(doc->'patients'), jsonb_array_length(doc->'checkins');
+
+  -- T67b the export is audited: handing a whole clinic's PHI to someone is an
+  -- act, and the one place in the schema that deliberately does it says so.
+  -- ⚠️ COUNTED AS THE CLINIC'S OWN MANAGER. access_log is RLS-scoped to a
+  -- clinic's staff, so counting it as the admin (who is not staff there) would
+  -- return zero however well the export worked.
+  perform set_config('app.user_id', mgr_d::text, true);
+  select count(*) into n from public.access_log
+   where clinic_id = clinic_d and action = 'clinic_exported';
+  perform set_config('app.user_id', admin_id::text, true);
+  raise notice '% T67b the export is audited -> % row', case when n = 1 then 'PASS:' else 'FAIL:' end, n;
+
+  -- T68 archiving switches the clinic OFF as well as filing it away.
+  perform admin_archive_clinic(clinic_d, true);
+  select count(*) into n from admin_list_clinics()
+   where id = clinic_d and archived_at is not null and activated_at is null;
+  raise notice '% T68 archiving a clinic also switches it off -> %',
+    case when n = 1 then 'PASS:' else 'FAIL:' end, n;
+
+  -- T69 restoring un-files it but does NOT switch it back on: that gate needs
+  -- the BAA and its own decision.
+  perform admin_archive_clinic(clinic_d, false);
+  select count(*) into n from admin_list_clinics()
+   where id = clinic_d and archived_at is null and activated_at is null;
+  raise notice '% T69 restoring does not switch the clinic back on -> %',
+    case when n = 1 then 'PASS:' else 'FAIL:' end, n;
+
+  -- T70 SECURITY: none of this is a manager's power, even their own clinic.
+  perform set_config('app.user_id', mgr_d::text, true);
+  refused := false;
+  begin
+    perform admin_archive_clinic(clinic_d, true);
+  exception when others then refused := (sqlerrm like '%Not authorised%'); end;
+  raise notice '% T70 a clinic manager cannot archive their own clinic',
+    case when refused then 'PASS:' else 'FAIL:' end;
+  refused := false;
+  begin
+    perform admin_export_clinic(clinic_d);
+  exception when others then refused := (sqlerrm like '%Not authorised%'); end;
+  raise notice '% T70b a clinic manager cannot export a clinic',
+    case when refused then 'PASS:' else 'FAIL:' end;
+
+  -- T71 the purge target names the logins to delete, and NEVER a platform
+  -- admin. This is the guard that stops David deleting his own account with
+  -- Riverside, which he administers GlowPT with.
+  perform set_config('app.user_id', admin_id::text, true);
+  perform admin_archive_clinic(clinic_d, true);
+  select count(*) into n from admin_clinic_purge_target(clinic_d);
+  -- THREE people are in this clinic and the target names TWO: the manager and
+  -- the patient. The third is the platform admin, and leaving them out is what
+  -- stops David deleting his own login along with Riverside PT.
+  raise notice '% T71 the purge target skips the platform admin -> % of 3 members',
+    case when n = 2 then 'PASS:' else 'FAIL:' end, n;
+
+  -- T72 the deletion itself.
+  perform admin_delete_clinic(clinic_d);
+  select count(*) into n from public.clinics where id = clinic_d;
+  raise notice '% T72 the clinic is gone -> % row', case when n = 0 then 'PASS:' else 'FAIL:' end, n;
+
+  -- ⚠️ EVERY REMAINING ASSERTION MOVED TO db/tests/owner_tests.sql, and the
+  -- reason is the point: they read public.users and public.clinic_deletions,
+  -- which glowpt_app has NO grant on at all, by design. Asserted from here they
+  -- do not fail loudly -- the suite simply stops, which is how this file can
+  -- look like it passed while proving nothing. See the runner.
+  -- Nothing to tidy: this is the last block in the last suite, and the admin's
+  -- profile is exactly where the deletion left it, which T73b asserts.
+  perform set_config('app.user_id', mgr_a::text, true);
+end $$;

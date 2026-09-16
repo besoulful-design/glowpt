@@ -970,6 +970,85 @@ async function postAdminBaaClear(client: Client, event: APIGatewayProxyEventV2Wi
   return json(200, { ok: true });
 }
 
+async function postAdminArchiveClinic(
+  client: Client,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+) {
+  const sub = requireSub(event);
+  const b = parseBody(event);
+  const clinicId = typeof b.clinic_id === 'string' ? b.clinic_id : '';
+  if (!clinicId) throw new HttpError(400, 'clinic_id_required');
+  if (typeof b.archived !== 'boolean') throw new HttpError(400, 'archived_required');
+  const result = await withUser(client, sub, async (c) =>
+    c.query('select public.admin_archive_clinic($1, $2) as archived_at', [clinicId, b.archived]),
+  );
+  return json(200, { archived_at: result.rows[0]?.archived_at ?? null });
+}
+
+// The whole clinic as one JSON document, so its records can be handed back
+// before they are destroyed. ⚠️ THE RESPONSE IS FULL PHI -- names, moods, notes.
+// It is platform-admin only (the database checks, not this), and the database
+// writes an audit row saying it happened.
+async function postAdminExportClinic(
+  client: Client,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+) {
+  const sub = requireSub(event);
+  const b = parseBody(event);
+  const clinicId = typeof b.clinic_id === 'string' ? b.clinic_id : '';
+  if (!clinicId) throw new HttpError(400, 'clinic_id_required');
+  const result = await withUser(client, sub, async (c) =>
+    c.query('select public.admin_export_clinic($1) as doc', [clinicId]),
+  );
+  return json(200, result.rows[0]?.doc ?? {});
+}
+
+// Permanently delete an archived clinic and everyone in it.
+//
+// ⚠️ THE ORDER IS THE SAME AS rpcPurgePatient, AND FOR THE SAME REASON: the
+// logins first, the rows second. Cognito cannot roll back and Postgres can, so
+// a failure half way through leaves rows that still describe the work left to
+// do, and a retry finishes it. The reverse order would leave logins for people
+// whose records are gone, with nothing left to say they existed.
+async function postAdminDeleteClinic(
+  client: Client,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+) {
+  const sub = requireSub(event);
+  const b = parseBody(event);
+  const clinicId = typeof b.clinic_id === 'string' ? b.clinic_id : '';
+  if (!clinicId) throw new HttpError(400, 'clinic_id_required');
+
+  // 1. Learn the logins under the guards that will delete the rows, changing
+  //    nothing. Raises if the caller is not a platform admin, or the clinic is
+  //    not archived. ⛔ A platform admin is never in this list.
+  const emails = await withUser(client, sub, async (c) => {
+    const { rows } = await c.query('select email from public.admin_clinic_purge_target($1)', [
+      clinicId,
+    ]);
+    return rows.map((r) => r.email as string);
+  });
+
+  // 2. The logins. Addresses never leave this function.
+  const userPoolId = process.env.USER_POOL_ID;
+  if (!userPoolId) throw new Error('USER_POOL_ID is not set');
+  for (const email of emails) {
+    try {
+      await cognito.send(new AdminDeleteUserCommand({ UserPoolId: userPoolId, Username: email }));
+    } catch (err) {
+      // Already gone is the success case: it is what a retry of a half-finished
+      // deletion looks like.
+      if (!(err instanceof UserNotFoundException)) throw err;
+    }
+  }
+
+  // 3. The rows, with every guard re-applied inside the transaction.
+  await withUser(client, sub, async (c) => {
+    await c.query('select public.admin_delete_clinic($1)', [clinicId]);
+  });
+  return json(200, { ok: true, logins_removed: emails.length });
+}
+
 const ROUTES: Record<string, Route> = {
   'GET /clinics/by-slug/{slug}': getClinicBySlug, // public
   'GET /me': getMe,
@@ -1005,6 +1084,9 @@ const ROUTES: Record<string, Route> = {
   'POST /admin/clinics/activation': postAdminActivation,
   'POST /admin/clinics/baa': postAdminBaa,
   'POST /admin/clinics/baa/clear': postAdminBaaClear,
+  'POST /admin/clinics/archive': postAdminArchiveClinic,
+  'POST /admin/clinics/export': postAdminExportClinic,
+  'POST /admin/clinics/delete': postAdminDeleteClinic,
 };
 
 export const handler = async (

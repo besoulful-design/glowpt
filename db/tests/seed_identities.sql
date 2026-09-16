@@ -25,6 +25,11 @@ select register_user('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','newstaff@a.com','Ne
 select register_user('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','wrongperson@a.com','Wrong','Person');
 select register_user('cccccccc-cccc-cccc-cccc-cccccccccccc','expired@a.com','Expired','Invitee');
 select register_user('dddddddd-dddd-dddd-dddd-dddddddddddd','newpat@a.com','New','Patient');
+-- Clinic D exists to be DELETED (the 2026-09-16 clinic lifecycle tests). It is
+-- built and destroyed at the very end of invite_tests.sql, with its own manager
+-- and its own patient, so no other test's fixtures go down with it.
+select register_user('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1','mgrd@d.com','Mgr','D');
+select register_user('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2','patd1@d.com','Pat','D1');
 
 \set QUIET off
 do $$
