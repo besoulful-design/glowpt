@@ -263,7 +263,18 @@ export class Api extends Construct {
       ['/admin/clinics', apigwv2.HttpMethod.GET],
       ['/admin/clinics/activation', apigwv2.HttpMethod.POST],
       ['/admin/clinics/baa', apigwv2.HttpMethod.POST],
+      ['/admin/clinics/baa/clear', apigwv2.HttpMethod.POST],
+      ['/admin/clinics/archive', apigwv2.HttpMethod.POST],
+      ['/admin/clinics/export', apigwv2.HttpMethod.POST],
+      ['/admin/clinics/delete', apigwv2.HttpMethod.POST],
     ];
+    // ⚠️ THIS LIST IS THE OTHER HALF OF THE LAMBDA'S ROUTES MAP, AND NOTHING
+    // BUT A TEST TIES THEM TOGETHER. A handler added to infra/lambda/api's
+    // ROUTES without a line here is invisible: API Gateway 404s the path with
+    // no CORS headers, so the browser reports a network failure ("Load failed"
+    // in Safari) rather than anything that names the cause. That shipped on
+    // 2026-09-16 -- four routes, one of them the Archive button David pressed
+    // straight away. infra/test now fails if the two lists disagree.
     for (const [routePath, method] of authed) {
       this.httpApi.addRoutes({ path: routePath, methods: [method], integration });
     }

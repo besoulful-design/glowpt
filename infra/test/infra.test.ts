@@ -204,3 +204,53 @@ test('weekly-summary: fires Sunday 18:00 America/New_York via Scheduler, no UTC 
   // job fires twice a week.
   expect(Object.keys(template.findResources('AWS::Events::Rule'))).toEqual([]);
 });
+
+// ⚠️ THE TEST THAT WOULD HAVE CAUGHT 2026-09-16. The API is two lists that have
+// to agree: the Lambda's own ROUTES map (which handler serves what) and the
+// gateway's route table in lib/api.ts (which paths exist at all). Adding a
+// handler without a gateway route is silent -- the code compiles, the Lambda
+// deploys, the unit tests pass, and the request 404s at the gateway with no CORS
+// headers, so the browser reports only "Load failed". David pressed Archive
+// within a minute of the deploy and got exactly that.
+//
+// The Lambda source is read as TEXT rather than imported: importing it pulls in
+// the AWS SDK and a database client for what is a string comparison.
+test('every Lambda route has a gateway route, and vice versa', () => {
+  const stack = new InfraStack(app(), 'RouteParity', { env: ENV });
+  const template = Template.fromStack(stack);
+
+  const source = readFileSync(
+    path.join(__dirname, '..', 'lambda', 'api', 'index.ts'),
+    'utf8',
+  );
+  const routesBlock = source.slice(
+    source.indexOf('const ROUTES: Record<string, Route> = {'),
+    source.indexOf('};', source.indexOf('const ROUTES: Record<string, Route> = {')),
+  );
+  const handlerRoutes = new Set(
+    [...routesBlock.matchAll(/'([A-Z]+ \/[^']*)'/g)].map((m) => m[1]),
+  );
+  expect(handlerRoutes.size).toBeGreaterThan(20);
+
+  const gatewayRoutes = new Set(
+    Object.values(template.findResources('AWS::ApiGatewayV2::Route')).map(
+      (r) => r.Properties.RouteKey as string,
+    ),
+  );
+
+  // POST /ai-response is on this same API but is integrated with a DIFFERENT
+  // Lambda (glowpt-ai-response, deliberately outside the VPC), so it is in no
+  // route map of the api handler. It is the only such route; a second one
+  // appearing here is a question worth answering, not a line to add.
+  const OTHER_LAMBDA = new Set(['POST /ai-response']);
+
+  // Path parameters are spelled the same way in both, so these compare directly.
+  const missingAtGateway = [...handlerRoutes].filter((r) => !gatewayRoutes.has(r));
+  const missingHandler = [...gatewayRoutes].filter(
+    (r) => !handlerRoutes.has(r) && !OTHER_LAMBDA.has(r),
+  );
+  expect({ missingAtGateway, missingHandler }).toEqual({
+    missingAtGateway: [],
+    missingHandler: [],
+  });
+});
