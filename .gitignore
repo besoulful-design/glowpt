@@ -26,3 +26,10 @@ dist-ssr
 # Environment / secrets — never commit any of these
 .env
 .env.*
+
+# ⛔ CLINIC EXPORTS ARE PHI. A file from /admin's Export Records holds patient
+# names, notes and reflections, and it lands in whatever folder the browser
+# downloads to -- which on 2026-09-16 was this one. Untracked is not enough: one
+# `git add -A` would have committed a clinic's records to GitHub. The name is
+# glowpt-<slug>-<date>.json, set in Admin.jsx.
+glowpt-*-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].json
