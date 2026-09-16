@@ -2451,3 +2451,13 @@ not, as of that evening. Banked verbatim.
 
 - **A new clinic is CLOSED until David presses Switch On in `/admin`.** Two separate columns on purpose: `activated_at` (the gate) and `baa_signed_at` (the legal record). The gate is enforced in the DATABASE, in both `join_clinic` and the `checkins` RLS policies — gating only the join would let an already-attached patient keep writing PHI to a switched-off clinic.
 ```
+
+### The copy rule's first line, before it was stated as a binary (2026-09-16)
+
+David turned the convention into a test: sentence case earns a terminal period,
+otherwise Title Case. The line was rewritten to say that and to name the one
+third category. Banked verbatim.
+
+```
+- **STATEMENTS** (headlines, prose, empty states) get **sentence case and a terminal period**. **LABELS** (titles, buttons, pills, section heads) get **Title Case and no period**. Questions keep the `?`.
+```

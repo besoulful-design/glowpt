@@ -297,7 +297,8 @@ David and friends testing on the sandbox is demo data, not real PHI, and that is
 **These are the rules whose reasoning was archived. Each line is the rule; the story behind it is in `docs/history.md`, searchable by the phrase in bold.**
 
 **✍️ COPY**
-- **STATEMENTS** (headlines, prose, empty states) get **sentence case and a terminal period**. **LABELS** (titles, buttons, pills, section heads) get **Title Case and no period**. Questions keep the `?`.
+- **STATEMENTS** (headlines, prose, empty states) get **sentence case and a terminal period**. **LABELS** (titles, buttons, pills, section heads) get **Title Case and no period**. Questions keep the `?`. **It is a BINARY (David, 2026-09-16): *"If it is sentence case, doesn't it then need a terminal period to be correct. Otherwise, it should be title case."*** An email SUBJECT takes no period, so it is Title Case.
+  - **THE ONE THIRD CATEGORY, so it is not re-argued: FRAGMENTS** (half a sentence another element finishes, punctuation on the other half — the consent checkbox, "How are you" + "feeling today?") and **UNIT CAPTIONS** (the word under a figure, read as part of the number — "6 enrolled", "62% of roster", "3.4 avg mood"; units, like mph). Both are listed by name in `scripts/check-title-case.mjs`.
 - **⛔ NO ALL-CAPS anywhere.** If you ever remove caps from something, retune the tracking too (~0.01em, not the 0.1–0.2em that suits uppercase) and step the size up.
 - **⛔ NO EM DASHES in any user-facing string** — and the rule covers `infra/lambda/` too, not just `src/`. Use a period, comma, colon or parentheses. A dash used as a LABEL SEPARATOR becomes the house middot `·`.
   - **⛔ DO NOT find-and-replace: SIX bare `—` are empty-value placeholders** (the dashboard Streak cell, the PatientApp selected-day stats) and must survive. Code comments and this doc are exempt.
