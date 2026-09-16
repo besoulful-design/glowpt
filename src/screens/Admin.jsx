@@ -283,6 +283,16 @@ export default function Admin() {
                   {' '}and {c.staff_count} staff member{c.staff_count === 1 ? '' : 's'}, their check-ins
                   {' '}and their sign-ins. It cannot be undone. Export first if you have not.
                 </div>
+                {/* Whether records were ever taken out, stated rather than left
+                    to memory. It does NOT block the deletion: forcing an export
+                    would put a file of patient notes on someone's laptop for
+                    every throwaway clinic, which is a worse habit than the one
+                    it prevents (David's call, 2026-09-16). */}
+                <div style={s.fieldLabel}>
+                  {c.last_exported_at
+                    ? `Records exported ${when(c.last_exported_at)}.`
+                    : 'No export has been taken.'}
+                </div>
                 <div style={s.fieldLabel}>Type the clinic name to confirm.</div>
                 <input style={s.input} value={typedName} placeholder={c.name}
                   onChange={e => setTypedName(e.target.value)} />

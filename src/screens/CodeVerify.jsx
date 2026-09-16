@@ -98,6 +98,22 @@ export default function CodeVerify({ pending, onResend, onBack }) {
         {'  ·  '}
         <button type="button" onClick={onBack} style={linkBtn}>Use a Different Email</button>
       </div>
+      {/* ⛔ THIS SCREEN CANNOT TELL YOU THAT THE ADDRESS HAS NO ACCOUNT, and
+          that is deliberate. The user pool has PreventUserExistenceErrors
+          ENABLED, so Cognito answers an unknown address with a challenge rather
+          than an error (verified by calling InitiateAuth against a made-up
+          address, 2026-09-16) -- which means no code is emailed and this screen
+          waits forever. Saying "no account with that email" would turn the sign
+          in box into a way to test addresses and learn who is having physical
+          therapy, which is exactly the inference the privacy notice exists to
+          stop. So the advice below is written for EVERYONE and reveals nothing:
+          it is equally true for a patient whose code is simply in spam.
+          (David hit this signing in as a manager whose clinic had just been
+          deleted: "it doesn't go anywhere... should this screen say anything".) */}
+      <div style={ui.fine}>
+        Still nothing? Check your spam folder. If you have never signed in before,
+        open the invite link your clinic sent you.
+      </div>
     </AuthShell>
   )
 }

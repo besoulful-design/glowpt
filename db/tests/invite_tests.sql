@@ -672,6 +672,13 @@ begin
   perform set_config('app.user_id', admin_id::text, true);
   raise notice '% T67b the export is audited -> % row', case when n = 1 then 'PASS:' else 'FAIL:' end, n;
 
+  -- T67c and that audit row is what tells the delete confirmation whether
+  -- records were ever taken out. No second column, no way for it to drift.
+  select count(*) into n from admin_list_clinics()
+   where id = clinic_d and last_exported_at is not null;
+  raise notice '% T67c the clinic list reports the last export -> %',
+    case when n = 1 then 'PASS:' else 'FAIL:' end, n;
+
   -- T68 archiving switches the clinic OFF as well as filing it away.
   perform admin_archive_clinic(clinic_d, true);
   select count(*) into n from admin_list_clinics()

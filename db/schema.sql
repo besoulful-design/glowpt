@@ -1287,6 +1287,10 @@ create or replace function public.admin_list_clinics()
     archived_at     timestamptz,
     baa_signed_at   timestamptz,
     baa_version     text,
+    -- ⚠️ READ FROM access_log, not a column. Every export writes a row there
+    -- (see admin_export_clinic), so the last one is a fact we already hold and
+    -- the delete confirmation can say whether records were ever taken out.
+    last_exported_at timestamptz,
     manager_name    text,
     manager_email   text,
     patient_count   bigint,
@@ -1305,6 +1309,8 @@ begin
   return query
     select c.id, c.name, c.slug, c.created_at, c.activated_at, c.archived_at,
            c.baa_signed_at, c.baa_version,
+           (select max(a.created_at) from public.access_log a
+             where a.clinic_id = c.id and a.action = 'clinic_exported'),
            m.full_name, mu.email::text,   -- users.email is citext; the return type is text
            (select count(*) from public.profiles p
              where p.clinic_id = c.id and p.role = 'patient' and p.discharged_at is null),
