@@ -11,9 +11,21 @@
 //   LABELS      (titles, buttons, pills, section heads) -> Title Case, NO period
 //   STATEMENTS  (headlines, prose, empty states)        -> sentence case, period
 //
-// So the test is simple: a short user-facing string that does NOT end in
-// punctuation is a label, and every word in it after the first must be
-// capitalised unless it is one of the small words AP leaves alone.
+// So the test is simple, and it is a BINARY (David, 2026-09-16): "If it is
+// sentence case, doesn't it then need a terminal period to be correct.
+// Otherwise, it should be title case." A short user-facing string that does not
+// end in punctuation is therefore a label, and every word in it after the first
+// must be capitalised unless it is one of the small words AP leaves alone.
+//
+// THERE IS EXACTLY ONE THIRD CATEGORY, and it is listed in ALLOWED below rather
+// than left to judgment:
+//   FRAGMENTS -- half of a sentence that another element completes, where the
+//     punctuation lives on the other half ("I've reviewed the" + the agreement's
+//     name + "."; "How are you" + "feeling today?").
+//   UNIT CAPTIONS -- the word under a figure that belongs to the number and is
+//     read as part of it ("6 enrolled", "62% of roster", "3.4 avg mood"). These
+//     are units, like mph. A period would be wrong and Title Case reads as a
+//     heading the tile already has above the number.
 //
 // ⚠️ IT IS DELIBERATELY NARROW. It reads only strings short enough to be a
 // label, and in src/ only the three places a label is actually written: a
@@ -43,11 +55,13 @@ const SMALL = new Set([
   'on', 'or', 'per', 'so', 'the', 'to', 'up', 'via', 'vs',
 ]);
 
-// Strings that are lowercase ON PURPOSE. Each is a caption or a fragment that
-// belongs to the figure beside it, not a label that introduces something.
+// Strings that are lowercase ON PURPOSE: a FRAGMENT or a UNIT CAPTION, per the
+// note above. Nothing else belongs in here -- anything that is simply a label
+// gets Title Case, and anything that is a sentence gets its period.
 const ALLOWED = new Set([
-  'of roster',        // reads as part of "62% of roster", not a heading
-  'avg mood',         // same: part of the number it trails
+  'of roster',        // unit: reads as part of "62% of roster"
+  'checked in',       // unit: "4 checked in", under the Active This Week tile
+  'avg mood',         // unit: part of the number it trails
   'Signing up as',    // a sentence fragment introducing a value, not a label
   'Signed in as',     // its twin
   'How are you',      // the check-in question, split over two lines by <br/>

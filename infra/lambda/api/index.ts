@@ -708,7 +708,7 @@ async function sendInvite(
         ...(SES_CONFIG_SET ? { ConfigurationSetName: SES_CONFIG_SET } : {}),
         Content: {
           Simple: {
-            Subject: { Data: `${clinicName} invited you to GlowPT` },
+            Subject: { Data: `${clinicName} Invited You to GlowPT` },
             Body: { Html: { Data: inviteEmail(clinicName, role, inviteUrl, firstName) } },
           },
         },

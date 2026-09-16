@@ -163,7 +163,7 @@ function buildOutbox(rows: SummaryRow[]): OutboxItem[] {
     if (r.role === 'patient') {
       outbox.push({
         to: r.email,
-        subject: 'Your GlowPT week',
+        subject: 'Your GlowPT Week',
         html: patientEmail(greetName(r.first_name), r.checkin_days),
         recipientId: r.recipient_id,
         role: r.role,
@@ -176,7 +176,7 @@ function buildOutbox(rows: SummaryRow[]): OutboxItem[] {
       const needAttention = total - active;
       outbox.push({
         to: r.email,
-        subject: `GlowPT weekly summary · ${r.clinic_name}`,
+        subject: `GlowPT Weekly Summary · ${r.clinic_name}`,
         html: clinicEmail(r.clinic_name, total, active, engagement, needAttention),
         recipientId: r.recipient_id,
         role: r.role,

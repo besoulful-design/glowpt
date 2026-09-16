@@ -115,10 +115,10 @@ function monthSummary(days) {
 // Average mood per week for the last 4 weeks (oldest → newest), for the mini bar chart.
 function weeklyAverages(days) {
   const buckets = [
-    { label: '3 wks ago', slice: days.slice(2, 9) },
-    { label: '2 wks ago', slice: days.slice(9, 16) },
-    { label: '1 wk ago', slice: days.slice(16, 23) },
-    { label: 'This week', slice: days.slice(23, 30) },
+    { label: '3 Wks Ago', slice: days.slice(2, 9) },
+    { label: '2 Wks Ago', slice: days.slice(9, 16) },
+    { label: '1 Wk Ago', slice: days.slice(16, 23) },
+    { label: 'This Week', slice: days.slice(23, 30) },
   ]
   return buckets.map(b => {
     const avg = avgFeeling(b.slice)

@@ -80,7 +80,7 @@ export default function Landing() {
             legal entity a clinic actually contracts with. Two lines, each doing
             one job. Entity name is the no-comma form used by lib/legal.js, both
             attorney drafts, and the AWS Company-name field the BAA binds to. */}
-        <div style={s.footer}>A FranklinAI product · Philadelphia</div>
+        <div style={s.footer}>A FranklinAI Product · Philadelphia</div>
         <div style={s.footerLegal}>© {new Date().getFullYear()} FranklinAI Solutions LLC</div>
       </div>
 
