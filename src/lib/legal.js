@@ -32,31 +32,31 @@ export function patientPrivacyNotice(clinicName) {
   const clinic = clinicName || 'your clinic'
   return [
     {
-      heading: 'What GlowPT records',
+      heading: 'What GlowPT Records',
       body: `The check-ins you choose to submit: how you're feeling on a scale of 1 to 5, the movement you did that day, and any note you write. We also store your name and email address so ${clinic} can recognize you and so we can send your sign-in codes.`,
     },
     {
-      heading: 'Who can see it',
+      heading: 'Who Can See It',
       body: `Your care team at ${clinic}: your assigned therapist and the practice manager. Every time a staff member opens patient information, that access is recorded. No other clinic using GlowPT can see anything about you.`,
     },
     {
-      heading: 'How the daily reflection is written',
+      heading: 'How the Daily Reflection Is Written',
       body: `The short message you get back after each check-in is written by an AI model. To write it, we send that one check-in (your first name, your feeling score, your movement, and your note) to Amazon Bedrock, the AI service that runs inside our own protected Amazon Web Services account. Your email address, your last name, and your history are not sent. Your words stay inside that protected environment, are not sent to an outside AI company, and are not used to train anyone's models.`,
     },
     {
-      heading: 'The weekly email',
+      heading: 'The Weekly Email',
       body: `Once a week we may send you a short encouragement with your first name and the number of check-ins you logged. It never includes your notes, your mood, or any clinical detail. Your clinic separately receives totals only, with no names attached.`,
     },
     {
-      heading: 'How it is protected',
+      heading: 'How It Is Protected',
       body: `Your information is encrypted while it travels from your phone and encrypted again where it is stored, on Amazon Web Services in the United States. Under HIPAA, GlowPT works for ${clinic} as a business associate, which means we are held by written agreement to the same protection rules your clinic follows.`,
     },
     {
-      heading: 'What we never do',
+      heading: 'What We Never Do',
       body: `We do not sell your information. We do not use it for advertising. We do not share it with employers, insurers, or anyone outside your care team at ${clinic}, except where the law requires it.`,
     },
     {
-      heading: 'Your choices',
+      heading: 'Your Choices',
       body: `Your health record belongs to ${clinic}, so requests to see, correct, or delete your information go to them directly, and they can answer questions about how it is handled. You can stop using GlowPT whenever you like. Ask ${clinic} to close your account. Choosing not to use GlowPT does not affect the care you receive.`,
     },
   ]
@@ -93,15 +93,15 @@ export const BAA_SUMMARY_INTRO =
 
 export const BAA_SUMMARY = [
   {
-    heading: 'What GlowPT is to you',
+    heading: 'What GlowPT Is to You',
     body: 'Your clinic is the covered entity under HIPAA. GlowPT is your business associate: we handle protected health information on your behalf, and only to provide this service to you.',
   },
   {
-    heading: 'What we may do with patient information',
+    heading: 'What We May Do With Patient Information',
     body: 'Use it to run GlowPT for your clinic, and nothing else. We will not sell it, use it for advertising, or use it to build products for anyone else.',
   },
   {
-    heading: 'How it is protected',
+    heading: 'How It Is Protected',
     body: 'Encrypted in transit and encrypted at rest on HIPAA-eligible Amazon Web Services infrastructure, under an executed AWS business associate addendum. Access is restricted to your own clinic\'s records, and every staff read is logged.',
   },
   {
@@ -109,19 +109,19 @@ export const BAA_SUMMARY = [
     body: 'Any vendor that handles patient information on our behalf is bound by the same obligations in writing. Today that is Amazon Web Services alone, covering hosting, database, email, and the Bedrock service that runs the AI reflection, all under one executed AWS business associate addendum.',
   },
   {
-    heading: 'If something goes wrong',
+    heading: 'If Something Goes Wrong',
     body: 'We notify your clinic without unreasonable delay if protected health information is breached, with what we know about what happened and who was affected.',
   },
   {
-    heading: 'When the relationship ends',
+    heading: 'When the Relationship Ends',
     body: 'You can export your clinic\'s data. We return or destroy the protected health information we hold, except where the law requires us to keep it.',
   },
   {
-    heading: "Your patients' rights",
+    heading: "Your Patients' Rights",
     body: 'We help you meet your HIPAA obligations to patients who ask to see, correct, or get an accounting of disclosures of their information.',
   },
   {
-    heading: 'Which document governs',
+    heading: 'Which Document Governs',
     body: 'The signed agreement governs. Where this summary and the signed agreement differ, the signed agreement wins.',
   },
 ]

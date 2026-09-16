@@ -177,7 +177,7 @@ export default function Onboard() {
         )}
 
         {error && <div style={ui.error}>{error}</div>}
-        <button style={ui.btn} disabled={busy}>{busy ? 'Setting up…' : 'Create my clinic →'}</button>
+        <button style={ui.btn} disabled={busy}>{busy ? 'Setting up…' : 'Create My Clinic →'}</button>
       </form>
       {/* A new clinic is created CLOSED and cannot take a patient until an admin
           switches it on, so without this line the manager signs up full of intent

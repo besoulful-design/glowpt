@@ -1144,7 +1144,7 @@ export default function Dashboard() {
               aria-label="Correct this patient's name" onClick={e => e.stopPropagation()}>
               <button type="button" style={ui.modalCloseX} onClick={() => setRenaming(null)}
                 aria-label="Close">×</button>
-              <div style={s.renameHead}>Correct this name</div>
+              <div style={s.renameHead}>Correct This Name</div>
               {/* Says whose record is being changed. The manager tapped a name in
                   a list of similar ones, which is the whole reason this exists. */}
               <div style={s.renameSub}>Currently {renaming.was}.</div>
@@ -1157,11 +1157,11 @@ export default function Dashboard() {
                   full-width rather than paired, because each now carries a label
                   above it. */}
               <form onSubmit={handleRename} style={s.renameForm}>
-                <label style={s.renameLabel} htmlFor="rename-first">First name</label>
+                <label style={s.renameLabel} htmlFor="rename-first">First Name</label>
                 <input id="rename-first" style={s.renameInput} value={renameFirst}
                   autoComplete="given-name"
                   onChange={e => { setRenameFirst(e.target.value); setRenameErr('') }} />
-                <label style={s.renameLabel} htmlFor="rename-last">Last name</label>
+                <label style={s.renameLabel} htmlFor="rename-last">Last Name</label>
                 <input id="rename-last" style={s.renameInput} value={renameLast}
                   autoComplete="family-name"
                   onChange={e => { setRenameLast(e.target.value); setRenameErr('') }} />

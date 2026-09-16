@@ -86,7 +86,7 @@ export default function CodeVerify({ pending, onResend, onBack }) {
           inputMode="numeric" autoComplete="one-time-code" placeholder="Enter code" maxLength={10} autoFocus
         />
         {error && <div style={ui.error}>{error}</div>}
-        <button style={ui.btn} disabled={busy}>{busy ? 'Verifying…' : 'Verify & sign in →'}</button>
+        <button style={ui.btn} disabled={busy}>{busy ? 'Verifying…' : 'Verify & Sign In →'}</button>
       </form>
       {/* ⚠️ Resend STAYS on screen after it is used. It used to be replaced by
           "New code sent.", so the one control that fixes an expired code could

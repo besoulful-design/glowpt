@@ -229,7 +229,7 @@ export default function InviteJoin() {
             What makes this field obviously editable is that it IS a text box
             sitting between two flat values, not a sentence saying so. */}
         <div style={s.editableField}>
-          <div style={s.fixedEmailLabel}>First name</div>
+          <div style={s.fixedEmailLabel}>First Name</div>
           <input style={ui.input} placeholder="Your first name" value={firstName}
             onChange={e => setFirstName(e.target.value)} autoComplete="given-name" />
         </div>
@@ -239,7 +239,7 @@ export default function InviteJoin() {
             not show an empty box. */}
         {lastName && (
           <div style={s.fixedEmail}>
-            <div style={s.fixedEmailLabel}>Last name</div>
+            <div style={s.fixedEmailLabel}>Last Name</div>
             <div style={s.fixedEmailValue}>{lastName}</div>
           </div>
         )}

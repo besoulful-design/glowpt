@@ -163,7 +163,7 @@ export default function Admin() {
       </div>
 
       <div style={s.wrap}>
-        <div style={s.h1}>Every clinic</div>
+        <div style={s.h1}>Every Clinic</div>
         <div style={s.sub}>
           A clinic cannot enrol patients or accept check-ins until you switch it on.
         </div>
@@ -198,9 +198,9 @@ export default function Admin() {
               <div style={s.meta}>
                 <div><div style={s.metaLabel}>Patients</div>{c.patient_count}</div>
                 <div><div style={s.metaLabel}>Staff</div>{c.staff_count}</div>
-                <div><div style={s.metaLabel}>Check-ins, 7 days</div>{c.checkins_7d}</div>
-                <div><div style={s.metaLabel}>Last check-in</div>{when(c.last_checkin_at)}</div>
-                <div><div style={s.metaLabel}>BAA signed</div>{when(c.baa_signed_at)}</div>
+                <div><div style={s.metaLabel}>Check-Ins, 7 Days</div>{c.checkins_7d}</div>
+                <div><div style={s.metaLabel}>Last Check-In</div>{when(c.last_checkin_at)}</div>
+                <div><div style={s.metaLabel}>BAA Signed</div>{when(c.baa_signed_at)}</div>
               </div>
 
               {c.manager_email && (
@@ -258,7 +258,7 @@ export default function Admin() {
                        want all of it to disappear again"). It reads as a fact
                        with a correction beside it, not as a button that vanished. */
                     <div style={s.baaDone}>
-                      BAA signed {when(c.baa_signed_at)}
+                      BAA Signed {when(c.baa_signed_at)}
                       {' · '}
                       <span role="button" tabIndex={0} style={s.clearLink}
                         onClick={() => setConfirming(c.id)}
