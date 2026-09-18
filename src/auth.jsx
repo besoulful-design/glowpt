@@ -10,14 +10,9 @@ import * as api from './lib/api'
 
 const AuthContext = createContext(null)
 
-const PENDING_JOIN_KEY = 'glowpt.pendingJoin'       // patient: { slug, firstName, lastName, consentVersion }
 const PENDING_ONBOARD_KEY = 'glowpt.pendingOnboard' // clinic: { clinicName, slug, firstName, lastName }
 const PENDING_STAFF_KEY = 'glowpt.pendingStaff'     // staff: the invite token
 const PENDING_PATIENT_INVITE_KEY = 'glowpt.pendingPatientInvite' // { token, consentVersion }
-
-export function savePendingJoin(slug, firstName, lastName, consentVersion) {
-  localStorage.setItem(PENDING_JOIN_KEY, JSON.stringify({ slug, firstName, lastName, consentVersion }))
-}
 
 export function savePendingStaff(token) {
   localStorage.setItem(PENDING_STAFF_KEY, token)
@@ -55,7 +50,6 @@ export function AuthProvider({ children }) {
     // Attached already? Done. Otherwise try the frontend re-attach safety net.
     if (!prof?.clinic_id) {
       const onboardRaw = localStorage.getItem(PENDING_ONBOARD_KEY)
-      const joinRaw = localStorage.getItem(PENDING_JOIN_KEY)
       const staffToken = localStorage.getItem(PENDING_STAFF_KEY)
       const patInviteRaw = localStorage.getItem(PENDING_PATIENT_INVITE_KEY)
 
@@ -76,13 +70,6 @@ export function AuthProvider({ children }) {
           // path writes a consents row and the staff path never does.
           const pi = JSON.parse(patInviteRaw)
           await api.acceptPatientInvite(pi.token, pi.consentVersion || null)
-        } else if (joinRaw) {
-          const j = JSON.parse(joinRaw)
-          // join_clinic upserts the profile (role pinned to patient) + records consent.
-          // Same one-deploy fallback as the onboard branch above.
-          await api.joinClinic(
-            j.slug, j.firstName || j.fullName || null, j.lastName || null, j.consentVersion || null,
-          )
         } else {
           // Invited staff. With a token this is a retry of the link they
           // followed; without one it is the blind email-matched net, which
@@ -106,7 +93,9 @@ export function AuthProvider({ children }) {
     // so none can re-fire a stale attach, and clear any earlier failure.
     if (prof?.clinic_id) {
       localStorage.removeItem(PENDING_ONBOARD_KEY)
-      localStorage.removeItem(PENDING_JOIN_KEY)
+      // The walk-in era's key. Never written or read since 2026-09-18; cleared
+      // here so a browser that started a walk-in sign-up does not carry it forever.
+      localStorage.removeItem('glowpt.pendingJoin')
       localStorage.removeItem(PENDING_STAFF_KEY)
       localStorage.removeItem(PENDING_PATIENT_INVITE_KEY)
       setAttachError(null)

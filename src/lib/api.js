@@ -77,11 +77,6 @@ export const getInvites = () => request('/clinic/invites');
 // -- RPCs (bodies carry entity ids, never the URL) --
 export const provisionClinic = (name, slug) =>
   request('/rpc/provision-clinic', { method: 'POST', body: { name, slug } });
-export const joinClinic = (slug, firstName, lastName, consentVersion) =>
-  request('/rpc/join-clinic', {
-    method: 'POST',
-    body: { slug, first_name: firstName, last_name: lastName, consent_version: consentVersion },
-  });
 // Public, like getClinicBySlug: read before the person has an account, so the
 // staff sign-up page can name the clinic and role. The token in the URL is the
 // invite's own identifier, not an identifier for a person.

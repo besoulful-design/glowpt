@@ -2461,3 +2461,13 @@ third category. Banked verbatim.
 ```
 - **STATEMENTS** (headlines, prose, empty states) get **sentence case and a terminal period**. **LABELS** (titles, buttons, pills, section heads) get **Title Case and no period**. Questions keep the `?`.
 ```
+
+### Two CLAUDE.md lines replaced 2026-09-18, when the join page form was deleted
+
+The first said the route was gone when it was not; the second still sent a session to make test patients through a link that no longer signs anyone up. Banked verbatim.
+
+```
+> 2. **🔒 EVERY clinic is invite only, always. There is no switch.** Walk-in sign-up and the printable QR were removed 2026-09-05. `/join/<slug>` still resolves but only says "You'll need an invite." **The `open_signup` column and its database gate are KEPT so the feature can return; only the route and the UI are gone.**
+
+Mess is fine — but **make new test patients via the clinic's `/join/<slug>` link, NOT by typing an email into `/login`**, or they land with no clinic (see V2.4).
+```
