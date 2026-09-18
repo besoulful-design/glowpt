@@ -2471,3 +2471,22 @@ The first said the route was gone when it was not; the second still sent a sessi
 
 Mess is fine — but **make new test patients via the clinic's `/join/<slug>` link, NOT by typing an email into `/login`**, or they land with no clinic (see V2.4).
 ```
+
+### CLAUDE.md lines replaced on the 2026-09-18 refresh for a new thread
+
+The new-thread block still described 2026-09-15 as current, told a session to go retest a Bedrock invoke that has worked since that day, and quoted a heartbeat count that had moved. Banked verbatim.
+
+```
+Last edited Tuesday 2026-09-15.
+
+CURRENT STATE ONLY (Tuesday 2026-09-15, 08:00)
+
+> **🎉 SHIPPED 2026-09-15: THE AI REFLECTION RUNS ON BEDROCK, WHICH CLOSED THE LAST HIPAA GATE.** Verified end to end on the live site (Timmy checked in, real reflection). `api.anthropic.com` is out of the app and its API key secret is deleted. **The only thing left before real patients is the attorney review, and that is not a coding task.** Also that morning: the four emails were rebuilt (one size, one color, navy, no ladder) and the `/staff/:token` alias went. Detail in Status & backlog.
+
+> - **Activate was REJECTED 09-14 and NO EMAIL EVER ARRIVED** (David checked inbox and junk). **▶ But the Bedrock answer may not need Activate at all: the management account has full quota. See the Bedrock item above; retest the invoke there FIRST.** The Activate "Contact us" link and AWS Sales remain open, and the missing email is a fair thing to raise.
+
+
+Check the first Amplify line on the AWS bill against the Activate credits.
+
+Sunday's heartbeat volume is **18** (Riverside 8, RidgePT 10) since Atlas joined RidgePT 2026-09-14 on a test invite and David kept them. **Expect 18, do not "fix" the count in code.**
+```

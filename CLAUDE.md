@@ -1,6 +1,6 @@
 # GlowPT — Project Guide (for Claude Code)
 
-*Living doc, loaded in full at the start of every session. Last edited Tuesday 2026-09-15. **⏰ RUN `date` BEFORE SAYING ANYTHING ABOUT TIME. DAVID'S DAY STARTS AT 3AM, so 3 to 6am is his MORNING, not a late night.***
+*Living doc, loaded in full at the start of every session. Last edited Friday 2026-09-18. **⏰ RUN `date` BEFORE SAYING ANYTHING ABOUT TIME. DAVID'S DAY STARTS AT 3AM, so 3 to 6am is his MORNING, not a late night.***
 
 *⚠️ **THE "PREVIOUSLY UPDATED..." CHAIN THAT USED TO LIVE HERE IS GONE (trimmed 2026-09-13).** It had grown to 29 KB of nested parentheses summarising entries that are ALSO in Status & backlog below, so every session paid for the same news twice. **Current state is the NEW THREAD block; detail is Status & backlog, newest first; everything older is in `docs/history.md`.** Do not start a new chain here.*
 
@@ -133,14 +133,14 @@ David and friends testing on the sandbox is demo data, not real PHI, and that is
 - **⚠️ The frontend host serves ONLY static files, on purpose.** PHI goes browser → AWS directly and never transits the host. On Amplify that means **hosting only: no Amplify backend, auth, data, SSR or functions, ever.** (The same rule kept Netlify out of business-associate territory; the reasoning is still in `netlify.toml` until that file goes.)
 - **The full phase-by-phase log, every acceptance test and the three bugs caught during bring-up are in `docs/history.md`.** Grep it before re-deriving anything about how this stack was built.
 
-> ## 🧭 NEW THREAD? READ THIS FIRST — CURRENT STATE ONLY (Tuesday 2026-09-15, 08:00)
+> ## 🧭 NEW THREAD? READ THIS FIRST — CURRENT STATE ONLY (Friday 2026-09-18, 19:00)
 >
 > **⚠️ THIS BLOCK IS STATE, NOT NEWS. Anything finished belongs in Status & backlog, newest first; anything older is in `docs/history.md`.** It was 37 KB of settled history on 2026-09-13; keep it short or it grows back.
 >
 > ### ✅ NOTHING IS BROKEN AND NOTHING IS OUTSTANDING IN CODE.
 > **Open with what David wants to do next, not with a list of what he owes.**
 >
-> **🎉 SHIPPED 2026-09-15: THE AI REFLECTION RUNS ON BEDROCK, WHICH CLOSED THE LAST HIPAA GATE.** Verified end to end on the live site (Timmy checked in, real reflection). `api.anthropic.com` is out of the app and its API key secret is deleted. **The only thing left before real patients is the attorney review, and that is not a coding task.** Also that morning: the four emails were rebuilt (one size, one color, navy, no ladder) and the `/staff/:token` alias went. Detail in Status & backlog.
+> **Bedrock closed the last HIPAA gate on 2026-09-15** (see the DO NOT REOPEN block below). **The only thing left before real patients is the attorney review, and that is not a coding task.** The 09-15 to 09-18 work (both names required for every user, the BAA gating Switch On, the clinic Archive → Export → Delete lifecycle, the title-case sweep) is in Status & backlog and STANDING RULES; **David has walked all of it on the live site.**
 > - **✅ EVERY PATIENT NOW HAS A LAST NAME. David added them himself through the rename dialog; read the database before saying otherwise.** The only two rows without one are **David's own manager account and PT Pete**, both staff on RidgePT, and **⛔ he does not want a staff rename tool — do not offer one.** Verified 2026-09-15 against production.
 >
 > ### 🚚 THE FRONTEND IS ON AWS AMPLIFY HOSTING, cut over 2026-09-13 19:10 and verified end to end by David (sign-in code arrived, dashboard loaded on glowpt.app).
@@ -164,8 +164,7 @@ David and friends testing on the sandbox is demo data, not real PHI, and that is
 > - **⚠️ AWS ACTIVATE WAS REJECTED 09-14 and no email ever arrived.** Irrelevant now. If David still wants to know why, the "Contact us" link is on the status page.
 >
 > ### 🗓️ DATED ITEMS
-> - **Activate was REJECTED 09-14 and NO EMAIL EVER ARRIVED** (David checked inbox and junk). **▶ But the Bedrock answer may not need Activate at all: the management account has full quota. See the Bedrock item above; retest the invoke there FIRST.** The Activate "Contact us" link and AWS Sales remain open, and the missing email is a fair thing to raise.
-> - **~2026-09-20** — one week on Amplify with no rollback: delete the GlowPT Netlify site, downgrade the Netlify team, remove `netlify.toml` + `public/_redirects`, and delete the three Resend-era DNS records. Check the first Amplify line on the AWS bill against the Activate credits.
+> - **~2026-09-20** — one week on Amplify with no rollback: delete the GlowPT Netlify site, downgrade the Netlify team, remove `netlify.toml` + `public/_redirects`, and delete the three Resend-era DNS records. Check the first Amplify line on the AWS bill (there are no Activate credits; it was rejected).
 > - **2026-09-27** — Netlify credits reset (FranklinAI site and McKenzie only).
 >
 > ### 🧪 DAVID IS STILL TESTING, AND HE IS WHY BUGS GET CAUGHT IN HOURS
@@ -180,6 +179,7 @@ David and friends testing on the sandbox is demo data, not real PHI, and that is
 > - **THE EMAIL TEMPLATE NAMES IT TOO.** Sign-in says *"Your authentication code is …"*; sign-up says *"The verification code to your new account is …"*.
 > - **WHICH FAILURE SCREEN APPEARED IS EVIDENCE.** Plain "You're not connected to a clinic yet" means **no attach was attempted**; "We couldn't finish connecting you" means one was attempted and failed.
 > - **Ask for the browser console.** `sign-in failed:` carries the real Cognito error name, `Profile re-attach failed:` the attach one.
+> - **AN ADDRESS WITH NO ACCOUNT LANDS ON "Enter Your Code" AND NO CODE EVER ARRIVES. That is deliberate:** the pool has `PreventUserExistenceErrors` ENABLED (verified 2026-09-16 by calling it), so the screen cannot reveal who has an account — which would reveal who is having PT. **⛔ Do not "fix" it.**
 > - **EVERY NEW CODE KILLS THE PREVIOUS ONE.** A second tab or an earlier attempt invalidates the code being typed. A private window works because it has no stale session.
 > - **For a LAYOUT report, reproduce it with the page shell around it**, or you will wrongly conclude it is not real.
 >
@@ -192,7 +192,7 @@ David and friends testing on the sandbox is demo data, not real PHI, and that is
 > - **⛔ THE "Patient Sign-In Link" CARD IS ONE NEUTRAL LINK FOR EVERY PATIENT, NOT A PER-ROW CONTROL.** A joined patient's invite token is spent, and a permanent per-person link would put "this address is a PT patient" in a URL forever. It shipped on the roster row first and David had it removed the same hour: **a per-row button implies a per-row link.** Do not put it back and do not "fix" it to be unique. **It copies an INSTRUCTION, not a bare URL**, and the exact text is rendered on the card.
 >
 > ### 🌄 DEMO CLINIC STATE
-> **Riverside was re-pristined 2026-09-12 05:00.** **⚠️ It now carries ONE extra real check-in from the 2026-09-13 cutover verification** (David signed in as Grace to prove the flip), so **re-pristine before the next demo.** Sunday's heartbeat volume is **18** (Riverside 8, RidgePT 10) since Atlas joined RidgePT 2026-09-14 on a test invite and David kept them. **Expect 18, do not "fix" the count in code.** **⚠️ A re-pristine invalidates David's session** — every demo Cognito account is destroyed and recreated with a fresh sub, so he signs in again as `besoulful@gmail.com`. Not a bug. RidgePT is never reset.
+> **Riverside was re-pristined 2026-09-12 05:00.** **⚠️ It now carries ONE extra real check-in from the 2026-09-13 cutover verification** (David signed in as Grace to prove the flip), so **re-pristine before the next demo.** Sunday's heartbeat volume was **18** on 09-14 and **grows whenever David adds a RidgePT test patient** (Martha Beck joined 2026-09-18). **Measure it before quoting a number, and never "fix" the count in code.** **⚠️ A re-pristine invalidates David's session** — every demo Cognito account is destroyed and recreated with a fresh sub, so he signs in again as `besoulful@gmail.com`. Not a bug. RidgePT is never reset.
 > - **🪤 `aws ec2 start-instances` ON THE BASTION RETURNS `InsufficientInstanceCapacity` INTERMITTENTLY** — five times on 09-06, three on 09-12, first try on 09-13. **us-east-1a is the constrained AZ for this account.** A retry loop is the answer; it is not a fault on our side.
 > - **💲 Running cost is roughly $95/mo against the $150 budget alarm** (a Cognito interface VPC endpoint added ~$7/mo on 2026-09-06, which is what makes Remove delete the person's login).
 >
@@ -412,6 +412,7 @@ David and friends testing on the sandbox is demo data, not real PHI, and that is
 **⏳ STILL-OPEN BACKLOG ITEMS (carried over from archived entries)**
 - **Owner/super-admin dashboard across all clinics** — David flagged it 2026-07-14 as a near-term want. Keep it to clinic-level aggregates and billing, never patient PHI across clinics. (`/admin` now does part of this.)
 - **A downloadable dated PDF of the accepted agreements** — the clinic is a covered entity and generally needs the executed BAA in its own records. Most of the machinery exists (`legal.js` versions the text, the app records a version per user). Gated on counsel answering the click-through-vs-signature question.
+- **⚠️ NOBODY CAN CHANGE THEIR EMAIL ADDRESS (confirmed 2026-09-18).** A joined patient whose real address changes can only be Removed and re-invited, **which deletes their check-in history.** Fine for demo data, wrong for a real patient mid-treatment. **David's to decide first:** who changes it (patient or manager) and how the new address is verified. Do not build it blind.
 - **No design-token file.** Colours are still inline literals across seven files. If the palette moves again, extract tokens first.
 
 ## Status & backlog
