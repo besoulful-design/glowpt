@@ -178,7 +178,8 @@ export default function InviteJoin() {
     )
   }
 
-  if (pending) return <CodeVerify pending={pending} onResend={sendCode} onBack={() => setPending(null)} />
+  // "Go Back", not "Use a Different Email": the address on an invite is fixed.
+  if (pending) return <CodeVerify pending={pending} onResend={sendCode} onBack={() => setPending(null)} backLabel="Go Back" />
 
   // Signed in as somebody else. Say so plainly rather than letting the database
   // refuse them with a message they cannot act on.
@@ -232,6 +233,14 @@ export default function InviteJoin() {
           <div style={s.fixedEmailLabel}>First Name</div>
           <input style={ui.input} placeholder="Your first name" value={firstName}
             onChange={e => setFirstName(e.target.value)} autoComplete="given-name" />
+          {/* ⚠️ THIS LINE WAS ADDED 2026-09-15 AND LOST 2026-09-16, and the loss is
+              the lesson. David first asked for the box to say it could be edited;
+              the next day he asked for its label to match "Last Name", and the fix
+              for the second request quietly deleted the first. He noticed on
+              2026-09-18: "I thought we added copy to first name so that a patient
+              knew they could change their first name only." The label stays two
+              words like its neighbors; the editability lives HERE, under the box. */}
+          <div style={s.fieldHint}>Only your first name can be changed here.</div>
         </div>
         {/* Shown but not editable, for the same reason as the email below: the
             clinic identifies you by it on their roster. Rendered only when the
@@ -316,6 +325,9 @@ const s = {
   // second bordered box reads as a field inside a field.
   editableField: { display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'left' },
   fixedEmailLabel: { fontSize: 12, lineHeight: 1.5, color: 'rgba(245,239,228,0.45)' },
+  // Same size and ink as the labels, so the hint reads as part of the field and
+  // not as a second heading.
+  fieldHint: { fontSize: 12, lineHeight: 1.5, color: 'rgba(245,239,228,0.45)' },
   fixedEmailValue: { fontSize: 15, lineHeight: 1.5, color: '#f5efe4', wordBreak: 'break-all' },
   consent: {
     display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left',

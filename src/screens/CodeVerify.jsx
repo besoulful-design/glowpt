@@ -10,7 +10,14 @@ const linkBtn = { background: 'none', border: 'none', color: '#F5A81A', textDeco
 // `pending` is the flow object from cognito.beginSignIn / beginSignUp (it knows
 // whether this is a returning sign-in or a new-account confirm). Everything stays
 // in this one screen/tab, so the session lands where they are.
-export default function CodeVerify({ pending, onResend, onBack }) {
+// ⚠️ `backLabel` EXISTS BECAUSE THE BACK LINK WAS A LIE ON ONE FLOW. It always
+// said "Use a Different Email" and always just went back a screen. On sign-in,
+// join and onboarding that screen has an editable email, so it was true. On an
+// INVITE it is not: the address is fixed there, because the invite is bound to
+// it and the database refuses any other. David asked, 2026-09-18: "How does
+// 'use a different email' work, did we setup for that?" The invite screen now
+// passes "Go Back", which is what the link actually does.
+export default function CodeVerify({ pending, onResend, onBack, backLabel = 'Use a Different Email' }) {
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -96,7 +103,7 @@ export default function CodeVerify({ pending, onResend, onBack }) {
         {resent ? 'New code sent. Use the newest email. ' : 'Didn’t get it? '}
         <button type="button" onClick={resend} style={linkBtn}>Resend</button>
         {'  ·  '}
-        <button type="button" onClick={onBack} style={linkBtn}>Use a Different Email</button>
+        <button type="button" onClick={onBack} style={linkBtn}>{backLabel}</button>
       </div>
       {/* ⛔ THIS SCREEN CANNOT TELL YOU THAT THE ADDRESS HAS NO ACCOUNT, and
           that is deliberate. The user pool has PreventUserExistenceErrors
